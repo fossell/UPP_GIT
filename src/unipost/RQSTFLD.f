@@ -2,7 +2,9 @@
 !--------------------------------------------------------------------
       implicit none
 !
+!aligo      INTEGER, PARAMETER :: MXFLD=510,MXLVL=70
       INTEGER, PARAMETER :: MXFLD=602,MXLVL=70
+!aligo
       CHARACTER*20 AVBL(MXFLD),FIELD(MXFLD)
       CHARACTER*6 DATSET      
 !
@@ -501,6 +503,50 @@
      &                      /1,'F_ice ON MDL SFCS   ',132,109/
       DATA IFILV(187),AVBL(187),IQ(187),IS(187)     &
      &                      /1,'F_RimeF ON MDL SFCS ',133,109/
+
+!aligo using Table 2/
+      DATA IFILV(475),AVBL(475),IQ(475),IS(475)     &
+     &                      /1,'pcond_f ON MDL SFCS ',245,109/
+      DATA IFILV(476),AVBL(476),IQ(476),IS(476)     &
+     &                      /1,'pidep_f ON MDL SFCS ',200,109/
+      DATA IFILV(477),AVBL(477),IQ(477),IS(477)     &
+     &                      /1,'piacw_f ON MDL SFCS ',206,109/
+      DATA IFILV(478),AVBL(478),IQ(478),IS(478)     &
+     &                      /1,'piacwi_f ON MDL SFC ',218,109/
+      DATA IFILV(479),AVBL(479),IQ(479),IS(479)     &
+     &                      /1,'piacwr_f ON MDL SFC ',219,109/
+      DATA IFILV(480),AVBL(480),IQ(480),IS(480)     &
+     &                      /1,'piacr_f ON MDL SFCS ',223,109/
+      DATA IFILV(481),AVBL(481),IQ(4),IS(481)       &
+     &                      /1,'picnd_f ON MDL SFCS ',246,109/
+      DATA IFILV(508),AVBL(508),IQ(508),IS(508)     &
+     &                      /1,'pievp_f ON MDL SFCS ',247,109/
+      DATA IFILV(509),AVBL(509),IQ(509),IS(509)     &
+     &                      /1,'pimlt_f ON MDL SFCS ',230,109/
+      DATA IFILV(510),AVBL(510),IQ(510),IS(510)     &
+     &                      /1,'praut_f ON MDL SFCS ',234,109/
+      DATA IFILV(511),AVBL(511),IQ(511),IS(511)     &
+     &                      /1,'pracw_f ON MDL SFCS ',252,109/
+      DATA IFILV(512),AVBL(512),IQ(512),IS(512)     &
+     &                      /1,'prevp_f ON MDL SFCS ',248,109/
+      DATA IFILV(513),AVBL(513),IQ(513),IS(513)     &
+     &                      /1,'vsnow_f ON MDL SFCS ',249,109/
+      DATA IFILV(514),AVBL(514),IQ(514),IS(514)     &
+     &                      /1,'vrain1_f ON MDL SFC ',250,109/
+      DATA IFILV(515),AVBL(515),IQ(515),IS(515)     &
+     &                      /1,'vrain2_f ON MDL SFC ',251,109/
+      DATA IFILV(520),AVBL(520),IQ(520),IS(520)     &
+     &                      /1,'thcuten_f ON MDL SFC',251,109/
+      DATA IFILV(521),AVBL(521),IQ(521),IS(521)     &
+     &                      /1,'qccuten_f ON MDL SFC',249,109/
+      DATA IFILV(522),AVBL(522),IQ(522),IS(522)     &
+     &                      /1,'qicuten_f ON MDL SFC',250,109/
+      DATA IFILV(523),AVBL(523),IQ(523),IS(523)     &
+     &                      /1,'qvcuten_f ON MDL SFC',251,109/
+
+
+!aligo
+
 !
 !--- The following cloud pressure fields have PDS Octet 4 = 2
 !
@@ -631,10 +677,8 @@
      &                      /1,'LIFT PCL LVL PRESS  ',141,116/
       DATA IFILV(247),AVBL(247),IQ(247),IS(247)     &
      &                      /1,'LOW WET BULB ZERO HT',007,245/
-
       DATA IFILV(248),AVBL(248),IQ(248),IS(248)     &
      &                      /1,'EMISSIVITY          ',193,001/
-
       DATA IFILV(249),AVBL(249),IQ(249),IS(249)     &
      &                      /1,'CONV PRECIP RATE    ',214,001/
 !--- USING Table 129
@@ -704,6 +748,80 @@
      &                      /1,'MODEL TOP PRESSURE  ',001,008/
       DATA IFILV(283),AVBL(283),IQ(283),IS(283)     &
      &                      /1,'HYBRID PRESSURE DP  ',001,110/
+!aligo
+      DATA IFILV(414),AVBL(414),IQ(414),IS(414)     & 
+     &                      /1,'pcond_f on P SFCS   ',245,100/ !Table 141
+      DATA IFILV(417),AVBL(417),IQ(417),IS(417)     &
+     &                      /1,'pidep_f on P SFCS   ',200,100/ !Begin Table 2
+      DATA IFILV(418),AVBL(418),IQ(418),IS(418)     &
+     &                      /1,'piacw_f on P SFCS   ',206,100/
+      DATA IFILV(419),AVBL(419),IQ(419),IS(419)     &
+     &                      /1,'piacwi_f on P SFC   ',218,100/
+      DATA IFILV(464),AVBL(464),IQ(464),IS(464)     &
+     &                      /1,'piacwr_f on P SFC   ',219,100/
+      DATA IFILV(465),AVBL(465),IQ(465),IS(465)     &
+     &                      /1,'piacr_f on P SFCS   ',223,100/ !End Table 2
+      DATA IFILV(466),AVBL(466),IQ(466),IS(466)     &
+     &                      /1,'picnd_f on P SFCS   ',246,100/ !Table 141
+      DATA IFILV(467),AVBL(467),IQ(467),IS(467)     &
+     &                      /1,'pievp_f on P SFCS   ',247,100/ !Table 141
+      DATA IFILV(468),AVBL(468),IQ(468),IS(468)     &
+     &                      /1,'pimlt_f on P SFCS   ',230,100/ !Table 2
+      DATA IFILV(469),AVBL(469),IQ(469),IS(469)     &
+     &                      /1,'praut_f on P SFCS   ',234,100/ !Table 2
+      DATA IFILV(470),AVBL(470),IQ(470),IS(470)     &
+     &                      /1,'pracw_f on P SFCS   ',252,100/ !Begin Table 141
+      DATA IFILV(471),AVBL(471),IQ(471),IS(471)     &
+     &                      /1,'prevp_f on P SFCS   ',248,100/
+      DATA IFILV(472),AVBL(472),IQ(472),IS(472)     &
+     &                      /1,'vsnow_f on P SFCS   ',249,100/
+      DATA IFILV(473),AVBL(473),IQ(473),IS(473)     &
+     &                      /1,'vrain1_f on P SFC   ',250,100/
+      DATA IFILV(474),AVBL(474),IQ(474),IS(474)     &
+     &                      /1,'vrain2_f on P SFC   ',251,100/
+      DATA IFILV(516),AVBL(516),IQ(516),IS(516)     &
+     &                      /1,'thcuten_f on P SFCS ',240,100/
+      DATA IFILV(517),AVBL(517),IQ(517),IS(517)     &
+     &                      /1,'qccuten_f on P SFCS ',207,100/
+      DATA IFILV(518),AVBL(518),IQ(518),IS(518)     &
+     &                      /1,'qicuten_f on P SFC  ',208,100/
+      DATA IFILV(519),AVBL(519),IQ(519),IS(519)     &
+     &                      /1,'qvcuten_f on P SFC  ',243,100/ 
+      DATA IFILV(524),AVBL(524),IQ(524),IS(524)     &
+     &                      /1,'piacw_f total col   ',209,200/  
+      DATA IFILV(525),AVBL(525),IQ(525),IS(525)     &
+     &                      /1,'piacwi_f total col  ',210,200/
+      DATA IFILV(526),AVBL(526),IQ(526),IS(526)     &
+     &                      /1,'piacwr_f total col  ',216,200/
+      DATA IFILV(527),AVBL(527),IQ(527),IS(527)     &
+     &                      /1,'piacr_f total col   ',217,200/ 
+      DATA IFILV(528),AVBL(528),IQ(528),IS(528)     &
+     &                      /1,'picnd_f total col   ',218,200/ 
+      DATA IFILV(529),AVBL(529),IQ(529),IS(529)     &
+     &                      /1,'pievp_f total col   ',219,200/ 
+      DATA IFILV(530),AVBL(530),IQ(530),IS(530)     &
+     &                      /1,'pimlt_f total col   ',220,200/ 
+      DATA IFILV(531),AVBL(531),IQ(531),IS(531)     &
+     &                      /1,'praut_f total col   ',221,200/ 
+      DATA IFILV(532),AVBL(532),IQ(532),IS(532)     &
+     &                      /1,'pracw_f total col   ',222,200/ 
+      DATA IFILV(533),AVBL(533),IQ(533),IS(533)     &
+     &                      /1,'prevp_f total col   ',223,200/
+      DATA IFILV(534),AVBL(534),IQ(534),IS(534)     &
+     &                      /1,'pcond_f total col   ',224,200/
+      DATA IFILV(535),AVBL(535),IQ(535),IS(535)     &
+     &                      /1,'pidep_f total col   ',228,200/
+      DATA IFILV(536),AVBL(536),IQ(536),IS(536)     &
+     &                      /1,'thcuten_f total col ',229,200/
+      DATA IFILV(537),AVBL(537),IQ(537),IS(537)     &
+     &                      /1,'qccuten_f total col ',232,200/
+      DATA IFILV(538),AVBL(538),IQ(538),IS(538)     &
+     &                      /1,'qicuten_f total col ',233,200/
+      DATA IFILV(539),AVBL(539),IQ(539),IS(539)     &
+     &                      /1,'qvcuten_f total col ',234,200/ !End Table 141
+
+!aligo
+
 !
 !--- USING Table 129
 !
@@ -985,17 +1103,18 @@
 ! SNOWFALL RATE
       DATA IFILV(405),AVBL(405),IQ(405),IS(405) &
      &                      /1,'AVE SNOWFALL RATE   ',064,001/
+!aligo-remove dust fields
 ! ADD DUST FIELDS
-      DATA IFILV(438),AVBL(438),IQ(438),IS(438) &
-     &                      /1,'DUST 1 ON P SFCS    ',240,100/
-      DATA IFILV(439),AVBL(439),IQ(439),IS(439) &
-     &                      /1,'DUST 2 ON P SFCS    ',241,100/
-      DATA IFILV(440),AVBL(440),IQ(440),IS(440) &
-     &                      /1,'DUST 3 ON P SFCS    ',242,100/
-      DATA IFILV(441),AVBL(441),IQ(441),IS(441) &
-     &                      /1,'DUST 4 ON P SFCS    ',243,100/
-      DATA IFILV(442),AVBL(442),IQ(442),IS(442) &
-     &                      /1,'DUST 5 ON P SFCS    ',244,100/
+!      DATA IFILV(438),AVBL(438),IQ(438),IS(438) &
+!     &                      /1,'DUST 1 ON P SFCS    ',240,100/
+!      DATA IFILV(439),AVBL(439),IQ(439),IS(439) &
+!     &                      /1,'DUST 2 ON P SFCS    ',241,100/
+!      DATA IFILV(440),AVBL(440),IQ(440),IS(440) &
+!     &                      /1,'DUST 3 ON P SFCS    ',242,100/
+!      DATA IFILV(441),AVBL(441),IQ(441),IS(441) &
+!     &                      /1,'DUST 4 ON P SFCS    ',243,100/
+!      DATA IFILV(442),AVBL(442),IQ(442),IS(442) &
+!     &                      /1,'DUST 5 ON P SFCS    ',244,100/
 !
       DATA IFILV(443),AVBL(443),IQ(443),IS(443) &
      &                      /1,'EQUIL LEVEL HEIGHT  ',007,247/

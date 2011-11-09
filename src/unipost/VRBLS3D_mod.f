@@ -44,6 +44,28 @@
       ,cnvctmgdrag(:,:,:)     &
 !
 ! Add NCAR GFIP ICING
-      ,icing_gfip(:,:,:)
+!aligo      ,icing_gfip(:,:,:)
+      ,icing_gfip(:,:,:)      &
+      ,pcond_f(:,:,:)         &
+      ,pidep_f(:,:,:)         &
+      ,piacw_f(:,:,:)         &
+      ,piacwi_f(:,:,:)        &
+      ,piacwr_f(:,:,:)        &
+      ,piacr_f(:,:,:)         &
+      ,picnd_f(:,:,:)         &
+      ,pievp_f(:,:,:)         &
+      ,pimlt_f(:,:,:)         &
+      ,praut_f(:,:,:)         &
+      ,pracw_f(:,:,:)         &
+      ,prevp_f(:,:,:)         &
+      ,vsnow_f(:,:,:)         &
+      ,vrain1_f(:,:,:)        &
+      ,vrain2_f(:,:,:)        &
+      ,thcuten_f(:,:,:)       &
+      ,qccuten_f(:,:,:)       &
+      ,qicuten_f(:,:,:)       &
+      ,qvcuten_f(:,:,:)
+
+!aligo
 !
       end module vrbls3d

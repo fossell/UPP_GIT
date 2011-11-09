@@ -209,6 +209,120 @@
 	      Qdum(I,J)=O3(I,J,L)
 	    ENDDO
 	  END DO	  
+!aligo
+! PIACW 
+        ELSE IF (IDECID .EQ. 17) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=piacw_f(I,J,L)
+            ENDDO
+          END DO
+!PIACWI 
+        ELSE IF (IDECID .EQ. 18) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=piacwi_f(I,J,L)
+            ENDDO
+          END DO
+!PIACWR 
+        ELSE IF (IDECID .EQ. 19) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=piacwr_f(I,J,L)
+            ENDDO
+          END DO
+!PIACR 
+        ELSE IF (IDECID .EQ. 20) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=piacr_f(I,J,L)
+            ENDDO
+          END DO
+!PICND
+        ELSE IF (IDECID .EQ. 21) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=picnd_f(I,J,L)
+            ENDDO
+          END DO
+!PIEVP 
+        ELSE IF (IDECID .EQ. 22) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=pievp_f(I,J,L)
+            ENDDO
+          END DO
+!PIMLT
+        ELSE IF (IDECID .EQ. 23) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=pimlt_f(I,J,L)
+            ENDDO
+          END DO
+!PRAUT
+        ELSE IF (IDECID .EQ. 24) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=praut_f(I,J,L)
+            ENDDO
+          END DO
+!PRACW
+        ELSE IF (IDECID .EQ. 25) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=pracw_f(I,J,L)
+            ENDDO
+          END DO
+!PREVP
+        ELSE IF (IDECID .EQ. 26) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=prevp_f(I,J,L)
+            ENDDO
+          END DO
+!PCOND
+        ELSE IF (IDECID .EQ. 27) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=pcond_f(I,J,L)
+            ENDDO
+          END DO
+!PIDEP
+        ELSE IF (IDECID .EQ. 28) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=pidep_f(I,J,L)
+            ENDDO
+          END DO
+!THCUTEN
+        ELSE IF (IDECID .EQ. 29) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=thcuten_f(I,J,L)
+            ENDDO
+          END DO
+!QCCUTEN
+        ELSE IF (IDECID .EQ. 30) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=qccuten_f(I,J,L)
+            ENDDO
+          END DO
+!QICUTEN
+        ELSE IF (IDECID .EQ. 31) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=qicuten_f(I,J,L)
+            ENDDO
+          END DO
+!QVCUTEN
+        ELSE IF (IDECID .EQ. 32) THEN
+          DO J=JSTA,JEND
+            DO I=1,IM
+              Qdum(I,J)=qvcuten_f(I,J,L)
+            ENDDO
+          END DO
+!aligo
 
         ENDIF
 

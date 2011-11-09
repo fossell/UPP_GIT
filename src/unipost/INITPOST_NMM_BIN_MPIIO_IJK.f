@@ -1616,6 +1616,517 @@
 	end if 
       end if
       write(0,*)' after F_RimeF'
+!aligo
+      varname='PCOND'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        pcond_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          pcond_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             pcond_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample pcond_f= ',i,j,l,pcond_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+      varname='PIDEP'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        pidep_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          pidep_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             pidep_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample pidep_f= ',i,j,l,pidep_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PIACW'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        piacw_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          piacw_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             piacw_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample piacw_f= ',i,j,l,piacw_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PIACWI'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        piacwi_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          piacwi_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             piacwi_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample piacwi_f= ',i,j,l,piacwi_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PIACWR'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        piacwr_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          piacwr_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             piacwr_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample piacwr_f= ',i,j,l,piacwr_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+      varname='PIACR'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        piacr_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          piacr_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             piacr_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample piacr_f= ',i,j,l,piacr_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PICND'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        picnd_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          picnd_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             picnd_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample picnd_f= ',i,j,l,picnd_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+      varname='PIEVP'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        pievp_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          pievp_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             pievp_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample pievp_f= ',i,j,l,pievp_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PIMLT'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        pimlt_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          pimlt_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             pimlt_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample pimlt_f= ',i,j,l,pimlt_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+      varname='PRAUT'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        praut_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          praut_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             praut_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample praut_f= ',i,j,l,praut_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PRACW'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        pracw_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          pracw_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             pracw_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample pracw_f= ',i,j,l,pracw_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='PREVP'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        prevp_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          prevp_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             prevp_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample prevp_f= ',i,j,l,prevp_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='VSNOW'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        vsnow_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          vsnow_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             vsnow_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample vsnow_f= ',i,j,l,vsnow_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='VRAIN1'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        vrain1_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          vrain1_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             vrain1_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample vrain1_f= ',i,j,l,vrain1_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='VRAIN2'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        vrain2_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          vrain2_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             vrain2_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample vrain2_f= ',i,j,l,vrain2_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='THCUTEN'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        thcuten_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          thcuten_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             thcuten_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample thcuten_f= ',i,j,l,thcuten_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='QCCUTEN'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        qccuten_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          qccuten_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             qccuten_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample qccuten_f= ',i,j,l,qccuten_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='QICUTEN'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        qicuten_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          qicuten_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             qicuten_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample qicuten_f= ',i,j,l,qicuten_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+      varname='QVCUTEN'
+      call retrieve_index(index,VarName,varname_all,nrecs,iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        qvcuten_f=SPVAL
+      else
+        this_offset=file_offset(index+1)
+        this_length=im*jm*lm
+        call mpi_file_read_at(iunit,this_offset                        &
+      ,buf3dx,this_length,mpi_real4,mpi_status_ignore, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          qvcuten_f=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             qvcuten_f( i, j, l ) = buf3dx ( i, ll, j )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,               &
+              'sample qvcuten_f= ',i,j,l,qvcuten_f( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+
+!aligo
 
        varname='CLDFRA'
        call retrieve_index(index,VarName,varname_all,nrecs,iret)
@@ -3579,6 +4090,9 @@
       IF(NRDSW.EQ.0)TRDSW=float(ifhr)  !in case buket does not get emptied
       THEAT=float(NHEAT)/TSPH
       IF(NHEAT.EQ.0)THEAT=float(ifhr)  !in case buket does not get emptied
+!aligo
+      TD3D=THEAT
+!aligo
       TCLOD=float(NCLOD)/TSPH
       IF(NCLOD.EQ.0)TCLOD=float(ifhr)  !in case buket does not get emptied
       TPREC=float(NPREC)/TSPH

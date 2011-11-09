@@ -394,6 +394,123 @@
          ID(1:25)=0
          CALL GRIBIT(IGET(299),LVLS(1,IGET(299)),GRID1,IM,JM)
       ENDIF
+!aligo
+!piacw
+      IF (IGET(524).GT.0) THEN
+         CALL CALPW(GRID1,17)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(524),LVLS(1,IGET(524)),GRID1,IM,JM)
+      ENDIF
+!piacwi
+      IF (IGET(525).GT.0) THEN
+         CALL CALPW(GRID1,18)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(525),LVLS(1,IGET(525)),GRID1,IM,JM)
+      ENDIF
+!piacwr
+      IF (IGET(526).GT.0) THEN
+         CALL CALPW(GRID1,19)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(526),LVLS(1,IGET(526)),GRID1,IM,JM)
+      ENDIF
+!piacr
+      IF (IGET(527).GT.0) THEN
+         CALL CALPW(GRID1,20)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(527),LVLS(1,IGET(527)),GRID1,IM,JM)
+      ENDIF
+!picnd
+      IF (IGET(528).GT.0) THEN
+         CALL CALPW(GRID1,21)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(528),LVLS(1,IGET(528)),GRID1,IM,JM)
+      ENDIF
+!pievp
+
+      IF (IGET(529).GT.0) THEN
+         CALL CALPW(GRID1,22)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(529),LVLS(1,IGET(529)),GRID1,IM,JM)
+      ENDIF
+!pimlt
+      IF (IGET(530).GT.0) THEN
+         CALL CALPW(GRID1,23)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(530),LVLS(1,IGET(530)),GRID1,IM,JM)
+      ENDIF
+!praut
+      IF (IGET(531).GT.0) THEN
+         CALL CALPW(GRID1,24)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(531),LVLS(1,IGET(531)),GRID1,IM,JM)
+      ENDIF
+!pracw
+      IF (IGET(532).GT.0) THEN
+         CALL CALPW(GRID1,25)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(532),LVLS(1,IGET(532)),GRID1,IM,JM)
+      ENDIF
+!prevp
+      IF (IGET(533).GT.0) THEN
+         CALL CALPW(GRID1,26)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(533),LVLS(1,IGET(533)),GRID1,IM,JM)
+      ENDIF
+!pcond
+      IF (IGET(534).GT.0) THEN
+         CALL CALPW(GRID1,27)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(534),LVLS(1,IGET(534)),GRID1,IM,JM)
+      ENDIF
+!pidep
+      IF (IGET(535).GT.0) THEN
+         CALL CALPW(GRID1,28)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(535),LVLS(1,IGET(535)),GRID1,IM,JM)
+      ENDIF
+!thcuten
+      IF (IGET(536).GT.0) THEN
+         CALL CALPW(GRID1,29)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(536),LVLS(1,IGET(536)),GRID1,IM,JM)
+      ENDIF
+!qccuten
+      IF (IGET(537).GT.0) THEN
+         CALL CALPW(GRID1,30)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(537),LVLS(1,IGET(537)),GRID1,IM,JM)
+      ENDIF
+!qicuten
+      IF (IGET(538).GT.0) THEN
+         CALL CALPW(GRID1,31)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(538),LVLS(1,IGET(538)),GRID1,IM,JM)
+      ENDIF
+!qvcuten
+      IF (IGET(539).GT.0) THEN
+         CALL CALPW(GRID1,32)
+         ID(1:25)=0
+         ID(02)=141
+         CALL GRIBIT(IGET(539),LVLS(1,IGET(539)),GRID1,IM,JM)
+      ENDIF
+
+!aligo
+
 !
 !     BOTTOM AND/OR TOP OF SUPERCOOLED (<0C) LIQUID WATER LAYER
       IF (IGET(287).GT.0 .OR. IGET(288).GT.0) THEN

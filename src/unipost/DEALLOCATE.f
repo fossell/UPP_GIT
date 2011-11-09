@@ -96,6 +96,28 @@
       deallocate(DBZC)
       deallocate(mcvg)
       deallocate(NLICE)
+!aligo
+      deallocate(pcond_f)
+      deallocate(pidep_f)
+      deallocate(piacw_f)
+      deallocate(piacwi_f)
+      deallocate(piacwr_f)
+      deallocate(piacr_f)
+      deallocate(picnd_f)
+      deallocate(pievp_f)
+      deallocate(pimlt_f)
+      deallocate(praut_f)
+      deallocate(pracw_f)
+      deallocate(prevp_f)
+      deallocate(vsnow_f)
+      deallocate(vrain1_f)
+      deallocate(vrain2_f)
+      deallocate(thcuten_f)
+      deallocate(qicuten_f)
+      deallocate(qccuten_f)
+      deallocate(qvcuten_f)
+
+!aligo
 !GFS FIELD
       deallocate(o3)
 ! Add GFS d3d fields

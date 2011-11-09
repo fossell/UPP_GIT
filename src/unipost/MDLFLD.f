@@ -652,6 +652,298 @@
 	       CALL GRIBIT(IGET(124),L,GRID1,IM,JM)
             ENDIF
           ENDIF 
+!aligo
+!---  Cloud water evaporation/condensation
+!
+          IF (IGET(475) .GT. 0) THEN
+            IF (LVLS(L,IGET(475)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=pcond_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(475),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+
+!---Deposition (>0) or sublimation (<0) of ice crystals
+!
+          IF (IGET(476) .GT. 0) THEN
+            IF (LVLS(L,IGET(476)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=pidep_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(476),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Cloud water collection (riming) by precipitation ice (>0)
+!
+          IF (IGET(477) .GT. 0) THEN
+            IF (LVLS(L,IGET(477)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=piacw_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(477),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Growth of precip ice by riming (>0)
+!
+          IF (IGET(478) .GT. 0) THEN
+            IF (LVLS(L,IGET(478)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=piacwi_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(478),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Shedding of accreted cloud water to form rain (>0)
+!
+          IF (IGET(479) .GT. 0) THEN
+            IF (LVLS(L,IGET(479)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=piacwr_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(479),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Freezing of rain onto large ice at supercooled temps (>0)
+!
+          IF (IGET(480) .GT. 0) THEN
+            IF (LVLS(L,IGET(480)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=piacr_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(480),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Condensation (>0) onto wet, melting ice
+!
+          IF (IGET(481) .GT. 0) THEN
+            IF (LVLS(L,IGET(481)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=picnd_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(481),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Evaporation (<0) from wet, melting ice
+!
+          IF (IGET(508) .GT. 0) THEN
+            IF (LVLS(L,IGET(508)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=pievp_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(508),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Melting ice (>0)
+!
+          IF (IGET(509) .GT. 0) THEN
+            IF (LVLS(L,IGET(509)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=pimlt_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(509),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Cloud water autoconversion to rain (>0)
+!
+          IF (IGET(510) .GT. 0) THEN
+            IF (LVLS(L,IGET(510)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=praut_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=02
+               CALL GRIBIT(IGET(510),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Cloud water collection (accretion) by rain (>0)
+!
+          IF (IGET(511) .GT. 0) THEN
+            IF (LVLS(L,IGET(511)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=pracw_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(511),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Rain evaporation (<0)
+!
+          IF (IGET(512) .GT. 0) THEN
+            IF (LVLS(L,IGET(512)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=prevp_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(512),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!---  Snow fall speeds
+!
+          IF (IGET(513) .GT. 0) THEN
+            IF (LVLS(L,IGET(513)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=vsnow_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(513),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Rain fall speeds
+!
+          IF (IGET(514) .GT. 0) THEN
+            IF (LVLS(L,IGET(514)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=vrain1_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(514),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Time averaged rain fall speeds
+!
+          IF (IGET(515) .GT. 0) THEN
+            IF (LVLS(L,IGET(515)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=vrain2_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(515),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+
+!--- Temperature change due to CU scheme
+!
+          IF (IGET(520) .GT. 0) THEN
+            IF (LVLS(L,IGET(520)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=thcuten_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(520),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Cloud water change due to CU scheme
+!
+          IF (IGET(521) .GT. 0) THEN
+            IF (LVLS(L,IGET(521)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=qccuten_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(521),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Cloud ice change due to CU scheme
+!
+          IF (IGET(522) .GT. 0) THEN
+            IF (LVLS(L,IGET(522)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=qicuten_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(522),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+!--- Water vapor change due to CU scheme
+!
+          IF (IGET(523) .GT. 0) THEN
+            IF (LVLS(L,IGET(523)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=qvcuten_f(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(02)=141
+               CALL GRIBIT(IGET(523),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+
+
+!aligo
+
 !
 !---  CLOUD ICE ON MDL SURFACE  (Jin, '01; Ferrier, Feb '02)
 !

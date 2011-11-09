@@ -175,6 +175,28 @@
       allocate(DBZC(im,jsta_2l:jend_2u,lm))
       allocate(mcvg(im,jsta_2l:jend_2u,lm))
       allocate(NLICE(im,jsta_2l:jend_2u,lm))
+!aligo
+      allocate(pcond_f(im,jsta_2l:jend_2u,lm))
+      allocate(pidep_f(im,jsta_2l:jend_2u,lm))
+      allocate(piacw_f(im,jsta_2l:jend_2u,lm))
+      allocate(piacwi_f(im,jsta_2l:jend_2u,lm))
+      allocate(piacwr_f(im,jsta_2l:jend_2u,lm))
+      allocate(piacr_f(im,jsta_2l:jend_2u,lm))
+      allocate(picnd_f(im,jsta_2l:jend_2u,lm))
+      allocate(pievp_f(im,jsta_2l:jend_2u,lm))
+      allocate(pimlt_f(im,jsta_2l:jend_2u,lm))
+      allocate(praut_f(im,jsta_2l:jend_2u,lm))
+      allocate(pracw_f(im,jsta_2l:jend_2u,lm))
+      allocate(prevp_f(im,jsta_2l:jend_2u,lm))
+      allocate(vsnow_f(im,jsta_2l:jend_2u,lm))
+      allocate(vrain1_f(im,jsta_2l:jend_2u,lm))
+      allocate(vrain2_f(im,jsta_2l:jend_2u,lm))
+      allocate(thcuten_f(im,jsta_2l:jend_2u,lm))
+      allocate(qccuten_f(im,jsta_2l:jend_2u,lm))
+      allocate(qicuten_f(im,jsta_2l:jend_2u,lm))
+      allocate(qvcuten_f(im,jsta_2l:jend_2u,lm))
+
+!aligo
 !GFS FIELD
       allocate(o3(im,jsta_2l:jend_2u,lm))
 ! Add GFS d3d fields

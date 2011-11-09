@@ -107,7 +107,15 @@
 !  DBZ1  - radar reflectivity
 !
       REAL C1D(IM,JM),QW1(IM,JM),QI1(IM,JM),QR1(IM,JM)            &
-     &,    QS1(IM,JM) ,QG1(IM,JM) ,DBZ1(IM,JM),FRIME(IM,JM),RAD(IM,JM)
+!aligo     &,    QS1(IM,JM) ,QG1(IM,JM) ,DBZ1(IM,JM),FRIME(IM,JM),RAD(IM,JM)
+     &,QS1(IM,JM) ,QG1(IM,JM) ,DBZ1(IM,JM),FRIME(IM,JM),RAD(IM,JM) &
+     &,PCOND(IM,JM),PIDEP(IM,JM),PIACW(IM,JM),PIACWI(IM,JM)        &
+     &,PIACWR(IM,JM),PIACR(IM,JM),PICND(IM,JM),PIEVP(IM,JM)        &
+     &,PIMLT(IM,JM),PRAUT(IM,JM),PRACW(IM,JM),PREVP(IM,JM)         &
+     &,VSNOW(IM,JM),VRAIN1(IM,JM),VRAIN2(IM,JM),THCUTEN(IM,JM)     &
+     &,QCCUTEN(IM,JM),QICUTEN(IM,JM),QVCUTEN(IM,JM)
+!aligo
+
       REAL HAINES(IM,JM)
 
       REAL SDUMMY(IM,2)
@@ -208,6 +216,29 @@
 	O3SL(I,J)=SPVAL
 	CFRSL(I,J)=SPVAL
 	ICINGFSL(I,J)=SPVAL
+!aligo
+        PCOND(I,J)=SPVAL
+        PIDEP(I,J)=SPVAL
+        PIACW(I,J)=SPVAL
+        PIACWI(I,J)=SPVAL
+        PIACWR(I,J)=SPVAL
+        PIACR(I,J)=SPVAL
+        PICND(I,J)=SPVAL
+        PIEVP(I,J)=SPVAL
+        PIMLT(I,J)=SPVAL
+        PRAUT(I,J)=SPVAL
+        PRACW(I,J)=SPVAL
+        PREVP(I,J)=SPVAL
+        VSNOW(I,J)=SPVAL
+        VRAIN1(I,J)=SPVAL
+        VRAIN2(I,J)=SPVAL
+        THCUTEN(I,J)=SPVAL
+        QCCUTEN(I,J)=SPVAL
+        QICUTEN(I,J)=SPVAL
+        QVCUTEN(I,J)=SPVAL
+
+!aligo
+
 !
 !***  LOCATE VERTICAL INDEX OF MODEL MIDLAYER JUST BELOW
 !***  THE PRESSURE LEVEL TO WHICH WE ARE INTERPOLATING.
@@ -292,6 +323,29 @@
 	  DBZ1(I,J)=AMAX1(DBZ1(I,J),DBZmin)
 	  IF(F_RimeF(I,J,1).LT.SPVAL)  FRIME(I,J)=F_RimeF(I,J,1)
           FRIME(I,J)=AMAX1(FRIME(I,J),H1)
+!aligo
+          IF(pcond_f(I,J,1).LT.SPVAL)  pcond(I,J)=pcond_f(I,J,1)
+          IF(pidep_f(I,J,1).LT.SPVAL)  pidep(I,J)=pidep_f(I,J,1)
+          IF(piacw_f(I,J,1).LT.SPVAL)  piacw(I,J)=piacw_f(I,J,1)
+          IF(piacwi_f(I,J,1).LT.SPVAL)  piacwi(I,J)=piacwi_f(I,J,1)
+          IF(piacwr_f(I,J,1).LT.SPVAL)  piacwr(I,J)=piacwr_f(I,J,1)
+          IF(piacr_f(I,J,1).LT.SPVAL)  piacr(I,J)=piacr_f(I,J,1)
+          IF(picnd_f(I,J,1).LT.SPVAL)  picnd(I,J)=picnd_f(I,J,1)
+          IF(pievp_f(I,J,1).LT.SPVAL)  pievp(I,J)=pievp_f(I,J,1)
+          IF(pimlt_f(I,J,1).LT.SPVAL)  pimlt(I,J)=pimlt_f(I,J,1)
+          IF(praut_f(I,J,1).LT.SPVAL)  praut(I,J)=praut_f(I,J,1)
+          IF(pracw_f(I,J,1).LT.SPVAL)  pracw(I,J)=pracw_f(I,J,1)
+          IF(prevp_f(I,J,1).LT.SPVAL)  prevp(I,J)=prevp_f(I,J,1)
+          IF(vsnow_f(I,J,1).LT.SPVAL)  vsnow(I,J)=vsnow_f(I,J,1)
+          IF(vrain1_f(I,J,1).LT.SPVAL) vrain1(I,J)=vrain1_f(I,J,1)
+          IF(vrain2_f(I,J,1).LT.SPVAL) vrain2(I,J)=vrain2_f(I,J,1)
+          IF(thcuten_f(I,J,1).LT.SPVAL) thcuten(I,J)=thcuten_f(I,J,1)
+          IF(qccuten_f(I,J,1).LT.SPVAL)  qccuten(I,J)=qccuten_f(I,J,1)
+          IF(qicuten_f(I,J,1).LT.SPVAL) qicuten(I,J)=qicuten_f(I,J,1)
+          IF(qvcuten_f(I,J,1).LT.SPVAL) qvcuten(I,J)=qvcuten_f(I,J,1)
+
+!aligo
+
 	  IF(TTND(I,J,1).LT.SPVAL)  RAD(I,J)=TTND(I,J,1)
           IF(TTND(I,J,1).LT.SPVAL)  O3SL(I,J)=O3(I,J,1)
           IF(CFR(I,J,1).LT.SPVAL)   CFRSL(I,J)=CFR(I,J,1)
@@ -412,6 +466,67 @@
           IF(QQG(I,J,LL).LT.SPVAL .AND. QQG(I,J,LL-1).LT.SPVAL)         &
              QG1(I,J)=QQG(I,J,LL)+(QQG(I,J,LL)-QQG(I,J,LL-1))*FACT
           QG1(I,J)=AMAX1(QG1(I,J),H1M12)      ! GRAUPEL (precip ice) 
+!aligo
+          IF(pcond_f(I,J,LL).LT.SPVAL.AND.pcond_f(I,J,LL-1).LT.SPVAL)   &
+             PCOND(I,J)=pcond_f(I,J,LL)+(pcond_f(I,J,LL)                &
+                -pcond_f(I,J,LL-1))*FACT !Evaporation/conden
+          IF(pidep_f(I,J,LL).LT.SPVAL.AND.pidep_f(I,J,LL-1).LT.SPVAL)   &
+             PIDEP(I,J)=pidep_f(I,J,LL)+(pidep_f(I,J,LL)                &
+                -pidep_f(I,J,LL-1))*FACT !Deposition/sublimation
+          IF(piacw_f(I,J,LL).LT.SPVAL.AND.piacw_f(I,J,LL-1).LT.SPVAL)   &
+             PIACW(I,J)=piacw_f(I,J,LL)+(piacw_f(I,J,LL)                &
+                -piacw_f(I,J,LL-1))*FACT !cloud water collection (riming) by precipitation ice
+          IF(piacwi_f(I,J,LL).LT.SPVAL.AND.piacwi_f(I,J,LL-1).LT.SPVAL)   &
+             PIACWI(I,J)=piacwi_f(I,J,LL)+(piacwi_f(I,J,LL)                &
+                -piacwi_f(I,J,LL-1))*FACT !growth of precip ice by riming
+          IF(piacwr_f(I,J,LL).LT.SPVAL.AND.piacwr_f(I,J,LL-1).LT.SPVAL)   &
+             PIACWR(I,J)=piacwr_f(I,J,LL)+(piacwr_f(I,J,LL)                &
+                -piacwr_f(I,J,LL-1))*FACT !shedding of accreted cloud water to form rain
+          IF(piacr_f(I,J,LL).LT.SPVAL.AND.piacr_f(I,J,LL-1).LT.SPVAL)   &
+             PIACR(I,J)=piacr_f(I,J,LL)+(piacr_f(I,J,LL)                &
+                -piacr_f(I,J,LL-1))*FACT !freezingi of rain onto large ice at supercooled temp
+          IF(picnd_f(I,J,LL).LT.SPVAL.AND.picnd_f(I,J,LL-1).LT.SPVAL)   &
+             PICND(I,J)=picnd_f(I,J,LL)+(picnd_f(I,J,LL)                &
+                -picnd_f(I,J,LL-1))*FACT !condensation onto wet, melting ice
+          IF(pievp_f(I,J,LL).LT.SPVAL.AND.pievp_f(I,J,LL-1).LT.SPVAL)   &
+             PIEVP(I,J)=pievp_f(I,J,LL)+(pievp_f(I,J,LL)                &
+                -pievp_f(I,J,LL-1))*FACT !evaporation from wet, melting ice
+          IF(pimlt_f(I,J,LL).LT.SPVAL.AND.pimlt_f(I,J,LL-1).LT.SPVAL)   &
+             PIMLT(I,J)=pimlt_f(I,J,LL)+(pimlt_f(I,J,LL)                &
+                -pimlt_f(I,J,LL-1))*FACT !melting ice
+          IF(praut_f(I,J,LL).LT.SPVAL.AND.praut_f(I,J,LL-1).LT.SPVAL)   &
+             PRAUT(I,J)=praut_f(I,J,LL)+(praut_f(I,J,LL)                &
+                -praut_f(I,J,LL-1))*FACT !cloud water autoconversion to rain
+          IF(pracw_f(I,J,LL).LT.SPVAL.AND.pracw_f(I,J,LL-1).LT.SPVAL)   &
+             PRACW(I,J)=pracw_f(I,J,LL)+(pracw_f(I,J,LL)                &
+                -pracw_f(I,J,LL-1))*FACT !cloud water collection (accretion) by rain
+          IF(prevp_f(I,J,LL).LT.SPVAL.AND.prevp_f(I,J,LL-1).LT.SPVAL)   &
+             PREVP(I,J)=prevp_f(I,J,LL)+(prevp_f(I,J,LL)                &
+                -prevp_f(I,J,LL-1))*FACT !rain evaporation
+          IF(vsnow_f(I,J,LL).LT.SPVAL.AND.vsnow_f(I,J,LL-1).LT.SPVAL)   &
+             VSNOW(I,J)=vsnow_f(I,J,LL)+(vsnow_f(I,J,LL)                &
+                -vsnow_f(I,J,LL-1))*FACT !snow fall speed
+          IF(vrain1_f(I,J,LL).LT.SPVAL.AND.vrain1_f(I,J,LL-1).LT.SPVAL)   &
+             VRAIN1(I,J)=vrain1_f(I,J,LL)+(vrain1_f(I,J,LL)                &
+                -vrain1_f(I,J,LL-1))*FACT !rain fall speed
+          IF(vrain2_f(I,J,LL).LT.SPVAL.AND.vrain2_f(I,J,LL-1).LT.SPVAL)   &
+             VRAIN2(I,J)=vrain2_f(I,J,LL)+(vrain2_f(I,J,LL)                &
+                -vrain2_f(I,J,LL-1))*FACT !time-averaged rain fall speed
+          IF(thcuten_f(I,J,LL).LT.SPVAL.AND.thcuten_f(I,J,LL-1).LT.SPVAL)   &
+             thcuten(I,J)=thcuten_f(I,J,LL)+(thcuten_f(I,J,LL)                &
+                -thcuten_f(I,J,LL-1))*FACT !temp change due to CU scheme
+          IF(qccuten_f(I,J,LL).LT.SPVAL.AND.qccuten_f(I,J,LL-1).LT.SPVAL)   &
+             qccuten(I,J)=qccuten_f(I,J,LL)+(qccuten_f(I,J,LL)                &
+                -qccuten_f(I,J,LL-1))*FACT !cloud w. change due to CU scheme
+          IF(qicuten_f(I,J,LL).LT.SPVAL.AND.qicuten_f(I,J,LL-1).LT.SPVAL)   &
+             qicuten(I,J)=qicuten_f(I,J,LL)+(qicuten_f(I,J,LL)                &
+                -qicuten_f(I,J,LL-1))*FACT !cloud ice change due to CU scheme
+          IF(qvcuten_f(I,J,LL).LT.SPVAL.AND.qvcuten_f(I,J,LL-1).LT.SPVAL)   &
+             QVCUTEN(I,J)=qvcuten_f(I,J,LL)+(qvcuten_f(I,J,LL)                &
+                -qvcuten_f(I,J,LL-1))*FACT !water vapor change due to CU scheme
+
+!aligo
+
 	  IF(DBZ(I,J,LL).LT.SPVAL .AND. DBZ(I,J,LL-1).LT.SPVAL)         &
              DBZ1(I,J)=DBZ(I,J,LL)+(DBZ(I,J,LL)-DBZ(I,J,LL-1))*FACT
 	  DBZ1(I,J)=AMAX1(DBZ1(I,J),DBZmin)
@@ -651,6 +766,28 @@
 	  RAD(I,J)=0.
 	  O3SL(I,J)=O3(I,J,LLMH)
 	  CFRSL(I,J)=0.
+!aligo
+          PCOND(I,J)=0.
+          PIDEP(I,J)=0.
+          PIACW(I,J)=0.
+          PIACWI(I,J)=0.
+          PIACWR(I,J)=0.
+          PIACR(I,J)=0.
+          PICND(I,J)=0.
+          PIEVP(I,J)=0.
+          PIMLT(I,J)=0.
+          PRAUT(I,J)=0.
+          PRACW(I,J)=0.
+          PREVP(I,J)=0.
+          VSNOW(I,J)=0.
+          VRAIN1(I,J)=0.
+          VRAIN2(I,J)=0.
+          THCUTEN(I,J)=0.
+          QCCUTEN(I,J)=0.
+          QICUTEN(I,J)=0.
+          QVCUTEN(I,J)=0.
+
+!aligo
         END IF	
 ! Compute heights by interpolating from heights on interface for NAM but hydrostatic
 ! integration for GFS
@@ -1443,6 +1580,325 @@
              CALL GRIBIT(IGET(263),LP,GRID1,IM,JM)
           ENDIF
          ENDIF
+!aligo
+!--- Rain evaporation/condensation
+         IF (IGET(414).GT.0) THEN
+          IF (LVLS(LP,IGET(414)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PCOND(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 2
+             CALL GRIBIT(IGET(414),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!---Deposition/sublimation of ice crystals
+         IF (IGET(417).GT.0) THEN
+          IF (LVLS(LP,IGET(417)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIDEP(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(417),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---cloud water collection (riming) by precip. ice
+         IF (IGET(418).GT.0) THEN
+          IF (LVLS(LP,IGET(418)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIACW(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(418),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!---growth of precip ice by riming
+         IF (IGET(419).GT.0) THEN
+          IF (LVLS(LP,IGET(419)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIACWI(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(419),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---shedding of accreted cloud water for form rain
+         IF (IGET(464).GT.0) THEN
+          IF (LVLS(LP,IGET(464)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIACWR(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(464),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---freezing of rain onto large ice at supercooled temps
+         IF (IGET(465).GT.0) THEN
+          IF (LVLS(LP,IGET(465)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIACR(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(465),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!---condensation onto wet, melting ice
+         IF (IGET(466).GT.0) THEN
+          IF (LVLS(LP,IGET(466)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PICND(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(466),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---evaporation from wet, melting ice
+         IF (IGET(467).GT.0) THEN
+          IF (LVLS(LP,IGET(467)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIEVP(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(467),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---melting ice
+         IF (IGET(468).GT.0) THEN
+          IF (LVLS(LP,IGET(468)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PIMLT(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(468),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!---cloud water autoconversion to rain
+         IF (IGET(469).GT.0) THEN
+          IF (LVLS(LP,IGET(469)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PRAUT(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=02    ! Parameter Table 2
+             CALL GRIBIT(IGET(469),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---cloud water collection (accretion) by rain
+         IF (IGET(470).GT.0) THEN
+          IF (LVLS(LP,IGET(470)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PRACW(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(470),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---rain evaporation
+         IF (IGET(471).GT.0) THEN
+          IF (LVLS(LP,IGET(471)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=PREVP(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(471),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---snow fall speed
+         IF (IGET(472).GT.0) THEN
+          IF (LVLS(LP,IGET(472)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=VSNOW(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(472),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---rain fall speed
+         IF (IGET(473).GT.0) THEN
+          IF (LVLS(LP,IGET(473)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=VRAIN1(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(473),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!---time averaged rain fall speed
+         IF (IGET(474).GT.0) THEN
+          IF (LVLS(LP,IGET(474)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=VRAIN2(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(474),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!--- temperature change due to CU scheme
+         IF (IGET(516).GT.0) THEN
+          IF (LVLS(LP,IGET(516)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=THCUTEN(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(516),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!--- cloud water change due to CU scheme
+         IF (IGET(517).GT.0) THEN
+          IF (LVLS(LP,IGET(517)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=QCCUTEN(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(517),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!--- cloud ice change due to CU scheme
+         IF (IGET(518).GT.0) THEN
+          IF (LVLS(LP,IGET(518)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=QICUTEN(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(518),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+!--- water vapor change due to CU scheme
+         IF (IGET(519).GT.0) THEN
+          IF (LVLS(LP,IGET(519)).GT.0) THEN
+             DO J=JSTA,JEND
+             DO I=1,IM
+               GRID1(I,J)=QVCUTEN(I,J)
+!               if(i.eq.29.and.j.eq.50)then
+!               print*,'grid1,pcond',grid1(i,j),pcond(i,j)
+!               endif
+             ENDDO
+             ENDDO
+             ID(1:25)=0
+             ID(02)=141    ! Parameter Table 141
+             CALL GRIBIT(IGET(519),LP,GRID1,IM,JM)
+          ENDIF
+         ENDIF
+
+!aligo
+
 !
 !---  Temperature tendency by all radiation: Requested by AFWA
          IF (IGET(294).GT.0) THEN
