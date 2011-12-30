@@ -633,7 +633,17 @@
         WRITE(6,*)' '
       ENDIF
 !
-      call DE_ALLOCATE
+
+! Temporary kludgy workaround: UPP crashes during memory deallocation on
+! 27:9:3 HWRF input on Jet, and on CCS and Vapor, it hangs during CRTM
+! initialization.  As a workaround on Jet, we disable memory
+! deallocation.  On CCS and Vapor, there is no workaround.  UPP is
+! simply unusable for satellite products there.
+
+!      call DE_ALLOCATE
+
+! FIXME: find a real fix and re-enable deallocation.
+
 !      if(IOFORM .EQ. 'netcdf')THEN
 !       call ext_ncd_ioclose ( DataHandle, Status )
 !      else
