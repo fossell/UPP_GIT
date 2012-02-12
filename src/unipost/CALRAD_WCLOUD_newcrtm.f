@@ -734,11 +734,6 @@
 !        tb2(i,j)=rtsolution(2,1)%brightness_temperature
 !        tb3(i,j)=rtsolution(3,1)%brightness_temperature
 !        tb4(i,j)=rtsolution(4,1)%brightness_temperature
-        if(i==ii.and.j==jj)print*,'sample rtsolution in CALRAD=',  &
-     &    rtsolution(9,1)%brightness_temperature,  &
-     &    rtsolution(10,1)%brightness_temperature,  &
-     &    rtsolution(11,1)%brightness_temperature,  &
-     &    rtsolution(12,1)%brightness_temperature   
          if(i==ii.and.j==jj)print*,'sample TB in CALRAD=', &
           tb(i,j,:)
 !     &    tb1(i,j),tb2(i,j),tb3(i,j),tb4(i,j)
