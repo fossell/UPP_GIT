@@ -208,6 +208,9 @@
  113  format(a20)
  114  format(a4)
       print*,'MODELNAME= ',MODELNAME
+
+!tms
+      iostatusD3D = 0  ! start with a clean slate
 !Chuang: If model is GFS, read in flux file name from unit5
       if(MODELNAME .EQ. 'GFS')then
          read(5,111,end=117)fileNameFlux
@@ -633,17 +636,8 @@
         WRITE(6,*)' '
       ENDIF
 !
-
-! Temporary kludgy workaround: UPP crashes during memory deallocation on
-! 27:9:3 HWRF input on Jet, and on CCS and Vapor, it hangs during CRTM
-! initialization.  As a workaround on Jet, we disable memory
-! deallocation.  On CCS and Vapor, there is no workaround.  UPP is
-! simply unusable for satellite products there.
-
+! Disable de_allocate because it causes a hang on the intel compiler:
 !      call DE_ALLOCATE
-
-! FIXME: find a real fix and re-enable deallocation.
-
 !      if(IOFORM .EQ. 'netcdf')THEN
 !       call ext_ncd_ioclose ( DataHandle, Status )
 !      else
