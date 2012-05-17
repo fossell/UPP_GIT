@@ -2,7 +2,7 @@
 !--------------------------------------------------------------------
       implicit none
 !
-      INTEGER, PARAMETER :: MXFLD=652,MXLVL=70
+      INTEGER, PARAMETER :: MXFLD=999,MXLVL=70
       CHARACTER*20 AVBL(MXFLD),FIELD(MXFLD)
       CHARACTER*6 DATSET      
 !
@@ -1121,6 +1121,15 @@
       DATA IFILV(624),AVBL(624),IQ(624),IS(624)     &
      &                      /1,'SSMIS F17 TB 53DEG18',118,008/
 
+! HWRF satellite additions: MTSAT-2 imager:
+      DATA IFILV(860),AVBL(860),IQ(860),IS(860)     &
+     &                      /1,'MTSAT2 CH1 NON NADIR',241,008/ !table 130
+      DATA IFILV(861),AVBL(861),IQ(861),IS(861)     &
+     &                      /1,'MTSAT2 CH2 NON NADIR',242,008/ !table 130
+      DATA IFILV(862),AVBL(862),IQ(862),IS(862)     &
+     &                      /1,'MTSAT2 CH3 NON NADIR',243,008/ !table 130
+      DATA IFILV(863),AVBL(863),IQ(863),IS(863)     &
+     &                      /1,'MTSAT2 CH4 NON NADIR',244,008/ !table 130   
 !end initialization
 !
    end module RQSTFLD_mod
