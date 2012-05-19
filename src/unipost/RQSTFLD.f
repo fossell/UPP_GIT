@@ -1123,13 +1123,13 @@
 
 ! HWRF satellite additions: MTSAT-2 imager:
       DATA IFILV(860),AVBL(860),IQ(860),IS(860)     &
-     &                      /1,'MTSAT2 CH1 NON NADIR',241,008/ !table 130
+     &                      /1,'MTSAT2 CH1 NON NADIR',118,008/ !table 130
       DATA IFILV(861),AVBL(861),IQ(861),IS(861)     &
-     &                      /1,'MTSAT2 CH2 NON NADIR',242,008/ !table 130
+     &                      /1,'MTSAT2 CH2 NON NADIR',118,008/ !table 130
       DATA IFILV(862),AVBL(862),IQ(862),IS(862)     &
-     &                      /1,'MTSAT2 CH3 NON NADIR',243,008/ !table 130
+     &                      /1,'MTSAT2 CH3 NON NADIR',118,008/ !table 130
       DATA IFILV(863),AVBL(863),IQ(863),IS(863)     &
-     &                      /1,'MTSAT2 CH4 NON NADIR',244,008/ !table 130   
+     &                      /1,'MTSAT2 CH4 NON NADIR',118,008/ !table 130   
 !end initialization
 !
    end module RQSTFLD_mod

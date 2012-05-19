@@ -1345,7 +1345,7 @@ SUBROUTINE CALRAD_WCLOUD
               if(isis=='imgr_mt2') then ! writing MTSAT-2 to grib
                  do ichan=1,4
                     !ichan=14+ichan  ! channel number
-                    igot=iget(860+ichan-1) ! iget(861) ... iget(864)
+                    igot=iget(860+ichan-1) ! iget(860) ... iget(863)
                     if(igot > 0) then
                        do j=jsta,jend
                           do i=1,im
@@ -1355,8 +1355,8 @@ SUBROUTINE CALRAD_WCLOUD
                        id(1:25) = 0
                        id(02) = 2
                        id(09) = 112
-                       id(10) = 122
-                       id(11) = ichan+30
+                       id(10) = 2
+                       id(11) = ichan
                        call gribit(igot,lvls(1,igot), grid1,im,jm)
                     endif
                  enddo
