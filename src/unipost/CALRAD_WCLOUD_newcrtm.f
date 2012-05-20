@@ -89,7 +89,7 @@ SUBROUTINE CALRAD_WCLOUD
   !      integer,parameter::  n_clouds = 4 
   integer,parameter::  n_aerosols = 0
   ! Add your sensors here
-  integer(i_kind),parameter:: n_sensors=8
+  integer(i_kind),parameter:: n_sensors=9
   character(len=20),parameter,dimension(1:n_sensors):: sensorlist= &
        (/'imgr_g12            ', &
        'imgr_g11            ', &
@@ -98,7 +98,8 @@ SUBROUTINE CALRAD_WCLOUD
        'ssmi_f15            ', &
        'ssmis_f20           ', &
        'ssmis_f17           ', &
-       'imgr_mt2            '/)
+       'imgr_mt2            ', &
+       'imgr_mt1r           '/)
   character(len=10),parameter,dimension(1:n_sensors):: obslist=  &
        (/'goes_img  ', &
        'goes_img  ', &
@@ -107,7 +108,8 @@ SUBROUTINE CALRAD_WCLOUD
        'ssmi      ', &
        'ssmis     ', &
        'ssmis     ', &
-       'imgr_mt2  '/)
+       'imgr_mt2  ', &
+       'imgr_mt1r '/)
   !
   integer(i_kind) sensorindex
   integer(i_kind) lunin,nobs,nchanl,nreal
@@ -199,7 +201,8 @@ SUBROUTINE CALRAD_WCLOUD
        .or. iget(612) > 0 .or. iget(613) > 0 .or. iget(614) > 0  &
        .or. iget(621) > 0 .or. iget(622) > 0 .or. iget(623) > 0  &
        .or. iget(624) > 0 .or. iget(860) > 0 .or. iget(861) > 0  &
-       .or. iget(862) > 0 .or. iget(863) > 0) then
+       .or. iget(862) > 0 .or. iget(863) > 0 .or. iget(864) > 0  &
+       .or. iget(865) > 0 .or. iget(866) > 0 .or. iget(867) > 0) then
      ! specify numbers of cloud species    
      if(imp_physics==99)then ! Zhao Scheme
         n_clouds=2 ! GFS uses Zhao scheme
@@ -280,7 +283,9 @@ SUBROUTINE CALRAD_WCLOUD
              .or. iget(613) > 0 .or. iget(614) > 0 .or. iget(621) > 0 &
              .or. iget(622) > 0 .or. iget(623) > 0 .or. iget(624) > 0)) .OR. &
              (isis=='imgr_mt2' .and. (iget(860)>0 .or. iget(861)>0 & 
-             .or. iget(862)>0 .or. iget(863)>0))) then
+             .or. iget(862)>0 .or. iget(863)>0)) .OR. &
+             (isis=='imgr_mt1r' .and. (iget(864)>0 .or. iget(865)>0 & 
+             .or. iget(866)>0 .or. iget(867)>0))) then
            print*,'obstype, isis= ',obstype,isis
            !       isis='amsua_n15'
 
@@ -941,7 +946,8 @@ SUBROUTINE CALRAD_WCLOUD
                 .or. iget(462) > 0 .or. iget(463) > 0 .or. iget(621) > 0  &
                 .or. iget(622) > 0 .or. iget(623) > 0 .or. iget(624) > 0 &
                 .or. iget(860) > 0 .or. iget(861) > 0 .or. iget(862) > 0 &
-                .or. iget(863) > 0) then
+                .or. iget(863) > 0 .or. iget(864) > 0 .or. iget(865) > 0 &
+                .or. iget(866) > 0 .or. iget(867) > 0) then
               do j=jsta,jend
                  do i=1,im
 
@@ -1356,6 +1362,26 @@ SUBROUTINE CALRAD_WCLOUD
                        id(02) = 2
                        id(09) = 112
                        id(10) = 2
+                       id(11) = ichan
+                       call gribit(igot,lvls(1,igot), grid1,im,jm)
+                    endif
+                 enddo
+              endif
+
+              if(isis=='imgr_mt1r') then ! writing MTSAT-1r to grib
+                 do ichan=1,4
+                    !ichan=14+ichan  ! channel number
+                    igot=iget(864+ichan-1) ! iget(864) ... iget(867)
+                    if(igot > 0) then
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,ichan)
+                          enddo
+                       enddo
+                       id(1:25) = 0
+                       id(02) = 2
+                       id(09) = 112
+                       id(10) = 1
                        id(11) = ichan
                        call gribit(igot,lvls(1,igot), grid1,im,jm)
                     endif
