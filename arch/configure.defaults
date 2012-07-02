@@ -29,8 +29,8 @@ SIZE_I4R8  = -qintsize=4 -qrealsize=8
 SIZE_I4R4  = -qintsize=4 -qrealsize=4
 SIZE       =
 
-PPDEFINE      = -WF,-DIBM4 -WF,-D$(BYTE_ORDER)
-PPDEFINE_C    = -DIBM4 -D$(BYTE_ORDER)
+PPDEFINE      = -WF,-DCOMMCODE -WF,-DIBM4 -WF,-D$(BYTE_ORDER)
+PPDEFINE_C    = -DCOMMCODE -DIBM4 -D$(BYTE_ORDER)
 FPPDEFINE     = $(PPDEFINE)
 
 FDEBUG  = -g -O0 -qfullpath -qflttrap=inv:ov:zero:en -qcheck -qsigtrap
@@ -77,7 +77,7 @@ SIZE_I4R8  = -i4 -r8
 SIZE_I4R4  = -i4 -r4
 SIZE       = 
 
-PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+PPDEFINE   = -DCOMMCODE -DLINUX -D$(BYTE_ORDER)
 FPPDEFINE  = $(PPDEFINE)
 
 FDEBUG  = -g -O0 -Mbounds -Mchkfpstk -Mchkptr -Mchkstk -traceback \
@@ -127,7 +127,7 @@ SIZE_I4R8  = -i4 -r8
 SIZE_I4R4  = -i4 -r4
 SIZE       = 
 
-PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+PPDEFINE   = -DCOMMCODE -DLINUX -D$(BYTE_ORDER)
 FPPDEFINE  = $(PPDEFINE)
 
 FDEBUG  = -O0 -g -Mbounds -Mchkfpstk -Mchkptr -Mchkstk -traceback \
@@ -176,7 +176,7 @@ SIZE_I4R8  = -i4 -r8
 SIZEI4R4   = -i4 -r4
 SIZE       =
 
-PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+PPDEFINE   = -DCOMMCODE -DLINUX -D$(BYTE_ORDER)
 FPPDEFINE  = $(PPDEFINE)
 
 FDEBUG  = -O0 -g -traceback -check all -ftrapuv -fpe0
@@ -223,7 +223,7 @@ SIZE_I4R8   = -i4 -r8
 SIZE_I4R4   = -i4 -r4
 SIZE        =
 
-PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+PPDEFINE   = -DCOMMCODE -DLINUX -D$(BYTE_ORDER)
 FPPDEFINE  = $(PPDEFINE)
 
 FDEBUG  = -O0 -g -traceback -check all -ftrapuv -fpe0
@@ -321,7 +321,7 @@ SIZE_I4R8  = -i4 -r8
 SIZE_I4R4  = -i4 -r4
 SIZE       =
 
-PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+PPDEFINE   = -DCOMMCODE -DLINUX -D$(BYTE_ORDER)
 FPPDEFINE  = $(PPDEFINE)
 
 FDEBUG  = -g -O0 -ffpe-trap=overflow,zero -fbounds-check -Wuninitialized \
@@ -370,7 +370,7 @@ SIZE_I4R8  = -i4 -r8
 SIZE_I4R4  = -i4 -r4
 SIZE       =
 
-PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+PPDEFINE   = -DCOMMCODE -DLINUX -D$(BYTE_ORDER)
 FPPDEFINE  = $(PPDEFINE)
 
 FDEBUG  = -g -O0 -ffpe-trap=overflow,zero -fbounds-check -Wuninitialized \

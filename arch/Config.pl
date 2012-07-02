@@ -97,11 +97,11 @@ while ( substr( $ARGV[0], 0, 1 ) eq "-" )
 #  Check for compression libraries needed in support of GRIB2 format
 $JASPERLIB = "";
 $JASPERLIB  =  $ENV{JASPERLIB};
-if ($JASPERLIB) {
-  $sw_grib2_libs= "-L$sw_wrf_path/external/io_grib2 -lio_grib2 " .
-                  "-L$JASPERLIB -ljasper";
- print "grib2lib = $sw_grib2_libs";
-}
+#if ($JASPERLIB) {
+#  $sw_grib2_libs= "-L$sw_wrf_path/external/io_grib2 -lio_grib2 " .
+#                  "-L$JASPERLIB -ljasper";
+# print "grib2lib = $sw_grib2_libs";
+#}
 
 #
 # Check for HWRF environment variable set if applicable

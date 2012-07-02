@@ -3098,7 +3098,7 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-             EL_PBL( i, j, l ) = buf3dx ( i, j ,ll)
+             EL_PBL( i, j, l ) = buf3dx ( i, ll ,j)
 	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample EL= ', &
                   i,j,l,EL_PBL( i, j, l )	     
             end do
@@ -3126,7 +3126,7 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-             EXCH_H( i, j, l ) = buf3dx ( i, j, ll )
+             EXCH_H( i, j, l ) = buf3dx ( i, ll, j )
 	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample EXCH= ', &
                   i,j,l,EXCH_H( i, j, l )	     
             end do

@@ -647,7 +647,7 @@
          IGDS( 5) = JM
          IGDS( 6) = LATSTART
          IGDS( 7) = LONSTART
-         IGDS( 8) = 128
+         IGDS( 8) = 136
          IGDS( 9) = LATLAST 
          IGDS(10) = LONLAST 
          IGDS(11) = DYVAL
