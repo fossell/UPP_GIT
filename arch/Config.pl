@@ -190,7 +190,11 @@ while ( <CONFIGURE_DEFAULTS> )
   if ( $latchon == 1 )
   {
     $_ =~ s/CONFIGURE_NETCDF_PATH/$sw_netcdf_path/g ;
-    $_ =~ s/CONFIGURE_NETCDF_LIBS/$sw_usenetcdff -lnetcdf/g ;
+    if($ENV{NETCDF_LDFLAGS}) {
+        $_ =~ s/CONFIGURE_NETCDF_LIBS/$ENV{NETCDF_LDFLAGS}/g ;
+    } else {
+        $_ =~ s/CONFIGURE_NETCDF_LIBS/$sw_usenetcdff -lnetcdf/g ;
+    }
     $_ =~ s/CONFIGURE_WRF_PATH/$sw_wrf_path/g ;
     $_ =~ s/CONFIGURE_FC/$sw_fc/g ;
     $_ =~ s/CONFIGURE_F90/$sw_f90/g ;
@@ -286,7 +290,11 @@ print CONFIGURE_UPP @machopts  ;
 open ARCH_POSTAMBLE, "< arch/postamble" or die "cannot open arch/postamble" ;
 while ( <ARCH_POSTAMBLE> ) { 
     $_ =~ s/CONFIGURE_NETCDF_PATH/$sw_netcdf_path/g ;
-    $_ =~ s/CONFIGURE_NETCDF_LIBS/$sw_usenetcdff -lnetcdf/g ;
+    if($ENV{NETCDF_LDFLAGS}) {
+        $_ =~ s/CONFIGURE_NETCDF_LIBS/$ENV{NETCDF_LDFLAGS}/g ;
+    } else {
+        $_ =~ s/CONFIGURE_NETCDF_LIBS/$sw_usenetcdff -lnetcdf/g ;
+    }
     $_ =~ s/CONFIGURE_WRF_PATH/$sw_wrf_path/g ;
     $_ =~ s/CONFIGURE_COMMS_OBJST/$sw_comms_objst/g ;
     $_ =~ s/CONFIGURE_COMMS_OBJ/$sw_comms_obj/g ;
