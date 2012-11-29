@@ -1120,6 +1120,8 @@
      &                      /1,'SSMIS F17 TB 53DEG17',118,008/
       DATA IFILV(624),AVBL(624),IQ(624),IS(624)     &
      &                      /1,'SSMIS F17 TB 53DEG18',118,008/
+      DATA IFILV(625),AVBL(625),IQ(625),IS(625)     &
+     &                      /1,'SSMIS F17 TB 53DEG04',118,008/
 
 !end initialization
 !
