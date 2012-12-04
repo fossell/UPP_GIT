@@ -81,6 +81,8 @@ $(TARGET):	wrflink $(OBJS_F)
 # The following links are done for compilation/link errors found in various compilers
 wrflink: $(WRF_DIR)/frame/module_internal_header_util.mod
 	$(LN)  $(WRF_DIR)/frame/module_internal_header_util.mod $(INCMOD)/module_internal_header_util.mod
+	$(LN)  $(WRF_DIR)/external/io_int/module_io_int_idx.mod $(INCMOD)/
+	$(LN)  $(WRF_DIR)/external/io_int/module_io_int_read.mod $(INCMOD)/
 
 #
 # This insures a dependency found in some files -- watch file order above remains -- should

@@ -55,13 +55,12 @@
       use lookup_mod
       use ctlblk_mod
       use gridspec_mod
+      use module_io_int_idx, only: io_int_index, r_info
+      use module_io_int_read, only: io_int_fetch_data
 !
 !     INCLUDE/SET PARAMETERS.
 !     
       INCLUDE "mpif.h"
-! This version of INITPOST shows how to initialize, open, read from, and
-! close a NetCDF dataset. In order to change it to read an internal (binary)
-! dataset, do a global replacement of _ncd_ with _int_. 
 
       character(len=31) :: VarName
       integer :: Status
@@ -95,16 +94,6 @@
       REAL DUM3D ( IM, LM, JM )
       REAL DUM3D2 ( IM, LM+1, JM ),DUMSOIL ( IM, NSOIL, JM )
 
-      character*132, allocatable :: datestr_all(:)
-      character*132, allocatable :: varname_all(:)
-      integer, allocatable       :: domainend_all(:,:)
-      integer, allocatable       :: start_block(:)
-      integer, allocatable       :: end_block(:)
-      integer, allocatable       :: start_byte(:)
-      integer, allocatable       :: end_byte(:) 
-      integer(kind=i_llong), allocatable           :: file_offset(:)
-      integer(kind=i_llong) this_offset
-      integer this_length
       integer ibuf(im,jsta_2l:jend_2u)
       real buf(im,jsta_2l:jend_2u),bufsoil(im,nsoil,jsta_2l:jend_2u)   &
         ,buf3d(im,jm,lm),buf3d2(im,jm,lp1),buf3dx(im,lm,jm)
@@ -114,6 +103,8 @@
               iunit,nrecs,I,J,L
 
       character*80        :: titlestring
+
+      type(r_info), pointer :: r(:) => NULL()
 
 !
       DATA BLANK/'    '/
@@ -147,24 +138,6 @@
         end do
        end do
       end do
-!
-!  how do I get the filename? 
-!      fileName = '/ptmp/wx20mb/wrfout_01_030500'
-!      DateStr = '2002-03-05_18:00:00'
-!  how do I get the filename?
-!         call ext_int_ioinit(SysDepInfo,Status)
-!          print*,'called ioinit', Status
-!         call ext_int_open_for_read( trim(fileName), 0, 0, " ", 
-!     &  DataHandle, Status)
-!          print*,'called open for read', Status
-!       if ( Status /= 0 ) then
-!         print*,'error opening ',fileName, ' Status = ', Status ; stop
-!       endif
-! get date/time info
-!  this routine will get the next time from the file, not using it
-!      print *,'DateStr before calling ext_int_get_next_time=',DateStr
-!      call ext_int_get_next_time(DataHandle, DateStr, Status)
-!      print *,'DateStri,Status,DataHandle = ',DateStr,Status,DataHandle
 
 !  The end j row is going to be jend_2u for all variables except for V.
       JS=JSTA_2L
@@ -175,71 +148,22 @@
        JEV=JEND_2U
       ENDIF
 
-      call ext_int_get_dom_ti_char(DataHandle, 'TITLE',titlestring, status)
-        print*,'TITLE= ',trim(titlestring)
+      ! Get an index of the file
+      call io_int_index(filename, r, ierr)
+      if (ierr /= 0) then
+       print*,'Error obtinaing index of: ', trim(filename)
+       stop
+      end if
 
-!
-! Getting start time
-!      call ext_int_get_dom_ti_char(DataHandle
-!     1 ,'START_DATE',startdate, status )
-!        print*,'startdate= ',startdate
-!      jdate=0
-!      idate=0
-!      read(startdate,15)iyear,imn,iday,ihrst,imin       
-! 15   format(i4,1x,i2,1x,i2,1x,i2,1x,i2)
-!      print*,'start yr mo day hr min =',iyear,imn,iday,ihrst,imin
-!      print*,'processing yr mo day hr min='
-!     +,idat(3),idat(1),idat(2),idat(4),idat(5)
-!      idate(1)=iyear
-!      idate(2)=imn
-!      idate(3)=iday
-!      idate(5)=ihrst
-!      idate(6)=imin
-!      SDAT(1)=imn
-!      SDAT(2)=iday
-!      SDAT(3)=iyear
-!      jdate(1)=idat(3)
-!      jdate(2)=idat(1)
-!      jdate(3)=idat(2)
-!      jdate(5)=idat(4)
-!      jdate(6)=idat(5)
+      ! MPI Open the file
+      call mpi_file_open(mpi_comm_world, filename,                      &
+                         mpi_mode_rdonly, mpi_info_null, iunit, ierr)
+      if (ierr /= 0) then
+       print*,"Error opening file with mpi io"
+       stop
+      end if
 
-!      CALL W3DIFDAT(JDATE,IDATE,0,RINC)
-!      ifhr=nint(rinc(2)+rinc(1)*24.)
-!      ifmin=nint(rinc(3))
-!      print*,' in INITPOST ifhr ifmin fileName=',ifhr,ifmin,fileName
-      
-! Getting tstart
-!      tstart=0.
-!      call ext_int_get_dom_ti_real(DataHandle,'TSTART',tmp
-!     + ,1,ioutcount,istatus)
-!      tstart=tmp 
-!      print*,'status for getting TSTART= ',istatus 
-!      IF( abs(istatus-0) .GT. 1)THEN
-!       PRINT*,'you do not have tstart in your WRF output,
-!     + many grid navigation will be read in incorrectly, STOPPING'       
-!       STOP   
-!      END IF 
-       print*,'TSTART= ',TSTART 
-      
-! Getting restart
-      
-!       RESTRT=.TRUE.  ! set RESTRT as default
-
-!UPP      IF(tstart .GT. 1.0E-2)THEN
-!       ifhr=ifhr+NINT(tstart)
-!       rinc=0
-!       idate=0
-!       rinc(2)=-1.0*ifhr
-!       call w3movdat(rinc,jdate,idate)
-!       SDAT(1)=idate(2)
-!       SDAT(2)=idate(3)
-!       SDAT(3)=idate(1)
-!       IHRST=idate(5)       
-!       print*,'new forecast hours for restrt run= ',ifhr
-!       print*,'new start yr mo day hr min =',sdat(3),sdat(1)
-!     +       ,sdat(2),ihrst,imin
-!      END IF 
+      call io_int_fetch_data(iunit, r, 'TITLE', titlestring, ierr)
 
 !  OK, since all of the variables are dimensioned/allocated to be
 !  the same size, this means we have to be careful int getVariable
@@ -248,154 +172,36 @@
 !  only be im,jm,lm points of data available for a particular variable.  
 ! get metadata
 
-        imp_physics=-33333
-        call ext_int_get_dom_ti_integer(DataHandle,'MP_PHYSICS'          &
-     & ,itmp,1,ioutcount,istatus)
-        if(imp_physics==-33333 .or. istatus/=0) then
-           imp_physics=5        ! assume ferrier if nothing specified
-        else
-           imp_physics=itmp
-        endif
-
-        if(imp_physics==85) imp_physics=5  ! HWRF scheme = Ferrier scheme
-        print*,'MP_PHYSICS= ',imp_physics
-
-        icu_physics=-33333
-        call ext_int_get_dom_ti_integer(DataHandle,'CU_PHYSICS'          &
-     & ,itmp,1,ioutcount,istatus)
-        if(icu_physics==-33333 .or. istatus/=0) then
-           icu_physics=4        ! assume SAS if nothing specified
-        else
-           icu_physics=itmp
-        endif
-
-        if(icu_physics==84) icu_physics=4  ! HWRF SAS = SAS
-        print*,'CU_PHYSICS= ',icu_physics
-
-        call ext_int_get_dom_ti_integer(DataHandle,'SF_SURFACE_PHYSICS',  &
-                 itmp,1,ioutcount,istatus)
-        isf_physics=itmp
-        print*,'SF_PHYSICS= ',isf_physics
-
-!        call ext_int_get_dom_ti_real(DataHandle,'DX',tmp
-!     + ,1,ioutcount,istatus)
-!        dxval=nint(tmp*1000.) ! E-grid dlamda in degree
-!        write(6,*) 'dxval= ', dxval
-!        call ext_int_get_dom_ti_real(DataHandle,'DY',tmp
-!     + ,1,ioutcount,istatus)
-!        dyval=nint(1000.*tmp)
-!        write(6,*) 'dyval= ', dyval
-!	call ext_int_get_dom_ti_real(DataHandle,'DT',tmp
-!     + ,1,ioutcount,istatus)
-!        DT=tmp
-!        write(6,*) 'DT= ', DT
-
-!        call ext_int_get_dom_ti_real(DataHandle,'CEN_LAT',tmp
-!     + ,1,ioutcount,istatus)
-
-!        cenlat=nint(1000.*tmp)
-!        write(6,*) 'cenlat= ', cenlat
-!        call ext_int_get_dom_ti_real(DataHandle,'CEN_LON',tmp
-!     + ,1,ioutcount,istatus)
-
-!        cenlon=nint(1000.*tmp)
-!        write(6,*) 'cenlon= ', cenlon
-!        call ext_int_get_dom_ti_real(DataHandle,'TRUELAT1',tmp
-!     + ,1,ioutcount,istatus)
-!        truelat1=nint(1000.*tmp)
-!        write(6,*) 'truelat1= ', truelat1
-!        call ext_int_get_dom_ti_real(DataHandle,'TRUELAT2',tmp
-!     + ,1,ioutcount,istatus)
-!        truelat2=nint(1000.*tmp)
-!        write(6,*) 'truelat2= ', truelat2
-!        call ext_int_get_dom_ti_integer(DataHandle,'MAP_PROJ',itmp
-!     + ,1,ioutcount,istatus)
-!        maptype=itmp
-
-!        write(6,*) 'maptype is ', maptype
-! closing wrf io api      
-!      call ext_int_ioclose ( DataHandle, Status )
-
-! start calling mpi io
-      iunit=33
-      call count_recs_wrf_binary_file(iunit, fileName, nrecs)
-      print*,'- FILE CONTAINS ',nrecs, ' RECORDS'
-      allocate (datestr_all(nrecs))
-      allocate (varname_all(nrecs))
-      allocate (domainend_all(3,nrecs))
-      allocate (start_block(nrecs))
-      allocate (end_block(nrecs))
-      allocate (start_byte(nrecs))
-      allocate (end_byte(nrecs))
-      allocate (file_offset(nrecs))
-      
-      call inventory_wrf_binary_file(iunit, filename, nrecs,            &  
-                      datestr_all,varname_all,domainend_all,            &
-            start_block,end_block,start_byte,end_byte,file_offset)
-     
-      close(iunit)
-
-      call mpi_file_open(mpi_comm_world, filename                       &
-       , mpi_mode_rdonly,mpi_info_null, iunit, ierr)
+      call io_int_fetch_data(iunit, r, 'MP_PHYSICS', imp_physics, ierr)
       if (ierr /= 0) then
-       print*,"Error opening file with mpi io"
-       stop
+         imp_physics=5        ! assume ferrier if nothing specified
+      endif
+      if(imp_physics==85) imp_physics=5  ! HWRF scheme = Ferrier scheme
+      print*,'MP_PHYSICS= ',imp_physics
+
+      call io_int_fetch_data(iunit, r,'CU_PHYSICS', icu_physics, ierr)
+      if (ierr /= 0) then
+         icu_physics=4        ! assume SAS if nothing specified
+      endif
+      if(icu_physics==84) icu_physics=4  ! HWRF SAS = SAS
+      print*,'CU_PHYSICS= ',icu_physics
+
+      call io_int_fetch_data(iunit,r,'SF_SURFACE_PHYSICS',isf_physics,ierr)
+      print*,'SF_PHYSICS= ',isf_physics
+
+      call io_int_fetch_data(iunit, r, 'START_DATE', startdate, ierr)
+      if (ierr /= 0) then
+        print*,"Error reading START_DATE using MPIIO"
+      else
+        print*,'START_DATE from MPIIO READ= ', startdate
       end if
 
-      VarName='START_DATE'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+(6+11)*4         &
-          ,startdate2,19*4,mpi_character, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= '
-	  do n=1,19
-      	    print*,'n startdate2 = ',n,startdate2(n)
-	  end do  
-        end if	
-      end if
-      
-      read(startdate2(1),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar1
-      read(startdate2(2),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar2
-      read(startdate2(3),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar3
-      read(startdate2(4),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar4
-      iyear=igar1*1000+igar2*100+igar3*10+igar4
-      print*,'iyear= ',iyear
-      read(startdate2(6),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar1
-      read(startdate2(7),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar2
-      imn=igar1*10+igar2
-      read(startdate2(9),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar1
-      read(startdate2(10),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar2
-      iday=igar1*10+igar2
-      read(startdate2(12),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar1
-      read(startdate2(13),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar2
-      ihrst=igar1*10+igar2
-      read(startdate2(15),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar1
-      read(startdate2(16),fmt='(A4)')cgar
-      read(cgar, '(I1)')igar2
-      imin=igar1*10+igar2
-      
       jdate=0
       idate=0
-!      read(startdate,15)iyear,imn,iday,ihrst,imin       
+      read(startdate,15)iyear,imn,iday,ihrst,imin       
  15   format(i4,1x,i2,1x,i2,1x,i2,1x,i2)
       print*,'start yr mo day hr min =',iyear,imn,iday,ihrst,imin
-      print*,'processing yr mo day hr min='                             &  
+      print*,'processing yr mo day hr min='                             &
          ,idat(3),idat(1),idat(2),idat(4),idat(5)
       idate(1)=iyear
       idate(2)=imn
@@ -410,47 +216,17 @@
       jdate(3)=idat(2)
       jdate(5)=idat(4)
       jdate(6)=idat(5)
-!      CALL W3DIFDAT(JDATE,IDATE,2,RINC)
-!      ifhr=nint(rinc(2))
+
       CALL W3DIFDAT(JDATE,IDATE,0,RINC)
       ifhr=nint(rinc(2)+rinc(1)*24.)
       ifmin=nint(rinc(3))
       print*,' in INITPOST ifhr ifmin fileName=',ifhr,ifmin,fileName
-      
+
 ! Getting tstart
       tstart=0.
-      VarName='TSTART'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &   
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-          tstart=garb
-        end if	
-      end if
+      call io_int_fetch_data(iunit, r, 'TSTART', tstart, ierr)
       print*,'tstart= ',tstart
-      
-! Getting restart
-      
-      RESTRT=.TRUE.  ! set RESTRT as default
-!      call ext_int_get_dom_ti_integer(DataHandle,'RESTARTBIN',itmp
-!     + ,1,ioutcount,istatus)
-      
-!      IF(itmp .LT. 1)THEN
-!        RESTRT=.FALSE.
-!      ELSE
-!        RESTRT=.TRUE.
-!      END IF
-     
-!      print*,'status for getting RESTARTBIN= ',istatus
-     
-!      print*,'Is this a restrt run? ',RESTRT
-            
+
       IF(tstart .GT. 1.0E-2)THEN
        ifhr=ifhr+NINT(tstart)
        rinc=0
@@ -462,1274 +238,506 @@
        SDAT(3)=idate(1)
        IHRST=idate(5)       
        print*,'new forecast hours for restrt run= ',ifhr
-       print*,'new start yr mo day hr min =',sdat(3),sdat(1)               &  
+       print*,'new start yr mo day hr min =',sdat(3),sdat(1)               &
              ,sdat(2),ihrst,imin
-      END IF 
+      END IF
 
-      VarName='MP_PHYSICS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4                 &
-          ,igarb,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',igarb
-          imp_physics=igarb
-        end if	
-      end if
-      if (imp_physics==85) imp_physics=5 !!for HWRF
-      print*,'MP_PHYSICS= ',imp_physics
+      RESTRT=.TRUE.  ! set RESTRT as default
 
-      VarName='SF_SURFACE_PHYSICS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4                 &
-          ,igarb,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',igarb
-          isf_physics=igarb
-        end if	
-      end if
-      print*,'SF_SURFACE_PHYSICS= ',isf_physics
+      call io_int_fetch_data(iunit, r, 'DX', garb, ierr)
+      print*,'DX from MPIIO READ= ',garb
+      dxval=nint(garb*1000.) ! E-grid dlamda in degree
+      write(6,*) 'dxval= ', dxval
 
-      VarName='DX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &   
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  dxval=nint(garb*1000.) ! E-grid dlamda in degree
-          write(6,*) 'dxval= ', dxval
-        end if	
-      end if
+      call io_int_fetch_data(iunit, r, 'DY', garb, ierr)
+      print*,'DY from MPIIO READ= ',garb
+      dyval=nint(garb*1000.) ! E-grid dlamda in degree
+      write(6,*) 'dyval= ', dyval
 
-      VarName='DY'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  dyval=nint(garb*1000.) ! E-grid dlamda in degree
-          write(6,*) 'dyval= ', dyval
-        end if	
-      end if
+      call io_int_fetch_data(iunit, r, 'DT', dt, ierr)
+      write(6,*) 'DT= ', DT
 
-      VarName='DT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  DT=garb 
-          write(6,*) 'DT= ', DT
-        end if	
-      end if
-      
-      VarName='CEN_LAT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  cenlat=nint(garb*1000.)
-          write(6,*) 'cenlat= ', cenlat
-        end if	
-      end if
-      
-      VarName='CEN_LON'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  cenlon=nint(garb*1000.)
-          write(6,*) 'cenlon= ', cenlon
-        end if	
-      end if
+      call io_int_fetch_data(iunit, r, 'CEN_LAT', garb, ierr)
+      print*,'CEN_LAT from MPIIO READ= ',garb
+      cenlat=nint(garb*1000.)
+      write(6,*) 'cenlat= ', cenlat
 
-      VarName='TRUELAT1'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  TRUELAT1=nint(garb*1000.)
-          write(6,*) 'truelat1= ', TRUELAT1
-        end if	
-      end if
-      
-      VarName='TRUELAT2'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,garb,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',garb
-	  TRUELAT2=nint(garb*1000.)
-          write(6,*) 'truelat2= ', TRUELAT2
-        end if	
-      end if
+      call io_int_fetch_data(iunit, r, 'CEN_LON', garb, ierr)
+      print*,'CEN_LON from MPIIO READ= ',garb
+      cenlon=nint(garb*1000.)
+      write(6,*) 'cenlon= ', cenlon
 
-      VarName='MAP_PROJ'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file"
-      else
-        call mpi_file_read_at(iunit,file_offset(index)+5*4              &  
-          ,igarb,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName," using MPIIO"
-        else
-          print*,VarName, ' from MPIIO READ= ',igarb
-	  maptype=igarb
-	  write(6,*) 'maptype is ', maptype
-        end if	
-      end if
-      gridtype='E'
+      ! Does HWRF (NMM) use TRUELAT1 and TRUELAT2?
+!      call io_int_fetch_data(iunit, r, 'TRUELAT1', garb, ierr)
+!      print*,'TRUELAT1 from MPIIO READ= ',garb
+!      TRUELAT1=nint(garb*1000.)
+!      write(6,*) 'truelat1= ', TRUELAT1
+!
+!      call io_int_fetch_data(iunit, r, 'TRUELAT2', garb, ierr)
+!      print*,'TRUELAT2 from MPIIO READ= ',garb
+!      TRUELAT2=nint(garb*1000.)
+!      write(6,*) 'truelat2= ', TRUELAT2
 
-      VarName='HBM2'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HBM2=SPVAL
-      else
-        print*,'HBM2 index,file_offset(index),file_offset(index+1)='   &
-          ,	  index,file_offset(index),file_offset(index+1)
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1) 
-        call mpi_file_read_at(iunit,this_offset                         &  
-           ,hbm2,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
+      call io_int_fetch_data(iunit, r, 'MAP_PROJ', maptype, ierr)
+      write(6,*) 'maptype is ', maptype
+
+      call io_int_fetch_data(iunit, r, 'GRIDTYPE', gridtype, ierr)
+      write(6,*) 'gridtype is ', gridtype
+
+      call io_int_fetch_data(iunit, r, 'HBM2', hbm2, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading HBM2: Assigned missing values"
           HBM2=SPVAL
-        end if
-      end if
+      endif
 
-      VarName='SM'      
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SM=SPVAL
-      else        
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-	print*,'this_offset,this_length= ',this_offset,this_length 
-        call mpi_file_read_at(iunit,this_offset                         &  
-          ,sm,this_length,mpi_real4, mpi_status_ignore, ierr)
+      call io_int_fetch_data(iunit, r, 'SM', sm, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SM: Assigned missing values"
+          sm=SPVAL
+      endif
 
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SM=SPVAL
-        else
+      call io_int_fetch_data(iunit, r, 'SICE', sice, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SICE: Assigned missing values"
+          sice=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'PD', pd, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PD: Assigned missing values"
+          pd=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'FIS', fis, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading FIS: Assigned missing values"
+          fis=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'T', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading T: Assigned missing values"
+          t=SPVAL
+      else
+          do l = 1, lm
+              ll=lm-l+1
+              do j = jsta_2l, jend_2u
+                  do i = 1, im
+                      T ( i, j, l ) = buf3d ( i, j, ll )
+                  end do
+              end do
+          end do
+      endif
+
+      call io_int_fetch_data(iunit, r, 'Q', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading Q: Assigned missing values"
+          q=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
           do j = jsta_2l, jend_2u
-!	  do j = jsta, jend
-           do i = 1, im
-!             SM(I,J)=DUMMY2(I,J)
-             if (j.eq.jm/2 .and. mod(i,10).eq.0)                    &   
-                print*,'sample SM= ',i,j,sm(i,j)
-     
-           enddo
-          enddo 
-        end if 
-      end if
-
-      VarName='SICE'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SICE=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-	print*,'this_offset,this_length= ',this_offset,this_length 
-        call mpi_file_read_at(iunit,this_offset                        &  
-          ,sice,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SICE=SPVAL
-        end if
-      end if
-      
-
-      VarName='PD'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PD=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                          &  
-          ,pd,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PD=SPVAL
-        end if
-      end if
-
-!       do j = jsta_2l, jend_2u
-!        do i = 1, im
-!	PD(I,J)=DUMMY2(I,J)
-!        enddo
-!       enddo
-
-      VarName='FIS'
-      
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        FIS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                          &
-           ,fis,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          FIS=SPVAL
-        end if
-      end if
-
-      VarName='T'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        T=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                          &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          T=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-!            T ( i, j, l ) = buf3d ( i, ll, j )
-             T ( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample T= ',    &
-               i,j,l,T ( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if	 
-	  
-
-      VarName='Q'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        Q=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                          &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          Q=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             Q ( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample Q= ',    &
-               i,j,l,Q ( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      
-      print*,'finish reading mixing ratio'
+              do i = 1, im
+                  Q ( i, j, l ) = buf3d ( i, j, ll )
+              end do
+          end do
+      end do
       ii=im/2
       jj=(jsta+jend)/2
-!      print*,'Q at ',ii,jj,ll,' = ',Q(ii,jj,ll)
 
-      VarName='U'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        U=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                          &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          U=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             U ( i, j, l ) = buf3d ( i, j, ll )
-	     UH( i, j, l ) = U( i, j, l )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample U= ',    &
-               i,j,l,U ( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
+      call io_int_fetch_data(iunit, r, 'U', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading U: Assigned missing values"
+          u=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  U ( i, j, l ) = buf3d ( i, j, ll )
+                  UH( i, j, l ) = U( i, j, l )
+              end do
+          end do
+      end do
 
-      VarName='V'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        V=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                          &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          V=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             V ( i, j, l ) = buf3d ( i, j, ll )
-	     VH( i, j, l ) = V( i, j, l )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample V= ',   &
-               i,j,l,V ( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after V'
-      
-      varname='DX_NMM'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        DX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                          &
-          ,dx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          DX=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'V', vwbuf3dsice, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading V: Assigned missing values"
+          v=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  V ( i, j, l ) = buf3d ( i, j, ll )
+                  VH( i, j, l ) = V( i, j, l )
+              end do
+          end do
+      end do
 
-      varname='ETA1'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ETA1=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,ETA1,lm,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ETA1=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'DX_NMM', dx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading DX_NMM: Assigned missing values"
+          dx=SPVAL
+      endif
 
-      varname='ETA2'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ETA2=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-           ,ETA2,lm,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ETA2=SPVAL
-        end if
-      end if
-      
-      open(75,file='ETAPROFILE.txt',form='formatted',                    &
-              status='unknown')
-        DO L=1,lm+1 
-	 IF(L .EQ. 1)THEN
-	  write(75,1020)L, 0., 0.
-	 ELSE 
-	  write(75,1020)L, ETA1(lm+2-l), ETA2(lm+2-l)
-	 END IF     
-!         print*,'L, ETA1, ETA2= ',L, ETA1(l), ETA2(l)
-        END DO
- 1020   format(I3,2E17.10)	
-	close (75)
+      call io_int_fetch_data(iunit, r, 'ETA1', eta1, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ETA1: Assigned missing values"
+          eta1=SPVAL
+      endif
 
-      varname='PDTOP'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PDTOP=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                &
-          ,pdtop,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PDTOP=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ETA2', eta2, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ETA2: Assigned missing values"
+          eta2=SPVAL
+      endif
 
-        varname='PT'
-	call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PT=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                &
-         ,pt,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PT=SPVAL
-        end if
-      end if
-      
+      open(75,file='ETAPROFILE.txt',form='formatted',status='unknown')
+      DO L=1,lm+1
+        IF(L .EQ. 1)THEN
+          write(75,1020)L, 0., 0.
+        ELSE
+          write(75,1020)L, ETA1(lm+2-l), ETA2(lm+2-l)
+        END IF
+      END DO
+1020   format(I3,2E17.10)
+      close (75)
+
+      call io_int_fetch_data(iunit, r, 'PDTOP', pdtop, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PDTOP: Assigned missing values"
+          pdtop=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'PT', pt, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PT: Assigned missing values"
+          pt=SPVAL
+      endif
+
       print*,'PT, PDTOP= ',PT,PDTOP
-	
-      varname='PBLH'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PBLH=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,pblh,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PBLH=SPVAL
-        end if
-      end if
 
-     varname='MIXHT' !PLee (3/07)
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        MIXHT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-        this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset,mixht,this_length,mpi_real4, &
-                              mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          MIXHT=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'PBLH', pblh, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PBLH: Assigned missing values"
+          pblh=SPVAL
+      endif
 
-      varname='USTAR'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        USTAR=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,ustar,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          USTAR=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'MIXHT', mixht, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading MIXHT: Assigned missing values"
+          mixht=SPVAL
+      endif
 
-      varname='Z0'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        Z0=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,z0,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          Z0=SPVAL
-        end if
-      end if
-      
-      varname='THS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        THS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,ths,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          THS=SPVAL
-        end if
-      end if
-	
-      VarName='QS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        QS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,qs,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          QS=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'USTAR', ustar, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SICE: Assigned missing values"
+          sice=SPVAL
+      endif
 
-      varname='TWBS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        TWBS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,twbs,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          TWBS=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'Z0', z0, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading Z0: Assigned missing values"
+          sice=SPVAL
+      endif
 
-      varname='QWBS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        QWBS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,qwbs,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          QWBS=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'THS', ths, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading THS: Assigned missing values"
+          ths=SPVAL
+      endif
 
-      varname='PREC' ! instantaneous precip rate?
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PREC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,prec,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PREC=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'QS', qs, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading QS: Assigned missing values"
+          qs=SPVAL
+      endif
 
-      varname='ACPREC' ! accum total precip
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ACPREC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,ACPREC,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ACPREC=SPVAL
-        end if
-      end if
-      
-      varname='CUPREC' ! accum cumulus precip
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CUPREC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,cuprec,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CUPREC=SPVAL
-        else
+      call io_int_fetch_data(iunit, r, 'TWBS', twbs, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TWBS: Assigned missing values"
+          twbs=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'QWBS', qwbs, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading QWBS: Assigned missing values"
+          qwbs=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'PREC', prec, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PREC: Assigned missing values"
+          prec=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'ACPREC', acprec, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ACPREC: Assigned missing values"
+          acprec=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'CUPREC', cuprec, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CUPREC: Assigned missing values"
+          cuprec=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+        do i = 1, im
+          ANCPRC(I,J)=ACPREC(I,J)-CUPREC(I,J)
+        enddo
+      enddo
+
+      call io_int_fetch_data(iunit, r, 'LSPA', lspa, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading LSPA: Assigned missing values"
+          lspa=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SNO', sno, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SNO: Assigned missing values"
+          sno=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SI', si, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SI: Assigned missing values"
+          si=SPVAL
+      endif
+      call io_int_fetch_data(iunit, r, 'CLDEFI', sice, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CLDEFI: Assigned missing values"
+          cldefi=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'TH10', th10, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TH10: Assigned missing values"
+          th10=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'Q10', q10, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading Q10: Assigned missing values"
+          q10=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'PSHLTR', pshltr, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PSHLTR: Assigned missing values"
+          pshltr=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'TSHLTR', tshltr, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TSHLTR: Assigned missing values"
+          tshltr=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'QSHLTR', qshltr, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading QSHLTR: Assigned missing values"
+          qshltr=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'Q2', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading Q2: Assigned missing values"
+          q2=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
           do j = jsta_2l, jend_2u
-           do i = 1, im
-	     ANCPRC(I,J)=ACPREC(I,J)-CUPREC(I,J)
-           enddo
-          enddo
-        end if
-      end if
-      write(0,*)' after CUPREC'
+              do i = 1, im
+                  Q2 ( i, j, l ) = buf3d ( i, j, ll )
+              end do
+          end do
+      end do
 
-      varname='LSPA'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        LSPA=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,lspa,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          LSPA=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'AKHS_OUT', akhs, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading AKHS_OUT: Assigned missing values"
+          akhs=SPVAL
+      endif
 
-      varname='SNO'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SNO=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sno,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SNO=SPVAL
-        end if
-      end if
-     
-      varname='SI'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SI=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,si,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SI=SPVAL
-        end if
-      end if
-      
-      varname='CLDEFI'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CLDEFI=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                      &
-        ,cldefi,this_length,mpi_real4,mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CLDEFI=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'AKMS_OUT', akms, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading AKMS_OUT: Assigned missing values"
+          akms=SPVAL
+      endif
 
-      varname='TH10'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        TH10=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,th10,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          TH10=SPVAL
-        end if
-      end if	
-       
-      varname='Q10'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        Q10=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-           ,q10,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          Q10=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ALBASE', albase, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ALBASE: Assigned missing values"
+          albase=SPVAL
+      endif
 
-      varname='PSHLTR'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PSHLTR=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,pshltr,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PSHLTR=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ALBEDO', albedo, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ALBEDO: Assigned missing values"
+          albedo=SPVAL
+      endif
 
-      varname='TSHLTR'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        TSHLTR=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,tshltr,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          TSHLTR=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'CZEN', czen, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SICE: Assigned missing values"
+          sice=SPVAL
+      endif
 
-      varname='QSHLTR'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        QSHLTR=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,qshltr,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          QSHLTR=SPVAL
-	end if  
-      end if
-      write(0,*)' after QSHLTR'
-      
-      VarName='Q2'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        Q2=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          Q2=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             Q2( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample Q2= ',   &
-               i,j,l,Q2( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after Q2'
+      call io_int_fetch_data(iunit, r, 'CZMEAN', czmean, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CZMEAN: Assigned missing values"
+          czmean=SPVAL
+      endif
 
-      varname='AKHS_OUT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        AKHS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,akhs,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          AKHS=SPVAL
-        end if
-      end if	
+      call io_int_fetch_data(iunit, r, 'GLAT', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading GLAT: Assigned missing values"
+          sice=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+        do i = 1, im
+          F(I,J)=1.454441e-4*sin(buf(I,J))   ! 2*omeg*sin(phi)
+          GDLAT(I,J)=buf(I,J)*RTD
+        enddo
+      enddo
 
-      varname='AKMS_OUT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        AKMS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,akms,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          AKMS=SPVAL
-        end if
-      end if		
-	
-      varname='ALBASE'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ALBASE=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,albase,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ALBASE=SPVAL
-        end if
-      end if	
-	
-      varname='ALBEDO'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ALBEDO=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,albedo,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ALBEDO=SPVAL
-        end if
-      end if	
+      call io_int_fetch_data(iunit, r, 'GLON', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SICE: Assigned missing values"
+          gdlon=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+        do i = 1, im
+          GDLON(I,J)=buf(I,J)*RTD
+        enddo
+      enddo
 
-      varname='CZEN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CZEN=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,czen,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CZEN=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'MXSNAL', mxsnal, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading MXSNAL: Assigned missing values"
+          mxsnal=SPVAL
+      endif
 
-      varname='CZMEAN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CZMEAN=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,czmean,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CZMEAN=SPVAL
-        end if
-      end if	
-       print*,'max CZMEAN= ',maxval(czmean) 
+      call io_int_fetch_data(iunit, r, 'RADOT', radot, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RADOT: Assigned missing values"
+          radot=SPVAL
+      endif
 
-      varname='GLAT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        GDLAT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          GDLAT=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             F(I,J)=1.454441e-4*sin(buf(I,J))   ! 2*omeg*sin(phi)
-             GDLAT(I,J)=buf(I,J)*RTD
-	     
-           enddo
-          enddo
-        end if
-      end if
-      
-      varname='GLON'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        GDLON=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          GDLON=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             GDLON(I,J)=buf(I,J)*RTD
-	     if(i.eq.409.and.j.eq.835)print*,'GDLAT GDLON in INITPOST='  &
-      	     ,i,j,GDLAT(I,J),GDLON(I,J)
-           enddo
-          enddo
-        end if
-      end if
-      
-       if(jsta.le.594.and.jend.ge.594)print*,'gdlon(120,594)= ',       &
-       gdlon(120,594)
+      call io_int_fetch_data(iunit, r, 'SIGT4', sigt4, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SIGT4: Assigned missing values"
+          sigt4=SPVAL
+      endif
 
-      varname='MXSNAL'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        MXSNAL=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,mxsnal,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          MXSNAL=SPVAL
-        endif
-      end if	
-      write(0,*)' after MXSNAL'
-	
-      varname='RADOT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RADOT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,radot,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RADOT=SPVAL
-        end if
-      end if
-      
-      varname='SIGT4'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SIGT4=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sigt4,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SIGT4=SPVAL
-        end if
-      end if
-       
-      varname='TGROUND'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        TG=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,tg,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          TG=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'TGROUND', tg, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TGROUND: Assigned missing values"
+          tg=SPVAL
+      endif
 
-      varname='CWM'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CWM=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CWM=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             CWM( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample CWM= ',   &
-               i,j,l,CWM( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if     
-      write(0,*)' after CWM'
+      call io_int_fetch_data(iunit, r, 'CWM', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CWM: Assigned missing values"
+          cwm=SPVAL
+      endif
+      do l = 1, lm
+        ll=lm-l+1
+        do j = jsta_2l, jend_2u
+          do i = 1, im
+            CWM( i, j, l ) = buf3d ( i, j, ll )
+          end do
+        end do
+      end do
 
-      varname='F_ICE'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        F_ice=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3dx,this_length,mpi_real4, mpi_status_ignore, ierr)        
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          F_ice=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             F_ice( i, j, l ) = buf3dx ( i, ll, j )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample F_ice= ', &
-               i,j,l,F_ice( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if	
-      write(0,*)' after F_ICE'
+      call io_int_fetch_data(iunit, r, 'F_ICE', buf3dx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading F_ICE: Assigned missing values"
+          f_ice=SPVAL
+      endif
+      do l = 1, lm
+        ll=lm-l+1
+        do j = jsta_2l, jend_2u
+          do i = 1, im
+            F_ice( i, j, l ) = buf3dx ( i, ll, j )
+          end do
+         end do
+      end do
 
-      varname='F_RAIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        F_rain=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,buf3dx,this_length,mpi_real4, mpi_status_ignore, ierr)      
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          F_rain=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             F_rain( i, j, l ) = buf3dx ( i, ll, j )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample F_rain= ',&
-               i,j,l,F_rain( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after F_RAIN'
+      call io_int_fetch_data(iunit, r, 'F_RAIN', buf3dx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading F_RAIN: Assigned missing values"
+          f_rain=SPVAL
+      endif
+      do l = 1, lm
+        ll=lm-l+1
+        do j = jsta_2l, jend_2u
+          do i = 1, im
+            F_rain( i, j, l ) = buf3dx ( i, ll, j )
+          end do
+         end do
+      end do
 
-      varname='F_RIMEF'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        F_RimeF=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,buf3dx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          F_RimeF=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             F_RimeF( i, j, l ) = buf3dx ( i, ll, j )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
-               'sample F_RimeF= ',i,j,l,F_RimeF( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after F_RimeF'
+      call io_int_fetch_data(iunit, r, 'F_RIMEF', buf3dx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading F_RIMEF: Assigned missing values"
+          f_rimef=SPVAL
+      endif
+      do l = 1, lm
+        ll=lm-l+1
+        do j = jsta_2l, jend_2u
+          do i = 1, im
+            F_rimef( i, j, l ) = buf3dx ( i, ll, j )
+          end do
+         end do
+      end do
 
-       varname='CLDFRA'
-       call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CFR=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CFR=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             CFR( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample CFR= ', &
-               i,j,l,CFR( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after CLDFRA'
+      call io_int_fetch_data(iunit, r, 'CLDFRA', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CLDFRA: Assigned missing values"
+          cfr=SPVAL
+      endif
+      do l = 1, lm
+        ll=lm-l+1
+        do j = jsta_2l, jend_2u
+          do i = 1, im
+            CFR( i, j, l ) = buf3d ( i, j, ll )
+          end do
+        end do
+      end do
 
-      varname='SR'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SR=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,sr,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SR=SPVAL
-        end if
-      end if	
+      call io_int_fetch_data(iunit, r, 'SR', sr, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SR: Assigned missing values"
+          sr=SPVAL
+      endif
 
-      varname='CFRACH'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CFRACH=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,cfrach,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CFRACH=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'CFRACH', cfrach, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CFRACH: Assigned missing values"
+          cfrach=SPVAL
+      endif
 
-      varname='CFRACL'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CFRACL=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,cfracl,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CFRACL=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'CFRACL', cfracl, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CFRACL: Assigned missing values"
+          cfracl=SPVAL
+      endif
 
-      varname='CFRACM'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CFRACM=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,cfracm,this_length,mpi_real4, mpi_status_ignore, ierr) 
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CFRACM=SPVAL
-        end if
-      end if
-      write(6,*) 'maxval CFRACM: ', maxval(CFRACM)
+      call io_int_fetch_data(iunit, r, 'CFRACM', cfracm, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CFRACM: Assigned missing values"
+          cfracm=SPVAL
+      endif
 
-      varname='ISLOPE'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ISLOPE=NINT(SPVAL)
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,islope,this_length,mpi_integer4, mpi_status_ignore, ierr)
-         if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ISLOPE=NINT(SPVAL)
-        end if
-      end if	
-	
-!	varname='SOILTB'
-!	write(6,*) 'call getVariableB for : ', VarName
-!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUMMY,
-!     &  IM,1,JM,1,IM,JS,JE,1)
+      call io_int_fetch_data(iunit, r, 'ISLOPE', islope, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ISLOPE: Assigned missing values"
+          islope=nint(SPVAL)
+      endif
 
 ! either assign SLDPTH to be the same as eta (which is original
 ! setup in WRF LSM) or extract thickness of soil layers from wrf
@@ -1749,19 +757,11 @@
 
       if (isf_PHYSICS == 3) then
 ! get SLDPTH from wrf output
-        VarName='SLDPTH'
-        call retrieve_index(index,VarName,varname_all,nrecs,iret)
-        if (iret /= 0) then
-          print*,VarName," not found in file-Assigned missing values"
-          SLDPTH2=SPVAL
-        else
-          call mpi_file_read_at(iunit,file_offset(index+1)      &
-                   ,SLDPTH2,NSOIL,mpi_real4, mpi_status_ignore, ierr)
-          if (ierr /= 0) then
-            print*,"Error reading ", VarName,"Assigned missing values"
+        call io_int_fetch_data(iunit, r, 'SLDPTH', SLDPTH2, ierr)
+        if (ierr .ne. 0) then
+            print*,"Error reading ISLOPE: Assigned missing values"
             SLDPTH2=SPVAL
-          end if
-        end if
+        endif
 
         DUMCST=0.0
         DO N=1,NSOIL
@@ -1772,23 +772,14 @@
             SLLEVEL(N)=SLDPTH2(N)
           END DO
         END IF
-        print*,'SLLEVEL ',(SLLEVEL(N),N=1,NSOIL)
+!        print*,'SLLEVEL ',(SLLEVEL(N),N=1,NSOIL)
 
       else ! isf_PHYSICS /= 3
-        VarName='DZSOIL'
-        call retrieve_index(index,VarName,varname_all,nrecs,iret)
-        if (iret /= 0) then
-          print*,VarName," not found in file-Assigned missing values"
-          SLDPTH2=SPVAL
-        else
-          call mpi_file_read_at(iunit,file_offset(index+1),             &
-                                SLDPTH2,NSOIL,mpi_real4,                &
-                                mpi_status_ignore, ierr)
-          if (ierr /= 0) then
-            print*,"Error reading ", VarName,"Assigned missing values"
+        call io_int_fetch_data(iunit, r, 'DZSOIL', SLDPTH2, ierr)
+        if (ierr .ne. 0) then
+            print*,"Error reading ISLOPE: Assigned missing values"
             SLDPTH2=SPVAL
-          end if
-        end if ! if (iret /= 0)
+        endif
 
         DUMCST=0.0
         DO N=1,NSOIL
@@ -1799,201 +790,92 @@
             SLDPTH(N)=SLDPTH2(N)
           END DO
         END IF
-        print*,'SLDPTH= ',(SLDPTH(N),N=1,NSOIL)
+!        print*,'SLDPTH= ',(SLDPTH(N),N=1,NSOIL)
       end if   ! if (isf_PHYSICS==3)
 
-      VarName='CMC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CMC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,cmc,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CMC=SPVAL
-        end if
-      end if
-      
-      varname='GRNFLX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        GRNFLX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,grnflx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          GRNFLX=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'CMC', cmc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CMC: Assigned missing values"
+          cmc=SPVAL
+      endif
 
-      varname='PCTSNO'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PCTSNO=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,pctsno,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PCTSNO=SPVAL
-        end if
-      end if	
-	
-      varname='SOILTB'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SOILTB=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,soiltb,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SOILTB=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'GRNFLX', grnflx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading GRNFLX: Assigned missing values"
+          grnflx=SPVAL
+      endif
 
-      varname='VEGFRC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        VEGFRC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,vegfrc,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          VEGFRC=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'PCTSNO', pctsno, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PCTSNO: Assigned missing values"
+          pctsno=SPVAL
+      endif
 
-      VarName='SH2O'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SH2O=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im*nsoil
-	this_length=im*(jend_2u-jsta_2l+1)*nsoil
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,bufsoil,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SH2O=SPVAL
-        else
-	  do l = 1, nsoil
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             SH2O(I,J,L)=bufSOIL(I,L,J)
-	    enddo 
-           enddo
+      call io_int_fetch_data(iunit, r, 'SOILTB', soiltb, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SOILTB: Assigned missing values"
+          soiltb=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'VEGFRC', vegfrc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading VEGFRC: Assigned missing values"
+          vegfrc=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SH2O', bufsoil, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SH2O: Assigned missing values"
+          sh20=SPVAL
+      endif
+      do l = 1, nsoil
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  SH2O(I,J,L)=bufSOIL(I,L,J)
+              enddo
           enddo
-        end if
-      end if
-      write(0,*)' after SH2O'
+      enddo
 
-      VarName='SMC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SMC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im*nsoil
-	this_length=im*(jend_2u-jsta_2l+1)*nsoil
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,bufsoil,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SMC=SPVAL
-        else
-	  do l = 1, nsoil
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             SMC(I,J,L)=bufSOIL(I,L,J)
-	    enddo 
-           enddo
-          enddo
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'SMC', bufsoil, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SMC: Assigned missing values"
+          smc=SPVAL
+      endif
+      DO L = 1, NSOIL
+          DO J = JSTA_2L, JEND_2U
+              DO I = 1, IM
+                  SMC(I,J,L)=BUFSOIL(I,L,J)
+              ENDDO
+          ENDDO
+      ENDDO
 
-      print*,'SMC at ',ii,jj,N,' = ',smc(ii,jj,1),smc(ii,jj,2)         &
-      ,smc(ii,jj,3),smc(ii,jj,4)
+      call io_int_fetch_data(iunit, r, 'STC', bufsoil, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading STC: Assigned missing values"
+          stc=SPVAL
+      endif
+      DO L = 1, NSOIL
+          DO J = JSTA_2L, JEND_2U
+              DO I = 1, IM
+                  STC(I,J,L)=BUFSOIL(I,L,J)
+              ENDDO
+          ENDDO
+      ENDDO
 
-      VarName='STC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        STC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im*nsoil
-	this_length=im*(jend_2u-jsta_2l+1)*nsoil
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,bufsoil,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          STC=SPVAL
-        else
-	  do l = 1, nsoil
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             STC(I,J,L)=bufSOIL(I,L,J)
-	    enddo 
-           enddo
-          enddo
-        end if
-      end if
-    
-      if(jj.ge.jsta.and.jj.le.jend)                                    &
-        print*,'STC at ',ii,jj,' = ',stc(ii,jj,1),stc(ii,jj,2)         &
-      ,stc(ii,jj,3),stc(ii,jj,4)
-      write(0,*)' after STC'
-
-      VarName='PINT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        PINT=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lp1
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,buf3d2,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          PINT=SPVAL
-        else
-	  do l = 1, lp1
-	   ll=lp1-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             PINT( i, j, l ) = buf3d2 ( i, j, ll )
-!      if(i==1.and.j==250)then
-!        write(0,*)' l=',l,' iin PINT=',pint(i,j,l)
-!      endif
-             ALPINT(I,J,L)=ALOG(PINT(I,J,L))     
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'PINT= ',       &
-               i,j,l,PINT ( i, j, l )
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after PINT'
+      call io_int_fetch_data(iunit, r, 'PINT', buf3d2, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading PINT: Assigned missing values"
+          pint=SPVAL
+      endif
+      DO L = 1, lp1
+          ll=lp1-l+1
+          DO J = JSTA_2L, JEND_2U
+              DO I = 1, IM
+                  PINT(I,J,L) = buf3d2(I,J,LL)
+                  ALPINT(I,J,L)=ALOG(PINT(I,J,L))
+              ENDDO
+          ENDDO
+      ENDDO
 
       do l = 2, lm+1
        do j = jsta_2l, jend_2u
@@ -2002,16 +884,10 @@
 !     &               ALOG(PINT(I,J,L)))*0.5)
          PMID ( i, j, l-1 ) = (PINT(I,J,L-1)+                              &
                      PINT(I,J,L))*0.5 ! representative of what model does
-      if(i==1.and.j==250.and.l==2)then
-        write(0,*)' pmid=',pmid(i,j,l-1)                                   &
-      ,           ' pint=',pint(i,j,l-1),pint(i,j,l)
-      endif
-         if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'PMID= ',              &
-               i,j,l-1,PMID ( i, j, l-1 )
         end do
        end do
-      end do 
-      write(0,*)' after PMID'
+      end do
+!      write(0,*)' after PMID'
 
       do l = 1, lm
        do j = jsta, jend
@@ -2095,552 +971,229 @@
        ENDDO
       ENDDO
 
-      write(0,*)' before W'
-      VarName='W'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        WH=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,buf3d2,this_length,mpi_real4, mpi_status_ignore, ierr)      
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
+      call io_int_fetch_data(iunit, r, 'W', buf3d2, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading W: Assigned missing values"
           WH=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             WH( i, j, l ) = buf3d2 ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'WH= ',               &
-               i,j,l,WH ( i, j, l )
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after W'
+      endif
+      DO L = 1, lm
+          ll=lm-l+1
+          DO J = JSTA_2L, JEND_2U
+              DO I = 1, IM
+                  WH(I,J,L) = buf3d2(I,J,LL)
+              ENDDO
+          ENDDO
+      ENDDO
 
-      VarName='ACFRCV'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ACFRCV=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,acfrcv,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ACFRCV=SPVAL
-        end if
-      end if
-      write(0,*)' after ACFRCV'
-      
+      call io_int_fetch_data(iunit, r, 'ACFRCV', acfrcv, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ACFRCV: Assigned missing values"
+          acfrcv=SPVAL
+      endif
       write(6,*) 'MAX ACFRCV: ', maxval(ACFRCV)
 
-      VarName='ACFRST'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ACFRST=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-       ,acfrst,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ACFRST=SPVAL
-        end if
-      end if
-      write(6,*) 'max ACFRST ', maxval(ACFRST)
-      write(0,*)' after ACFRST'
 
-!insert-mp
-      VarName='SSROFF'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SSROFF=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,ssroff,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SSROFF=SPVAL
-        end if
-      end if
-      write(0,*)' after SSROFF'
+      call io_int_fetch_data(iunit, r, 'ACFRST', acfrst, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ACFRST: Assigned missing values"
+          acfrst=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SSROFF', ssroff, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SSROFF: Assigned missing values"
+          ssroff=SPVAL
+      endif
 
 ! reading UNDERGROUND RUNOFF
-      VarName='BGROFF'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        BGROFF=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,bgroff,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          BGROFF=SPVAL
-        end if
-      end if
-      write(0,*)' after BGROFF'
-      
-      VarName='RLWIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RLWIN=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,rlwin,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RLWIN=SPVAL
-        end if
-      end if
-      write(0,*)' after RLWIN'
+      call io_int_fetch_data(iunit, r, 'BGROFF', bgroff, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading BGROFF: Assigned missing values"
+          bgroff=SPVAL
+      endif
 
-      VarName='RLWTOA'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RLWTOA=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,rlwtoa,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RLWTOA=SPVAL
-        end if
-      end if
-      write(0,*)' after RLWTOA'
+      call io_int_fetch_data(iunit, r, 'RLWIN', rlwin, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RLWIN: Assigned missing values"
+          rlwin=SPVAL
+      endif
 
-      VarName='ALWIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ALWIN=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,alwin,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ALWIN=SPVAL
-        end if
-      end if
-      write(0,*)' after ALWIN'
-      
-      VarName='ALWOUT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ALWOUT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,alwout,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ALWOUT=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'RLWTOA', rlwtoa, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RLWTOA: Assigned missing values"
+          rlwtoa=SPVAL
+      endif
 
-      VarName='ALWTOA'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ALWTOA=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,alwtoa,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ALWTOA=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ALWIN', alwin, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ALWIN: Assigned missing values"
+          alwin=SPVAL
+      endif
 
-      VarName='RSWIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RSWIN=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,rswin,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RSWIN=SPVAL
-        end if
-      end if
-      
-      VarName='RSWINC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RSWINC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,rswinc,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RSWINC=SPVAL
-        end if
-      end if
-      
-       print*,'max RSWINC= ',maxval(RSWINC)
+      call io_int_fetch_data(iunit, r, 'ALWOUT', alwout, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ALWOUT: Assigned missing values"
+          alwout=SPVAL
+      endif
 
-      VarName='RSWOUT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RSWOUT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,rswout,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RSWOUT=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ALWTOA', alwtoa, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ALWTOA: Assigned missing values"
+          alwtoa=SPVAL
+      endif
 
-      VarName='ASWIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ASWIN=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,aswin,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ASWIN=SPVAL
-        end if
-      end if
-      
-      VarName='ASWOUT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ASWOUT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,aswout,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ASWOUT=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'RSWIN', rswin, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RSWIN: Assigned missing values"
+          rswin=SPVAL
+      endif
 
-      VarName='ASWTOA'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ASWTOA=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,aswtoa,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ASWTOA=SPVAL
-        end if
-      end if
-      write(0,*)' after ASWTOA'
+      call io_int_fetch_data(iunit, r, 'RSWINC', rswinc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RSWINC: Assigned missing values"
+          rswinc=SPVAL
+      endif
 
-      VarName='SFCSHX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SFCSHX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sfcshx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SFCSHX=SPVAL
-        end if
-      end if
-      
-      VarName='SFCLHX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SFCLHX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sfclhx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SFCLHX=SPVAL
-        end if
-      end if
-      
-      VarName='SUBSHX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SUBSHX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,subshx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SUBSHX=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'RSWOUT', rswout, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RSWOUT: Assigned missing values"
+          rswout=SPVAL
+      endif
 
-      VarName='SNOPCX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SNOPCX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,snopcx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SNOPCX=SPVAL
-        end if
-      end if
-      write(0,*)' after SNOPCX'
-	
-      VarName='SFCUVX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SFCUVX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sfcuvx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SFCUVX=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ASWIN', aswin, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ASWIN: Assigned missing values"
+          aswin=SPVAL
+      endif
 
-      VarName='POTEVP'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        POTEVP=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,potevp,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          POTEVP=SPVAL
-        end if
-      end if
-      write(0,*)' after POTEVP'
+      call io_int_fetch_data(iunit, r, 'ASWOUT', aswout, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ASWOUT: Assigned missing values"
+          aswout=SPVAL
+      endif
 
-      varname='RLWTT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RLWTT=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RLWTT=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             RLWTT( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample RLWTT= ', &
-                  i,j,l,RLWTT( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after RLWTT'
+      call io_int_fetch_data(iunit, r, 'ASWTOA', aswtoa, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ASWTOA: Assigned missing values"
+          aswtoa=SPVAL
+      endif
 
-      varname='RSWTT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        RSWTT=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)      
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          RSWTT=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             RSWTT( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample RSWTT= ', &
-                  i,j,l,RSWTT( i, j, l )
-             ttnd ( i, j, l ) = rswtt(i,j,l) + rlwtt(i,j,l)	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after RSWTT'
+      call io_int_fetch_data(iunit, r, 'SFCSHX', sfcshx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SFCSHX: Assigned missing values"
+          sfcshx=SPVAL
+      endif
 
-      varname='TCUCN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        TCUCN=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)      
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          TCUCN=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             TCUCN( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample TCUCN= ', &
-                  i,j,l,TCUCN( i, j, l )	 
-             if(l.eq.lm.and.ABS(TCUCN( i, j, l )).gt.1.0e-4)              &
-          print*,'nonzero TCUCN',i,j,l,TCUCN( i, j, l )    
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after TCUCN'
-      nextoffset=file_offset(index+2)
-      nextoffset_expected4 = file_offset(index+1)+im*lm*jm*4+8
-      print*,'nextoffset, nextoffset_expected4= '                      &
-               ,nextoffset, nextoffset_expected4
-	
-      varname='TRAIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        TRAIN=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3d,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          TRAIN=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             TRAIN( i, j, l ) = buf3d ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample TRAIN= ',  &
-                  i,j,l,TRAIN( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after TRAIN'
+      call io_int_fetch_data(iunit, r, 'SFCLHX', sfclhx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SFCLHX: Assigned missing values"
+          sfclhx=SPVAL
+      endif
 
-      VarName='NCFRCV'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NCFRCV=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,ibuf,this_length,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NCFRCV=SPVAL
-        else
+      call io_int_fetch_data(iunit, r, 'SUBSHX', subshx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SUBSHX: Assigned missing values"
+          subshx=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SNOPCX', snopcx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SNOPCX: Assigned missing values"
+          snopcx=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SFCUVX', sfcuvx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SFCUVX: Assigned missing values"
+          sfcuvx=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'POTEVP', potevp, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading POTEVP: Assigned missing values"
+          potevp=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'RLWTT', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RLWTT: Assigned missing values"
+          rlwtt=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
           do j = jsta_2l, jend_2u
-           do i = 1, im
-             NCFRCV(I,J)=FLOAT(ibuf(I,J))
-           enddo
-          enddo
-        end if
-      end if
-      write(0,*)' after NCFRCV'
+              do i = 1, im
+                  RLWTT( i, j, l ) = buf3d ( i, j, ll )
+              end do
+          end do
+      end do
 
-      VarName='NCFRST'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NCFRST=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,ibuf,this_length,mpi_integer4 , mpi_status_ignore, ierr) 
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NCFRST=SPVAL
-        else
+      call io_int_fetch_data(iunit, r, 'RSWTT', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading RSWTT: Assigned missing values"
+          rswtt=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
           do j = jsta_2l, jend_2u
-           do i = 1, im
-             NCFRST(I,J)=FLOAT(IBUF(I,J))
-           enddo
+              do i = 1, im
+                  RSWTT( i, j, l ) = buf3d ( i, j, ll )
+              end do
+          end do
+      end do
+
+      call io_int_fetch_data(iunit, r, 'TCUCN', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TCUCN: Assigned missing values"
+          tcucn=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  TCUCN( i, j, l ) = buf3d ( i, j, ll )
+              end do
+          end do
+      end do
+
+      call io_int_fetch_data(iunit, r, 'TRAIN', buf3d, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TRAIN: Assigned missing values"
+          train=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  TRAIN( i, j, l ) = buf3d ( i, j, ll )
+              end do
+          end do
+      end do
+
+      call io_int_fetch_data(iunit, r, 'NCFRCV', ibuf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NCFRCV: Assigned missing values"
+          ncfrcv=SPVAL
+      endif
+      ! Is this needed?....
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              NCFRCV(I,J)=FLOAT(ibuf(I,J))
           enddo
-        end if
-      end if
-      
+      enddo
+
+      call io_int_fetch_data(iunit, r, 'NCFRST', ibuf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NCFRST: Assigned missing values"
+          ncfrst=SPVAL
+      endif
+      ! Is this needed?....
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              ncfrst(I,J)=FLOAT(ibuf(I,J))
+          enddo
+      enddo
+
 ! set default to not empty buket
       NSRFC=0
       NRDLW=0
@@ -2649,567 +1202,213 @@
       NCLOD=0
       NPREC=0
 
-      VarName='NPHS0'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NPHS=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1),                 &  
-          NPHS,1,mpi_integer4 , mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NPHS=NINT(SPVAL)
-	end if  
-      end if
-      write(6,*) 'NPHS= ', NPHS
+      call io_int_fetch_data(iunit, r, 'NPHS0', nphs, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NPHS0: Assigned missing values"
+          nphs=SPVAL
+      endif
 
-      VarName='NPREC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NPREC=NINT(SPVAL)
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)               &
-          ,NPREC,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NPREC=NINT(SPVAL)
-	end if  
-      end if
-      write(6,*) 'NPREC= ', NPREC
+      call io_int_fetch_data(iunit, r, 'NPREC', nprec, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NPREC: Assigned missing values"
+          nprec=SPVAL
+      endif
 
-      VarName='NCLOD'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NCLOD=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,NCLOD,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NCLOD=SPVAL
-        end if
-      end if
-      write(6,*) 'NCLOD= ', NCLOD
-      
-      VarName='NHEAT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NHEAT=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,NHEAT,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NHEAT=SPVAL
-        end if
-      end if
-      write(6,*) 'NHEAT= ', NHEAT      
+      call io_int_fetch_data(iunit, r, 'NCLOD', nclod, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NCLOD: Assigned missing values"
+          nclod=SPVAL
+      endif
 
-      VarName='NRDLW'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NRDLW=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,NRDLW,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NRDLW=SPVAL
-        end if
-      end if
-      write(6,*) 'NRDLW= ', NRDLW
+      call io_int_fetch_data(iunit, r, 'NHEAT', nheat, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NHEAT: Assigned missing values"
+          nheat=SPVAL
+      endif
 
-      VarName='NRDSW'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NRDSW=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,NRDSW,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NRDSW=SPVAL
-        end if
-      end if
-	write(6,*) 'NRDSW= ', NRDSW
+      call io_int_fetch_data(iunit, r, 'NRDLW', nrdlw, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NRDLW: Assigned missing values"
+          nrdlw=SPVAL
+      endif
 
-      VarName='NSRFC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        NSRFC=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,NSRFC,1,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          NSRFC=SPVAL
-        end if
-      end if
-	write(6,*) 'NSRFC= ', NSRFC
+      call io_int_fetch_data(iunit, r, 'NRDSW', nrdsw, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NRDSW: Assigned missing values"
+          nrdsw=SPVAL
+      endif
 
-      VarName='AVRAIN'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        AVRAIN=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,AVRAIN,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          AVRAIN=SPVAL
-        end if
-      end if
-      write(6,*) 'AVRAIN= ', AVRAIN
-      write(0,*)' after AVRAIN'
+      call io_int_fetch_data(iunit, r, 'NSRFC', nsrfc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading NSRFC: Assigned missing values"
+          nsrfc=SPVAL
+      endif
 
-      VarName='AVCNVC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        AVCNVC=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,AVCNVC,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          AVCNVC=SPVAL
-        end if
-      end if
-      write(6,*) 'AVCNVC= ', AVCNVC
+      call io_int_fetch_data(iunit, r, 'AVRAIN', avrain, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading AVRAIN: Assigned missing values"
+          avrain=SPVAL
+      endif
 
-      VarName='ARDLW'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ARDLW=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,ARDLW,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ARDLW=SPVAL
-        end if
-      end if
-      write(6,*) 'ARDLW= ', ARDLW
+      call io_int_fetch_data(iunit, r, 'AVCNVC', avcnvc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading AVCNVC: Assigned missing values"
+          avcnvc=SPVAL
+      endif
 
-      VarName='ARDSW'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ARDSW=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,ARDSW,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ARDSW=SPVAL
-        end if
-      end if
-	write(6,*) 'ARDSW= ', ARDSW
-	
-      VarName='ASRFC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ASRFC=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,ASRFC,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ASRFC=SPVAL
-        end if
-      end if
-	write(6,*) 'ASRFC= ', ASRFC	
+      call io_int_fetch_data(iunit, r, 'ARDLW', ardlw, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ARDLW: Assigned missing values"
+          ardlw=SPVAL
+      endif
 
-      VarName='APHTIM'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        APHTIM=SPVAL
-      else
-        call mpi_file_read_at(iunit,file_offset(index+1)                 &
-          ,APHTIM,1,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          APHTIM=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'ARDSW', ardsw, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ARDSW: Assigned missing values"
+          ardsw=SPVAL
+      endif
 
-! reading TKE
-!      VarName='TKE_PBL'
-!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUM3D,
-!     &  IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
-!      do l = 1, lm
-!       do j = jsta_2l, jend_2u
-!        do i = 1, im
-!            q2 ( i, j, l ) = dum3d ( i, j, l )
-!        end do
-!       end do
-!      end do
-!      print*,'TKE at ',ii,jj,ll,' = ',q2(ii,jj,ll)
-!
-! reading 10 m wind
-      VarName='U10'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        U10=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,u10,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          U10=SPVAL
-        end if
-      end if
-      if(jj.ge.jsta.and.jj.le.jend)                                     &
-               print*,'U10 at ',ii,jj,' = ',U10(ii,jj)
-      write(0,*)' after U10'
+      call io_int_fetch_data(iunit, r, 'ASRFC', asrfc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ASRFC: Assigned missing values"
+          asrfc=SPVAL
+      endif
 
-      VarName='V10'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        V10=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,v10,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          V10=SPVAL
-        end if
-      end if
-      if(jj.ge.jsta.and.jj.le.jend)                                     &
-           print*,'V10 at ',ii,jj,' = ',V10(ii,jj)
-!
-!
-! reading SMSTAV
-      VarName='SMSTAV'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SMSTAV=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,smstav,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SMSTAV=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'APHTIM', aphtim, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading APHTIM: Assigned missing values"
+          aphtim=SPVAL
+      endif
 
-      VarName='SMSTOT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SMSTOT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,smstot,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SMSTOT=SPVAL
-        end if
-      end if
-! reading VEGETATION TYPE 
-      VarName='IVGTYP'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        IVGTYP=NINT(SPVAL)
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,ivgtyp,this_length,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          IVGTYP=NINT(SPVAL)
-        end if
-      end if	
+      call io_int_fetch_data(iunit, r, 'U10', u10, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading U10: Assigned missing values"
+          u10=SPVAL
+      endif
 
-      VarName='ISLTYP' 
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ISLTYP=NINT(SPVAL)
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,isltyp,this_length,mpi_integer4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ISLTYP=NINT(SPVAL)
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'V10', v10, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading V10: Assigned missing values"
+          v10=SPVAL
+      endif
 
-      VarName='SFCEVP'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SFCEVP=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sfcevp,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SFCEVP=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'SMSTAV', smstav, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SMSTAV: Assigned missing values"
+          smstav=SPVAL
+      endif
 
-      VarName='SFCEXC'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SFCEXC=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sfcexc,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SFCEXC=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'SMSTOT', smstot, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SMSTOT: Assigned missing values"
+          smstot=SPVAL
+      endif
 
-      VarName='ACSNOW'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ACSNOW=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,acsnow,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ACSNOW=SPVAL
-        end if
-      end if
-       
-      VarName='ACSNOM'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        ACSNOM=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,acsnom,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          ACSNOM=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'IVGTYP', ivgtyp, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading IVGTYP: Assigned missing values"
+          ivgtyp=SPVAL
+      endif
 
-      VarName='SST'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        SST=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,sst,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          SST=SPVAL
-        end if
-      end if
-      if(jj.ge.jsta.and.jj.le.jend)                                      &
-            print*,'SST at ',ii,jj,' = ',sst(ii,jj)      
-      write(0,*)' after SST'
+      call io_int_fetch_data(iunit, r, 'ISLTYP', isltyp, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ISLTYP: Assigned missing values"
+          isltyp=SPVAL
+      endif
 
-! ADDED TAUX AND TAUY in POST --------------- zhan's doing
-      VarName='TAUX'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        MDLTAUX=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-        this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,mdltaux,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          MDLTAUX=SPVAL
-        end if
-      end if
-      if(jj.ge.jsta.and.jj.le.jend)                &
-        print*,'MDLTAUX at ',ii,jj,' = ',mdltaux(ii,jj)
-      write(0,*)' after MDLTAUX'
+      call io_int_fetch_data(iunit, r, 'SFCEVP', sfcevp, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SFCEVP: Assigned missing values"
+          sfcevp=SPVAL
+      endif
 
-      VarName='TAUY'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        MDLTAUY=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-        this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset     &
-      ,mdltauy,this_length,mpi_real4                   &
-      , mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          MDLTAUY=SPVAL
-        end if
-      end if
-      if(jj.ge.jsta.and.jj.le.jend)                 &
-        print*,'MDLTAUY at ',ii,jj,' = ',mdltauy(ii,jj)
-      write(0,*)' after MDLTAUY'
-! zhang's dong ends
+      call io_int_fetch_data(iunit, r, 'SFCEXC', sfcexc, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SFCEXC: Assigned missing values"
+          sfcexc=SPVAL
+      endif
 
-      VarName='EL_PBL'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        EL_PBL=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3dx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          EL_PBL=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             EL_PBL( i, j, l ) = buf3dx ( i, j ,ll)
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample EL= ', &
-                  i,j,l,EL_PBL( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after EL_PBL'
+      call io_int_fetch_data(iunit, r, 'ACSNOW', acsnow, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ACSNOW: Assigned missing values"
+          acsnow=SPVAL
+      endif
 
-      VarName='EXCH_H'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        EXCH_H=SPVAL
-      else
-        this_offset=file_offset(index+1)
-	this_length=im*jm*lm
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,buf3dx,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
+      call io_int_fetch_data(iunit, r, 'ACSNOM', acsnom, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading ACSNOM: Assigned missing values"
+          acsnom=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'SST', sst, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading SST: Assigned missing values"
+          sst=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'TAUX', mdltaux, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TAUX: Assigned missing values"
+          mdltaux=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'TAUY', mdltauy, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading TAUY: Assigned missing values"
+          mdltauy=SPVAL
+      endif
+
+      call io_int_fetch_data(iunit, r, 'EL_PBL', buf3dx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading EL_PBL: Assigned missing values"
+          el_pbl=SPVAL
+      endif
+      do l = 1, lm
+          ll=lm-l+1
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  EL_PBL( i, j, l ) = buf3dx ( i, j ,ll)
+              end do
+          end do
+      end do
+
+      call io_int_fetch_data(iunit, r, 'EXCH_H', buf3dx, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading EXCH_H: Assigned missing values"
           EXCH_H=SPVAL
-        else
-	  do l = 1, lm
-	   ll=lm-l+1
-           do j = jsta_2l, jend_2u
-            do i = 1, im
-             EXCH_H( i, j, l ) = buf3dx ( i, j, ll )
-	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample EXCH= ', &
-                  i,j,l,EXCH_H( i, j, l )	     
-            end do
-           end do
-          end do 
-	end if 
-      end if
-      write(0,*)' after EXCH_H'
+      endif
+      do l = 1, lm
+          ll=lm-l+1
+          do j = jsta_2l, jend_2u
+              do i = 1, im
+                  EXCH_H( i, j, l ) = buf3dx ( i, j ,ll)
+              end do
+          end do
+      end do 
 
-      VarName='THZ0'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        THZ0=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,thz0,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          THZ0=SPVAL
-        end if
-      end if
-      print*,'THZ0 at ',ii,jj,' = ',THZ0(ii,jj)
+      call io_int_fetch_data(iunit, r, 'THZ0', thz0, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading THZ0: Assigned missing values"
+          thz0=SPVAL
+      endif
 
-      VarName='QZ0'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        QZ0=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,qz0,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          QZ0=SPVAL
-        end if
-      end if
-      print*,'QZ0 at ',ii,jj,' = ',QZ0(ii,jj)
+      call io_int_fetch_data(iunit, r, 'QZ0', qz0, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading QZ0: Assigned missing values"
+          qz0=SPVAL
+      endif
 
-      VarName='UZ0'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        UZ0=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,uz0,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          UZ0=SPVAL
-	end if  
-      end if
-      if(jj.ge.jsta.and.jj.le.jend)                                     &
-           print*,'UZ0 at ',ii,jj,' = ',UZ0(ii,jj)
+      call io_int_fetch_data(iunit, r, 'UZ0', uz0, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading UZ0: Assigned missing values"
+          uz0=SPVAL
+      endif
 
-      VarName='VZ0'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        VZ0=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,vz0,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          VZ0=SPVAL
-        end if
-      end if
-      if(jj.ge.jsta.and.jj.le.jend) print*,'VZ0 at ',ii,jj,'=',VZ0(ii,jj)
-
+      call io_int_fetch_data(iunit, r, 'VZ0', vz0, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading VZ0: Assigned missing values"
+          vz0=SPVAL
+      endif
 
 !
 ! Very confusing story ...
@@ -3225,201 +1424,91 @@
 ! For historical reasons model arrays CNVTOP,CNVBOT are renamed HBOT,HTOP
 ! and manipulated throughout the post. 
 
-! retrieve htop and hbot
-!      VarName='HTOP'
-      VarName='CNVTOP'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HTOP=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HTOP=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             HTOP ( i, j ) = float(LM)-buf(i,j)+1.0
-             HTOP ( i, j ) = max(1.0,min(HTOP(I,J),float(LM)))
-           enddo
+      call io_int_fetch_data(iunit, r, 'CNVTOP', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CNVTOP: Assigned missing values"
+          htop=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              HTOP ( i, j ) = float(LM)-buf(i,j)+1.0
+              HTOP ( i, j ) = max(1.0,min(HTOP(I,J),float(LM)))
           enddo
-        end if
-      end if
-       print*,'maxval HTOP: ', maxval(HTOP)
-      write(0,*)' after HTOP'
+      enddo
 
-!      VarName='HBOT'
-      VarName='CNVBOT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HBOT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HBOT=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             HBOT ( i, j ) = float(LM)-buf(i,j)+1.0
-             HBOT ( i, j ) = max(1.0,min(HBOT(I,J),float(LM)))
-           enddo
+      call io_int_fetch_data(iunit, r, 'CNVBOT', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CNVBOT: Assigned missing values"
+          hbot=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              HBOT ( i, j ) = float(LM)-buf(i,j)+1.0
+              HBOT ( i, j ) = max(1.0,min(HBOT(I,J),float(LM)))
           enddo
-        end if
-      end if      
-       print*,'maxval HBOT: ', maxval(HBOT)
-      write(0,*)' after HBOT'
+      enddo
 
-      VarName='HTOPD'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HTOPD=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HTOPD=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             HTOPD ( i, j ) = float(LM)-buf(i,j)+1.0
-           enddo
+      call io_int_fetch_data(iunit, r, 'HTOPD', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading HTOPD: Assigned missing values"
+          htopd=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              HTOPD ( i, j ) = float(LM)-buf(i,j)+1.0
           enddo
-        end if
-      end if
-       print*,'maxval HTOPD: ', maxval(HTOPD)
+      enddo
 
-      VarName='HBOTD'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HBOTD=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HBOTD=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             HBOTD( i, j ) = float(LM)-buf(i,j)+1.0
-           enddo
+      call io_int_fetch_data(iunit, r, 'HBOTD', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading HBOTD: Assigned missing values"
+          hbotd=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              HBOTD ( i, j ) = float(LM)-buf(i,j)+1.0
           enddo
-        end if
-      end if
-       print*,'maxval HBOTD: ', maxval(HBOTD)
+      enddo
 
-      VarName='HTOPS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HTOPS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HTOPS=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             HTOPS( i, j ) = float(LM)-buf(i,j)+1.0
-           enddo
+      call io_int_fetch_data(iunit, r, 'HTOPS', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading HTOPS: Assigned missing values"
+          htops=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              HTOPS ( i, j ) = float(LM)-buf(i,j)+1.0
           enddo
-        end if
-      end if
-       print*,'maxval HTOPS: ', maxval(HTOPS)
-                                                                                 
-      VarName='HBOTS'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HBOTS=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-         ,buf,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HBOTS=SPVAL
-        else
-          do j = jsta_2l, jend_2u
-           do i = 1, im
-             HBOTS ( i, j ) = float(LM)-buf(i,j)+1.0
-           enddo
+      enddo
+
+      call io_int_fetch_data(iunit, r, 'HBOTS', buf, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading HBOTS: Assigned missing values"
+          hbots=SPVAL
+      endif
+      do j = jsta_2l, jend_2u
+          do i = 1, im
+              HBOTS ( i, j ) = float(LM)-buf(i,j)+1.0
           enddo
-        end if
-      end if
-       print*,'maxval HBOTS: ', maxval(HBOTS)
-      write(0,*)' after HBOTS'
+      enddo
 
-      VarName='CUPPT'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CUPPT=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,cuppt,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CUPPT=SPVAL
-        end if
-      end if
-       print*,'maxval CUPPT: ', maxval(CUPPT)
+      call io_int_fetch_data(iunit, r, 'CUPPT', cuppt, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CUPPT: Assigned missing values"
+          cuppt=SPVAL
+      endif
 
-      VarName='CPRATE'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        CPRATE=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset                         &
-          ,cprate,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          CPRATE=SPVAL
-        end if
-      end if
-       print*,'maxval CPRATE: ', maxval(CPRATE)
+      call io_int_fetch_data(iunit, r, 'CPRATE', cprate, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading CPRATE: Assigned missing values"
+          cprate=SPVAL
+      endif
 
-      VarName='HBM2'
-      call retrieve_index(index,VarName,varname_all,nrecs,iret)
-      if (iret /= 0) then
-        print*,VarName," not found in file-Assigned missing values"
-        HBM2=SPVAL
-      else
-        this_offset=file_offset(index+1)+(jsta_2l-1)*4*im
-	this_length=im*(jend_2u-jsta_2l+1)
-        call mpi_file_read_at(iunit,this_offset,                        &
-           hbm2,this_length,mpi_real4, mpi_status_ignore, ierr)
-        if (ierr /= 0) then
-          print*,"Error reading ", VarName,"Assigned missing values"
-          HBM2=SPVAL
-        end if
-      end if
+      call io_int_fetch_data(iunit, r, 'HBM2', hbm2, ierr)
+      if (ierr .ne. 0) then
+          print*,"Error reading HBM2: Assigned missing values"
+          hbm2=SPVAL
+      endif
 
 !!!! DONE GETTING
 
@@ -3681,18 +1770,6 @@
       write(0,*)' after writes'
 
         call mpi_file_close(iunit,ierr)
-        deallocate (datestr_all)
-        deallocate (varname_all)
-        deallocate (domainend_all)
-        deallocate (start_block)
-        deallocate (end_block)
-        deallocate (start_byte)
-        deallocate (end_byte)
-        deallocate (file_offset)
-      write(0,*)' after deallocates'
-
-!     
-!
 
       RETURN
       END
