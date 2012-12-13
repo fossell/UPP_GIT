@@ -55,8 +55,10 @@
       use lookup_mod
       use ctlblk_mod
       use gridspec_mod
-      use module_io_int_idx, only: io_int_index, r_info
-      use module_io_int_read, only: io_int_fetch_data
+      use module_io_int_idx, only: io_int_index, io_int_loc, r_info
+      use initpost_nmm_bin_mpiio_read, only: fetch_data
+      use, intrinsic :: iso_c_binding, only: c_int32_t
+
 !
 !     INCLUDE/SET PARAMETERS.
 !     
@@ -104,7 +106,9 @@
 
       character*80        :: titlestring
 
-      type(r_info), pointer :: r(:) => NULL()
+      type(r_info), pointer         :: r(:) => NULL()
+      integer(kind=mpi_offset_kind) :: pos
+      integer                       :: n
 
 !
       DATA BLANK/'    '/
@@ -163,7 +167,7 @@
        stop
       end if
 
-      call io_int_fetch_data(iunit, r, 'TITLE', titlestring, ierr)
+      call fetch_data(iunit, r, 'TITLE', dst=titlestring, ierr=ierr)
 
 !  OK, since all of the variables are dimensioned/allocated to be
 !  the same size, this means we have to be careful int getVariable
@@ -172,24 +176,24 @@
 !  only be im,jm,lm points of data available for a particular variable.  
 ! get metadata
 
-      call io_int_fetch_data(iunit, r, 'MP_PHYSICS', imp_physics, ierr)
+      call fetch_data(iunit, r, 'MP_PHYSICS', dst=imp_physics, ierr=ierr)
       if (ierr /= 0) then
          imp_physics=5        ! assume ferrier if nothing specified
       endif
       if(imp_physics==85) imp_physics=5  ! HWRF scheme = Ferrier scheme
       print*,'MP_PHYSICS= ',imp_physics
 
-      call io_int_fetch_data(iunit, r,'CU_PHYSICS', icu_physics, ierr)
+      call fetch_data(iunit, r,'CU_PHYSICS', dst=icu_physics, ierr=ierr)
       if (ierr /= 0) then
          icu_physics=4        ! assume SAS if nothing specified
       endif
       if(icu_physics==84) icu_physics=4  ! HWRF SAS = SAS
       print*,'CU_PHYSICS= ',icu_physics
 
-      call io_int_fetch_data(iunit,r,'SF_SURFACE_PHYSICS',isf_physics,ierr)
+      call fetch_data(iunit,r,'SF_SURFACE_PHYSICS',dst=isf_physics,ierr=ierr)
       print*,'SF_PHYSICS= ',isf_physics
 
-      call io_int_fetch_data(iunit, r, 'START_DATE', startdate, ierr)
+      call fetch_data(iunit, r, 'START_DATE', dst=startdate, ierr=ierr)
       if (ierr /= 0) then
         print*,"Error reading START_DATE using MPIIO"
       else
@@ -224,7 +228,7 @@
 
 ! Getting tstart
       tstart=0.
-      call io_int_fetch_data(iunit, r, 'TSTART', tstart, ierr)
+      call fetch_data(iunit, r, 'TSTART', dst=tstart, ierr=ierr)
       print*,'tstart= ',tstart
 
       IF(tstart .GT. 1.0E-2)THEN
@@ -244,500 +248,1078 @@
 
       RESTRT=.TRUE.  ! set RESTRT as default
 
-      call io_int_fetch_data(iunit, r, 'DX', garb, ierr)
+      call fetch_data(iunit, r, 'DX', dst=garb, ierr=ierr)
       print*,'DX from MPIIO READ= ',garb
       dxval=nint(garb*1000.) ! E-grid dlamda in degree
       write(6,*) 'dxval= ', dxval
 
-      call io_int_fetch_data(iunit, r, 'DY', garb, ierr)
+      call fetch_data(iunit, r, 'DY', dst=garb, ierr=ierr)
       print*,'DY from MPIIO READ= ',garb
       dyval=nint(garb*1000.) ! E-grid dlamda in degree
       write(6,*) 'dyval= ', dyval
 
-      call io_int_fetch_data(iunit, r, 'DT', dt, ierr)
+      call fetch_data(iunit, r, 'DT', dst=dt, ierr=ierr)
       write(6,*) 'DT= ', DT
 
-      call io_int_fetch_data(iunit, r, 'CEN_LAT', garb, ierr)
+      call fetch_data(iunit, r, 'CEN_LAT', dst=garb, ierr=ierr)
       print*,'CEN_LAT from MPIIO READ= ',garb
       cenlat=nint(garb*1000.)
       write(6,*) 'cenlat= ', cenlat
 
-      call io_int_fetch_data(iunit, r, 'CEN_LON', garb, ierr)
+      call fetch_data(iunit, r, 'CEN_LON', dst=garb, ierr=ierr)
       print*,'CEN_LON from MPIIO READ= ',garb
       cenlon=nint(garb*1000.)
       write(6,*) 'cenlon= ', cenlon
 
       ! Does HWRF (NMM) use TRUELAT1 and TRUELAT2?
-!      call io_int_fetch_data(iunit, r, 'TRUELAT1', garb, ierr)
-!      print*,'TRUELAT1 from MPIIO READ= ',garb
-!      TRUELAT1=nint(garb*1000.)
-!      write(6,*) 'truelat1= ', TRUELAT1
-!
-!      call io_int_fetch_data(iunit, r, 'TRUELAT2', garb, ierr)
-!      print*,'TRUELAT2 from MPIIO READ= ',garb
-!      TRUELAT2=nint(garb*1000.)
-!      write(6,*) 'truelat2= ', TRUELAT2
+      call fetch_data(iunit, r, 'TRUELAT1', dst=garb, ierr=ierr)
+      print*,'TRUELAT1 from MPIIO READ= ',garb
+      TRUELAT1=nint(garb*1000.)
+      write(6,*) 'truelat1= ', TRUELAT1
 
-      call io_int_fetch_data(iunit, r, 'MAP_PROJ', maptype, ierr)
+      call fetch_data(iunit, r, 'TRUELAT2', dst=garb, ierr=ierr)
+      print*,'TRUELAT2 from MPIIO READ= ',garb
+      TRUELAT2=nint(garb*1000.)
+      write(6,*) 'truelat2= ', TRUELAT2
+
+      call fetch_data(iunit, r, 'MAP_PROJ', dst=maptype, ierr=ierr)
       write(6,*) 'maptype is ', maptype
 
-      call io_int_fetch_data(iunit, r, 'GRIDTYPE', gridtype, ierr)
+      call fetch_data(iunit, r, 'GRIDTYPE', dst=gridtype, ierr=ierr)
       write(6,*) 'gridtype is ', gridtype
 
-      call io_int_fetch_data(iunit, r, 'HBM2', hbm2, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading HBM2: Assigned missing values"
-          HBM2=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SM', sm, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SM: Assigned missing values"
-          sm=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SICE', sice, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SICE: Assigned missing values"
-          sice=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'PD', pd, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PD: Assigned missing values"
-          pd=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'FIS', fis, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading FIS: Assigned missing values"
-          fis=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'T', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading T: Assigned missing values"
-          t=SPVAL
+      VarName='HBM2'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HBM2=SPVAL
       else
-          do l = 1, lm
-              ll=lm-l+1
-              do j = jsta_2l, jend_2u
-                  do i = 1, im
-                      T ( i, j, l ) = buf3d ( i, j, ll )
-                  end do
-              end do
-          end do
-      endif
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1) 
+        call fetch_data(iunit, r, VarName, pos, n, HBM2, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HBM2=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'Q', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading Q: Assigned missing values"
-          q=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
+      VarName='SM'      
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SM=SPVAL
+      else        
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sm, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SM=SPVAL
+        else
           do j = jsta_2l, jend_2u
-              do i = 1, im
-                  Q ( i, j, l ) = buf3d ( i, j, ll )
-              end do
-          end do
-      end do
+!	  do j = jsta, jend
+           do i = 1, im
+!             SM(I,J)=DUMMY2(I,J)
+             if (j.eq.jm/2 .and. mod(i,10).eq.0)                    &   
+                print*,'sample SM= ',i,j,sm(i,j)
+     
+           enddo
+          enddo 
+        end if 
+      end if
+
+      VarName='SICE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SICE=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, SICE, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SICE=SPVAL
+        end if
+      end if
+      
+
+      VarName='PD'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PD=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, PD, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PD=SPVAL
+        end if
+      end if
+
+!       do j = jsta_2l, jend_2u
+!        do i = 1, im
+!	PD(I,J)=DUMMY2(I,J)
+!        enddo
+!       enddo
+
+      VarName='FIS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        FIS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, FIS, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          FIS=SPVAL
+        end if
+      end if
+
+      VarName='T'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        T=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          T=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+!            T ( i, j, l ) = buf3d ( i, ll, j )
+             T ( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample T= ',    &
+               i,j,l,T ( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if	 
+	  
+
+      VarName='Q'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        Q=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          Q=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             Q ( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample Q= ',    &
+               i,j,l,Q ( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      
+      print*,'finish reading mixing ratio'
       ii=im/2
       jj=(jsta+jend)/2
+!      print*,'Q at ',ii,jj,ll,' = ',Q(ii,jj,ll)
 
-      call io_int_fetch_data(iunit, r, 'U', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading U: Assigned missing values"
-          u=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  U ( i, j, l ) = buf3d ( i, j, ll )
-                  UH( i, j, l ) = U( i, j, l )
-              end do
-          end do
-      end do
+      VarName='U'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        U=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          U=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             U ( i, j, l ) = buf3d ( i, j, ll )
+	     UH( i, j, l ) = U( i, j, l )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample U= ',    &
+               i,j,l,U ( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
 
-      call io_int_fetch_data(iunit, r, 'V', vwbuf3dsice, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading V: Assigned missing values"
-          v=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  V ( i, j, l ) = buf3d ( i, j, ll )
-                  VH( i, j, l ) = V( i, j, l )
-              end do
-          end do
-      end do
+      VarName='V'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        V=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          V=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             V ( i, j, l ) = buf3d ( i, j, ll )
+	     VH( i, j, l ) = V( i, j, l )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample V= ',   &
+               i,j,l,V ( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after V'
+      
+      varname='DX_NMM'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        DX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          DX=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'DX_NMM', dx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading DX_NMM: Assigned missing values"
-          dx=SPVAL
-      endif
+      varname='ETA1'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ETA1=SPVAL
+      else
+        call fetch_data(iunit, r, VarName, pos, n, ETA1, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ETA1=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ETA1', eta1, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ETA1: Assigned missing values"
-          eta1=SPVAL
-      endif
+      varname='ETA2'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ETA2=SPVAL
+      else
+        call fetch_data(iunit, r, VarName, pos, n, ETA2, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ETA2=SPVAL
+        end if
+      end if
+      
+      open(75,file='ETAPROFILE.txt',form='formatted',                    &
+              status='unknown')
+        DO L=1,lm+1 
+	 IF(L .EQ. 1)THEN
+	  write(75,1020)L, 0., 0.
+	 ELSE 
+	  write(75,1020)L, ETA1(lm+2-l), ETA2(lm+2-l)
+	 END IF     
+!         print*,'L, ETA1, ETA2= ',L, ETA1(l), ETA2(l)
+        END DO
+ 1020   format(I3,2E17.10)	
+	close (75)
 
-      call io_int_fetch_data(iunit, r, 'ETA2', eta2, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ETA2: Assigned missing values"
-          eta2=SPVAL
-      endif
+      varname='PDTOP'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PDTOP=SPVAL
+      else
+        ! n = 1
+        call fetch_data(iunit, r, VarName, pos, n, pdtop, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PDTOP=SPVAL
+        end if
+      end if
 
-      open(75,file='ETAPROFILE.txt',form='formatted',status='unknown')
-      DO L=1,lm+1
-        IF(L .EQ. 1)THEN
-          write(75,1020)L, 0., 0.
-        ELSE
-          write(75,1020)L, ETA1(lm+2-l), ETA2(lm+2-l)
-        END IF
-      END DO
-1020   format(I3,2E17.10)
-      close (75)
-
-      call io_int_fetch_data(iunit, r, 'PDTOP', pdtop, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PDTOP: Assigned missing values"
-          pdtop=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'PT', pt, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PT: Assigned missing values"
-          pt=SPVAL
-      endif
-
+        varname='PT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PT=SPVAL
+      else
+        ! n = 1
+        call fetch_data(iunit, r, VarName, pos, n, pt, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PT=SPVAL
+        end if
+      end if
+      
       print*,'PT, PDTOP= ',PT,PDTOP
+	
+      varname='PBLH'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PBLH=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, pblh, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PBLH=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'PBLH', pblh, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PBLH: Assigned missing values"
-          pblh=SPVAL
-      endif
+     varname='MIXHT' !PLee (3/07)
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        MIXHT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+        n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, mixht, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          MIXHT=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'MIXHT', mixht, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading MIXHT: Assigned missing values"
-          mixht=SPVAL
-      endif
+      varname='USTAR'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        USTAR=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ustar, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          USTAR=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'USTAR', ustar, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SICE: Assigned missing values"
-          sice=SPVAL
-      endif
+      varname='Z0'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        Z0=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, z0, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          Z0=SPVAL
+        end if
+      end if
+      
+      varname='THS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        THS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ths, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          THS=SPVAL
+        end if
+      end if
+	
+      VarName='QS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        QS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, qs, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          QS=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'Z0', z0, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading Z0: Assigned missing values"
-          sice=SPVAL
-      endif
+      varname='TWBS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        TWBS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, twbs, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          TWBS=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'THS', ths, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading THS: Assigned missing values"
-          ths=SPVAL
-      endif
+      varname='QWBS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        QWBS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, qwbs, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          QWBS=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'QS', qs, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading QS: Assigned missing values"
-          qs=SPVAL
-      endif
+      varname='PREC' ! instantaneous precip rate?
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PREC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, prec, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PREC=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'TWBS', twbs, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TWBS: Assigned missing values"
-          twbs=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'QWBS', qwbs, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading QWBS: Assigned missing values"
-          qwbs=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'PREC', prec, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PREC: Assigned missing values"
-          prec=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'ACPREC', acprec, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ACPREC: Assigned missing values"
-          acprec=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'CUPREC', cuprec, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CUPREC: Assigned missing values"
-          cuprec=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-        do i = 1, im
-          ANCPRC(I,J)=ACPREC(I,J)-CUPREC(I,J)
-        enddo
-      enddo
-
-      call io_int_fetch_data(iunit, r, 'LSPA', lspa, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading LSPA: Assigned missing values"
-          lspa=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SNO', sno, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SNO: Assigned missing values"
-          sno=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SI', si, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SI: Assigned missing values"
-          si=SPVAL
-      endif
-      call io_int_fetch_data(iunit, r, 'CLDEFI', sice, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CLDEFI: Assigned missing values"
-          cldefi=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'TH10', th10, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TH10: Assigned missing values"
-          th10=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'Q10', q10, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading Q10: Assigned missing values"
-          q10=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'PSHLTR', pshltr, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PSHLTR: Assigned missing values"
-          pshltr=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'TSHLTR', tshltr, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TSHLTR: Assigned missing values"
-          tshltr=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'QSHLTR', qshltr, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading QSHLTR: Assigned missing values"
-          qshltr=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'Q2', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading Q2: Assigned missing values"
-          q2=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
+      varname='ACPREC' ! accum total precip
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ACPREC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ACPREC, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ACPREC=SPVAL
+        end if
+      end if
+      
+      varname='CUPREC' ! accum cumulus precip
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CUPREC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cuprec, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CUPREC=SPVAL
+        else
           do j = jsta_2l, jend_2u
-              do i = 1, im
-                  Q2 ( i, j, l ) = buf3d ( i, j, ll )
-              end do
-          end do
-      end do
+           do i = 1, im
+	     ANCPRC(I,J)=ACPREC(I,J)-CUPREC(I,J)
+           enddo
+          enddo
+        end if
+      end if
+      write(0,*)' after CUPREC'
 
-      call io_int_fetch_data(iunit, r, 'AKHS_OUT', akhs, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading AKHS_OUT: Assigned missing values"
-          akhs=SPVAL
-      endif
+      varname='LSPA'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        LSPA=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, lspa, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          LSPA=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'AKMS_OUT', akms, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading AKMS_OUT: Assigned missing values"
-          akms=SPVAL
-      endif
+      varname='SNO'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SNO=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sno, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SNO=SPVAL
+        end if
+      end if
+     
+      varname='SI'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SI=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, si, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SI=SPVAL
+        end if
+      end if
+      
+      varname='CLDEFI'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CLDEFI=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cldefi, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CLDEFI=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ALBASE', albase, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ALBASE: Assigned missing values"
-          albase=SPVAL
-      endif
+      varname='TH10'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        TH10=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, th10, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          TH10=SPVAL
+        end if
+      end if	
+       
+      varname='Q10'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        Q10=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, q10, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          Q10=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ALBEDO', albedo, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ALBEDO: Assigned missing values"
-          albedo=SPVAL
-      endif
+      varname='PSHLTR'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PSHLTR=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, pshltr, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PSHLTR=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'CZEN', czen, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SICE: Assigned missing values"
-          sice=SPVAL
-      endif
+      varname='TSHLTR'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        TSHLTR=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, tshltr, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          TSHLTR=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'CZMEAN', czmean, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CZMEAN: Assigned missing values"
-          czmean=SPVAL
-      endif
+      varname='QSHLTR'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        QSHLTR=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, qshltr, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          QSHLTR=SPVAL
+	end if  
+      end if
+      write(0,*)' after QSHLTR'
+      
+      VarName='Q2'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        Q2=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          Q2=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             Q2( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample Q2= ',   &
+               i,j,l,Q2( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after Q2'
 
-      call io_int_fetch_data(iunit, r, 'GLAT', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading GLAT: Assigned missing values"
-          sice=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-        do i = 1, im
-          F(I,J)=1.454441e-4*sin(buf(I,J))   ! 2*omeg*sin(phi)
-          GDLAT(I,J)=buf(I,J)*RTD
-        enddo
-      enddo
+      varname='AKHS_OUT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        AKHS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, akhs, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          AKHS=SPVAL
+        end if
+      end if	
 
-      call io_int_fetch_data(iunit, r, 'GLON', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SICE: Assigned missing values"
-          gdlon=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-        do i = 1, im
-          GDLON(I,J)=buf(I,J)*RTD
-        enddo
-      enddo
+      varname='AKMS_OUT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        AKMS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, akms, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          AKMS=SPVAL
+        end if
+      end if		
+	
+      varname='ALBASE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ALBASE=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, albase, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ALBASE=SPVAL
+        end if
+      end if	
+	
+      varname='ALBEDO'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ALBEDO=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, albedo, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ALBEDO=SPVAL
+        end if
+      end if	
 
-      call io_int_fetch_data(iunit, r, 'MXSNAL', mxsnal, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading MXSNAL: Assigned missing values"
-          mxsnal=SPVAL
-      endif
+      varname='CZEN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CZEN=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, czen, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CZEN=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'RADOT', radot, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RADOT: Assigned missing values"
-          radot=SPVAL
-      endif
+      varname='CZMEAN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CZMEAN=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, czmean, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CZMEAN=SPVAL
+        end if
+      end if	
+       print*,'max CZMEAN= ',maxval(czmean) 
 
-      call io_int_fetch_data(iunit, r, 'SIGT4', sigt4, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SIGT4: Assigned missing values"
-          sigt4=SPVAL
-      endif
+      varname='GLAT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        GDLAT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          GDLAT=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             F(I,J)=1.454441e-4*sin(buf(I,J))   ! 2*omeg*sin(phi)
+             GDLAT(I,J)=buf(I,J)*RTD
+	     
+           enddo
+          enddo
+        end if
+      end if
+      
+      varname='GLON'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        GDLON=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          GDLON=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             GDLON(I,J)=buf(I,J)*RTD
+	     if(i.eq.409.and.j.eq.835)print*,'GDLAT GDLON in INITPOST='  &
+      	     ,i,j,GDLAT(I,J),GDLON(I,J)
+           enddo
+          enddo
+        end if
+      end if
+      
+       if(jsta.le.594.and.jend.ge.594)print*,'gdlon(120,594)= ',       &
+       gdlon(120,594)
 
-      call io_int_fetch_data(iunit, r, 'TGROUND', tg, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TGROUND: Assigned missing values"
-          tg=SPVAL
-      endif
+      varname='MXSNAL'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        MXSNAL=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, mxsnal, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          MXSNAL=SPVAL
+        endif
+      end if	
+      write(0,*)' after MXSNAL'
+	
+      varname='RADOT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RADOT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, radot, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RADOT=SPVAL
+        end if
+      end if
+      
+      varname='SIGT4'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SIGT4=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sigt4, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SIGT4=SPVAL
+        end if
+      end if
+       
+      varname='TGROUND'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        TG=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, tg, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          TG=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'CWM', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CWM: Assigned missing values"
-          cwm=SPVAL
-      endif
-      do l = 1, lm
-        ll=lm-l+1
-        do j = jsta_2l, jend_2u
-          do i = 1, im
-            CWM( i, j, l ) = buf3d ( i, j, ll )
-          end do
-        end do
-      end do
+      varname='CWM'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CWM=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CWM=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             CWM( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample CWM= ',   &
+               i,j,l,CWM( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if     
+      write(0,*)' after CWM'
 
-      call io_int_fetch_data(iunit, r, 'F_ICE', buf3dx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading F_ICE: Assigned missing values"
-          f_ice=SPVAL
-      endif
-      do l = 1, lm
-        ll=lm-l+1
-        do j = jsta_2l, jend_2u
-          do i = 1, im
-            F_ice( i, j, l ) = buf3dx ( i, ll, j )
-          end do
-         end do
-      end do
+      varname='F_ICE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        F_ice=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          F_ice=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             F_ice( i, j, l ) = buf3dx ( i, ll, j )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample F_ice= ', &
+               i,j,l,F_ice( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if	
+      write(0,*)' after F_ICE'
 
-      call io_int_fetch_data(iunit, r, 'F_RAIN', buf3dx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading F_RAIN: Assigned missing values"
-          f_rain=SPVAL
-      endif
-      do l = 1, lm
-        ll=lm-l+1
-        do j = jsta_2l, jend_2u
-          do i = 1, im
-            F_rain( i, j, l ) = buf3dx ( i, ll, j )
-          end do
-         end do
-      end do
+      varname='F_RAIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        F_rain=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          F_rain=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             F_rain( i, j, l ) = buf3dx ( i, ll, j )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample F_rain= ',&
+               i,j,l,F_rain( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after F_RAIN'
 
-      call io_int_fetch_data(iunit, r, 'F_RIMEF', buf3dx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading F_RIMEF: Assigned missing values"
-          f_rimef=SPVAL
-      endif
-      do l = 1, lm
-        ll=lm-l+1
-        do j = jsta_2l, jend_2u
-          do i = 1, im
-            F_rimef( i, j, l ) = buf3dx ( i, ll, j )
-          end do
-         end do
-      end do
+      varname='F_RIMEF'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        F_RimeF=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          F_RimeF=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             F_RimeF( i, j, l ) = buf3dx ( i, ll, j )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
+               'sample F_RimeF= ',i,j,l,F_RimeF( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after F_RimeF'
 
-      call io_int_fetch_data(iunit, r, 'CLDFRA', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CLDFRA: Assigned missing values"
-          cfr=SPVAL
-      endif
-      do l = 1, lm
-        ll=lm-l+1
-        do j = jsta_2l, jend_2u
-          do i = 1, im
-            CFR( i, j, l ) = buf3d ( i, j, ll )
-          end do
-        end do
-      end do
+       varname='CLDFRA'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CFR=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CFR=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             CFR( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample CFR= ', &
+               i,j,l,CFR( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after CLDFRA'
 
-      call io_int_fetch_data(iunit, r, 'SR', sr, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SR: Assigned missing values"
-          sr=SPVAL
-      endif
+      varname='SR'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SR=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sr, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SR=SPVAL
+        end if
+      end if	
 
-      call io_int_fetch_data(iunit, r, 'CFRACH', cfrach, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CFRACH: Assigned missing values"
-          cfrach=SPVAL
-      endif
+      varname='CFRACH'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CFRACH=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cfrach, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CFRACH=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'CFRACL', cfracl, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CFRACL: Assigned missing values"
-          cfracl=SPVAL
-      endif
+      varname='CFRACL'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CFRACL=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cfracl, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CFRACL=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'CFRACM', cfracm, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CFRACM: Assigned missing values"
-          cfracm=SPVAL
-      endif
+      varname='CFRACM'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CFRACM=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cfracm, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CFRACM=SPVAL
+        end if
+      end if
+      write(6,*) 'maxval CFRACM: ', maxval(CFRACM)
 
-      call io_int_fetch_data(iunit, r, 'ISLOPE', islope, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ISLOPE: Assigned missing values"
-          islope=nint(SPVAL)
-      endif
+      varname='ISLOPE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ISLOPE=NINT(SPVAL)
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, islope, ierr)
+         if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ISLOPE=NINT(SPVAL)
+        end if
+      end if	
+	
+!	varname='SOILTB'
+!	write(6,*) 'call getVariableB for : ', VarName
+!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUMMY,
+!     &  IM,1,JM,1,IM,JS,JE,1)
 
 ! either assign SLDPTH to be the same as eta (which is original
 ! setup in WRF LSM) or extract thickness of soil layers from wrf
@@ -757,11 +1339,19 @@
 
       if (isf_PHYSICS == 3) then
 ! get SLDPTH from wrf output
-        call io_int_fetch_data(iunit, r, 'SLDPTH', SLDPTH2, ierr)
-        if (ierr .ne. 0) then
-            print*,"Error reading ISLOPE: Assigned missing values"
+        VarName='SLDPTH'
+      call io_int_loc(VarName, r, pos, n, iret)
+        if (iret /= 0) then
+          print*,VarName," not found in file-Assigned missing values"
+          SLDPTH2=SPVAL
+        else
+          n = NSOIL
+          call fetch_data(iunit, r, VarName, pos, n, SLDPTH2, ierr)
+          if (ierr /= 0) then
+            print*,"Error reading ", VarName,"Assigned missing values"
             SLDPTH2=SPVAL
-        endif
+          end if
+        end if
 
         DUMCST=0.0
         DO N=1,NSOIL
@@ -772,14 +1362,22 @@
             SLLEVEL(N)=SLDPTH2(N)
           END DO
         END IF
-!        print*,'SLLEVEL ',(SLLEVEL(N),N=1,NSOIL)
+        print*,'SLLEVEL ',(SLLEVEL(N),N=1,NSOIL)
 
       else ! isf_PHYSICS /= 3
-        call io_int_fetch_data(iunit, r, 'DZSOIL', SLDPTH2, ierr)
-        if (ierr .ne. 0) then
-            print*,"Error reading ISLOPE: Assigned missing values"
+        VarName='DZSOIL'
+      call io_int_loc(VarName, r, pos, n, iret)
+        if (iret /= 0) then
+          print*,VarName," not found in file-Assigned missing values"
+          SLDPTH2=SPVAL
+        else
+          n = NSOIL
+          call fetch_data(iunit, r, VarName, pos, n, SLDPTH2, ierr)
+          if (ierr /= 0) then
+            print*,"Error reading ", VarName,"Assigned missing values"
             SLDPTH2=SPVAL
-        endif
+          end if
+        end if ! if (iret /= 0)
 
         DUMCST=0.0
         DO N=1,NSOIL
@@ -790,92 +1388,191 @@
             SLDPTH(N)=SLDPTH2(N)
           END DO
         END IF
-!        print*,'SLDPTH= ',(SLDPTH(N),N=1,NSOIL)
+        print*,'SLDPTH= ',(SLDPTH(N),N=1,NSOIL)
       end if   ! if (isf_PHYSICS==3)
 
-      call io_int_fetch_data(iunit, r, 'CMC', cmc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CMC: Assigned missing values"
-          cmc=SPVAL
-      endif
+      VarName='CMC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CMC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cmc, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CMC=SPVAL
+        end if
+      end if
+      
+      varname='GRNFLX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        GRNFLX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, grnflx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          GRNFLX=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'GRNFLX', grnflx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading GRNFLX: Assigned missing values"
-          grnflx=SPVAL
-      endif
+      varname='PCTSNO'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PCTSNO=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, pctsno, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PCTSNO=SPVAL
+        end if
+      end if	
+	
+      varname='SOILTB'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SOILTB=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, soiltb, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SOILTB=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'PCTSNO', pctsno, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PCTSNO: Assigned missing values"
-          pctsno=SPVAL
-      endif
+      varname='VEGFRC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        VEGFRC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, vegfrc, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          VEGFRC=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'SOILTB', soiltb, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SOILTB: Assigned missing values"
-          soiltb=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'VEGFRC', vegfrc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading VEGFRC: Assigned missing values"
-          vegfrc=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SH2O', bufsoil, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SH2O: Assigned missing values"
-          sh20=SPVAL
-      endif
-      do l = 1, nsoil
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  SH2O(I,J,L)=bufSOIL(I,L,J)
-              enddo
+      VarName='SH2O'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SH2O=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im*nsoil
+	n=im*(jend_2u-jsta_2l+1)*nsoil
+        call fetch_data(iunit, r, VarName, pos, n, bufsoil, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SH2O=SPVAL
+        else
+	  do l = 1, nsoil
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             SH2O(I,J,L)=bufSOIL(I,L,J)
+	    enddo 
+           enddo
           enddo
-      enddo
+        end if
+      end if
+      write(0,*)' after SH2O'
 
-      call io_int_fetch_data(iunit, r, 'SMC', bufsoil, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SMC: Assigned missing values"
-          smc=SPVAL
-      endif
-      DO L = 1, NSOIL
-          DO J = JSTA_2L, JEND_2U
-              DO I = 1, IM
-                  SMC(I,J,L)=BUFSOIL(I,L,J)
-              ENDDO
-          ENDDO
-      ENDDO
+      VarName='SMC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SMC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im*nsoil
+	n=im*(jend_2u-jsta_2l+1)*nsoil
+        call fetch_data(iunit, r, VarName, pos, n, bufsoil, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SMC=SPVAL
+        else
+	  do l = 1, nsoil
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             SMC(I,J,L)=bufSOIL(I,L,J)
+	    enddo 
+           enddo
+          enddo
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'STC', bufsoil, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading STC: Assigned missing values"
-          stc=SPVAL
-      endif
-      DO L = 1, NSOIL
-          DO J = JSTA_2L, JEND_2U
-              DO I = 1, IM
-                  STC(I,J,L)=BUFSOIL(I,L,J)
-              ENDDO
-          ENDDO
-      ENDDO
+      print*,'SMC at ',ii,jj,N,' = ',smc(ii,jj,1),smc(ii,jj,2)         &
+      ,smc(ii,jj,3),smc(ii,jj,4)
 
-      call io_int_fetch_data(iunit, r, 'PINT', buf3d2, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading PINT: Assigned missing values"
-          pint=SPVAL
-      endif
-      DO L = 1, lp1
-          ll=lp1-l+1
-          DO J = JSTA_2L, JEND_2U
-              DO I = 1, IM
-                  PINT(I,J,L) = buf3d2(I,J,LL)
-                  ALPINT(I,J,L)=ALOG(PINT(I,J,L))
-              ENDDO
-          ENDDO
-      ENDDO
+      VarName='STC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        STC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im*nsoil
+	n=im*(jend_2u-jsta_2l+1)*nsoil
+        call fetch_data(iunit, r, VarName, pos, n, bufsoil, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          STC=SPVAL
+        else
+	  do l = 1, nsoil
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             STC(I,J,L)=bufSOIL(I,L,J)
+	    enddo 
+           enddo
+          enddo
+        end if
+      end if
+    
+      if(jj.ge.jsta.and.jj.le.jend)                                    &
+        print*,'STC at ',ii,jj,' = ',stc(ii,jj,1),stc(ii,jj,2)         &
+      ,stc(ii,jj,3),stc(ii,jj,4)
+      write(0,*)' after STC'
+
+      VarName='PINT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        PINT=SPVAL
+      else
+	n=im*jm*lp1
+        call fetch_data(iunit, r, VarName, pos, n, buf3d2, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          PINT=SPVAL
+        else
+	  do l = 1, lp1
+	   ll=lp1-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             PINT( i, j, l ) = buf3d2 ( i, j, ll )
+!      if(i==1.and.j==250)then
+!        write(0,*)' l=',l,' iin PINT=',pint(i,j,l)
+!      endif
+             ALPINT(I,J,L)=ALOG(PINT(I,J,L))     
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'PINT= ',       &
+               i,j,l,PINT ( i, j, l )
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after PINT'
 
       do l = 2, lm+1
        do j = jsta_2l, jend_2u
@@ -884,10 +1581,16 @@
 !     &               ALOG(PINT(I,J,L)))*0.5)
          PMID ( i, j, l-1 ) = (PINT(I,J,L-1)+                              &
                      PINT(I,J,L))*0.5 ! representative of what model does
+      if(i==1.and.j==250.and.l==2)then
+        write(0,*)' pmid=',pmid(i,j,l-1)                                   &
+      ,           ' pint=',pint(i,j,l-1),pint(i,j,l)
+      endif
+         if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'PMID= ',              &
+               i,j,l-1,PMID ( i, j, l-1 )
         end do
        end do
-      end do
-!      write(0,*)' after PMID'
+      end do 
+      write(0,*)' after PMID'
 
       do l = 1, lm
        do j = jsta, jend
@@ -971,229 +1674,515 @@
        ENDDO
       ENDDO
 
-      call io_int_fetch_data(iunit, r, 'W', buf3d2, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading W: Assigned missing values"
+      write(0,*)' before W'
+      VarName='W'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        WH=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d2, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
           WH=SPVAL
-      endif
-      DO L = 1, lm
-          ll=lm-l+1
-          DO J = JSTA_2L, JEND_2U
-              DO I = 1, IM
-                  WH(I,J,L) = buf3d2(I,J,LL)
-              ENDDO
-          ENDDO
-      ENDDO
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             WH( i, j, l ) = buf3d2 ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'WH= ',               &
+               i,j,l,WH ( i, j, l )
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after W'
 
-      call io_int_fetch_data(iunit, r, 'ACFRCV', acfrcv, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ACFRCV: Assigned missing values"
-          acfrcv=SPVAL
-      endif
+      VarName='ACFRCV'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ACFRCV=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, acfrcv, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ACFRCV=SPVAL
+        end if
+      end if
+      write(0,*)' after ACFRCV'
+      
       write(6,*) 'MAX ACFRCV: ', maxval(ACFRCV)
 
+      VarName='ACFRST'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ACFRST=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, acfrst, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ACFRST=SPVAL
+        end if
+      end if
+      write(6,*) 'max ACFRST ', maxval(ACFRST)
+      write(0,*)' after ACFRST'
 
-      call io_int_fetch_data(iunit, r, 'ACFRST', acfrst, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ACFRST: Assigned missing values"
-          acfrst=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SSROFF', ssroff, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SSROFF: Assigned missing values"
-          ssroff=SPVAL
-      endif
+!insert-mp
+      VarName='SSROFF'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SSROFF=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ssroff, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SSROFF=SPVAL
+        end if
+      end if
+      write(0,*)' after SSROFF'
 
 ! reading UNDERGROUND RUNOFF
-      call io_int_fetch_data(iunit, r, 'BGROFF', bgroff, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading BGROFF: Assigned missing values"
-          bgroff=SPVAL
-      endif
+      VarName='BGROFF'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        BGROFF=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, bgroff, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          BGROFF=SPVAL
+        end if
+      end if
+      write(0,*)' after BGROFF'
+      
+      VarName='RLWIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RLWIN=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, rlwin, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RLWIN=SPVAL
+        end if
+      end if
+      write(0,*)' after RLWIN'
 
-      call io_int_fetch_data(iunit, r, 'RLWIN', rlwin, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RLWIN: Assigned missing values"
-          rlwin=SPVAL
-      endif
+      VarName='RLWTOA'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RLWTOA=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, rlwtoa, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RLWTOA=SPVAL
+        end if
+      end if
+      write(0,*)' after RLWTOA'
 
-      call io_int_fetch_data(iunit, r, 'RLWTOA', rlwtoa, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RLWTOA: Assigned missing values"
-          rlwtoa=SPVAL
-      endif
+      VarName='ALWIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ALWIN=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, alwin, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ALWIN=SPVAL
+        end if
+      end if
+      write(0,*)' after ALWIN'
+      
+      VarName='ALWOUT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ALWOUT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, alwout, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ALWOUT=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ALWIN', alwin, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ALWIN: Assigned missing values"
-          alwin=SPVAL
-      endif
+      VarName='ALWTOA'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ALWTOA=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, alwtoa, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ALWTOA=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ALWOUT', alwout, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ALWOUT: Assigned missing values"
-          alwout=SPVAL
-      endif
+      VarName='RSWIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RSWIN=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, rswin, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RSWIN=SPVAL
+        end if
+      end if
+      
+      VarName='RSWINC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RSWINC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, rswinc, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RSWINC=SPVAL
+        end if
+      end if
+      
+       print*,'max RSWINC= ',maxval(RSWINC)
 
-      call io_int_fetch_data(iunit, r, 'ALWTOA', alwtoa, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ALWTOA: Assigned missing values"
-          alwtoa=SPVAL
-      endif
+      VarName='RSWOUT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RSWOUT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, rswout, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RSWOUT=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'RSWIN', rswin, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RSWIN: Assigned missing values"
-          rswin=SPVAL
-      endif
+      VarName='ASWIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ASWIN=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, aswin, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ASWIN=SPVAL
+        end if
+      end if
+      
+      VarName='ASWOUT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ASWOUT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, aswout, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ASWOUT=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'RSWINC', rswinc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RSWINC: Assigned missing values"
-          rswinc=SPVAL
-      endif
+      VarName='ASWTOA'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ASWTOA=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, aswtoa, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ASWTOA=SPVAL
+        end if
+      end if
+      write(0,*)' after ASWTOA'
 
-      call io_int_fetch_data(iunit, r, 'RSWOUT', rswout, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RSWOUT: Assigned missing values"
-          rswout=SPVAL
-      endif
+      VarName='SFCSHX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SFCSHX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sfcshx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SFCSHX=SPVAL
+        end if
+      end if
+      
+      VarName='SFCLHX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SFCLHX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sfclhx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SFCLHX=SPVAL
+        end if
+      end if
+      
+      VarName='SUBSHX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SUBSHX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, subshx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SUBSHX=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ASWIN', aswin, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ASWIN: Assigned missing values"
-          aswin=SPVAL
-      endif
+      VarName='SNOPCX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SNOPCX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, snopcx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SNOPCX=SPVAL
+        end if
+      end if
+      write(0,*)' after SNOPCX'
+	
+      VarName='SFCUVX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SFCUVX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sfcuvx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SFCUVX=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ASWOUT', aswout, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ASWOUT: Assigned missing values"
-          aswout=SPVAL
-      endif
+      VarName='POTEVP'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        POTEVP=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, potevp, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          POTEVP=SPVAL
+        end if
+      end if
+      write(0,*)' after POTEVP'
 
-      call io_int_fetch_data(iunit, r, 'ASWTOA', aswtoa, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ASWTOA: Assigned missing values"
-          aswtoa=SPVAL
-      endif
+      varname='RLWTT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RLWTT=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RLWTT=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             RLWTT( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample RLWTT= ', &
+                  i,j,l,RLWTT( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after RLWTT'
 
-      call io_int_fetch_data(iunit, r, 'SFCSHX', sfcshx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SFCSHX: Assigned missing values"
-          sfcshx=SPVAL
-      endif
+      varname='RSWTT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        RSWTT=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          RSWTT=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             RSWTT( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample RSWTT= ', &
+                  i,j,l,RSWTT( i, j, l )
+             ttnd ( i, j, l ) = rswtt(i,j,l) + rlwtt(i,j,l)	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after RSWTT'
 
-      call io_int_fetch_data(iunit, r, 'SFCLHX', sfclhx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SFCLHX: Assigned missing values"
-          sfclhx=SPVAL
-      endif
+      varname='TCUCN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        TCUCN=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          TCUCN=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             TCUCN( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample TCUCN= ', &
+                  i,j,l,TCUCN( i, j, l )	 
+             if(l.eq.lm.and.ABS(TCUCN( i, j, l )).gt.1.0e-4)              &
+          print*,'nonzero TCUCN',i,j,l,TCUCN( i, j, l )    
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after TCUCN'
+	
+      varname='TRAIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        TRAIN=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          TRAIN=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             TRAIN( i, j, l ) = buf3d ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample TRAIN= ',  &
+                  i,j,l,TRAIN( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after TRAIN'
 
-      call io_int_fetch_data(iunit, r, 'SUBSHX', subshx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SUBSHX: Assigned missing values"
-          subshx=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SNOPCX', snopcx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SNOPCX: Assigned missing values"
-          snopcx=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SFCUVX', sfcuvx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SFCUVX: Assigned missing values"
-          sfcuvx=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'POTEVP', potevp, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading POTEVP: Assigned missing values"
-          potevp=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'RLWTT', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RLWTT: Assigned missing values"
-          rlwtt=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
+      VarName='NCFRCV'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NCFRCV=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ibuf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NCFRCV=SPVAL
+        else
           do j = jsta_2l, jend_2u
-              do i = 1, im
-                  RLWTT( i, j, l ) = buf3d ( i, j, ll )
-              end do
-          end do
-      end do
-
-      call io_int_fetch_data(iunit, r, 'RSWTT', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading RSWTT: Assigned missing values"
-          rswtt=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  RSWTT( i, j, l ) = buf3d ( i, j, ll )
-              end do
-          end do
-      end do
-
-      call io_int_fetch_data(iunit, r, 'TCUCN', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TCUCN: Assigned missing values"
-          tcucn=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  TCUCN( i, j, l ) = buf3d ( i, j, ll )
-              end do
-          end do
-      end do
-
-      call io_int_fetch_data(iunit, r, 'TRAIN', buf3d, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TRAIN: Assigned missing values"
-          train=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  TRAIN( i, j, l ) = buf3d ( i, j, ll )
-              end do
-          end do
-      end do
-
-      call io_int_fetch_data(iunit, r, 'NCFRCV', ibuf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NCFRCV: Assigned missing values"
-          ncfrcv=SPVAL
-      endif
-      ! Is this needed?....
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              NCFRCV(I,J)=FLOAT(ibuf(I,J))
+           do i = 1, im
+             NCFRCV(I,J)=FLOAT(ibuf(I,J))
+           enddo
           enddo
-      enddo
+        end if
+      end if
+      write(0,*)' after NCFRCV'
 
-      call io_int_fetch_data(iunit, r, 'NCFRST', ibuf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NCFRST: Assigned missing values"
-          ncfrst=SPVAL
-      endif
-      ! Is this needed?....
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              ncfrst(I,J)=FLOAT(ibuf(I,J))
+      VarName='NCFRST'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NCFRST=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ibuf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NCFRST=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             NCFRST(I,J)=FLOAT(IBUF(I,J))
+           enddo
           enddo
-      enddo
-
+        end if
+      end if
+      
 ! set default to not empty buket
       NSRFC=0
       NRDLW=0
@@ -1202,213 +2191,545 @@
       NCLOD=0
       NPREC=0
 
-      call io_int_fetch_data(iunit, r, 'NPHS0', nphs, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NPHS0: Assigned missing values"
-          nphs=SPVAL
-      endif
+      VarName='NPHS0'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NPHS=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NPHS, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NPHS=NINT(SPVAL)
+	end if  
+      end if
+      write(6,*) 'NPHS= ', NPHS
 
-      call io_int_fetch_data(iunit, r, 'NPREC', nprec, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NPREC: Assigned missing values"
-          nprec=SPVAL
-      endif
+      VarName='NPREC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NPREC=NINT(SPVAL)
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NPREC, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NPREC=NINT(SPVAL)
+	end if  
+      end if
+      write(6,*) 'NPREC= ', NPREC
 
-      call io_int_fetch_data(iunit, r, 'NCLOD', nclod, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NCLOD: Assigned missing values"
-          nclod=SPVAL
-      endif
+      VarName='NCLOD'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NCLOD=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NCLOD, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NCLOD=SPVAL
+        end if
+      end if
+      write(6,*) 'NCLOD= ', NCLOD
+      
+      VarName='NHEAT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NHEAT=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NHEAT, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NHEAT=SPVAL
+        end if
+      end if
+      write(6,*) 'NHEAT= ', NHEAT      
 
-      call io_int_fetch_data(iunit, r, 'NHEAT', nheat, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NHEAT: Assigned missing values"
-          nheat=SPVAL
-      endif
+      VarName='NRDLW'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NRDLW=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NRDLW, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NRDLW=SPVAL
+        end if
+      end if
+      write(6,*) 'NRDLW= ', NRDLW
 
-      call io_int_fetch_data(iunit, r, 'NRDLW', nrdlw, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NRDLW: Assigned missing values"
-          nrdlw=SPVAL
-      endif
+      VarName='NRDSW'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NRDSW=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NRDSW, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NRDSW=SPVAL
+        end if
+      end if
+	write(6,*) 'NRDSW= ', NRDSW
 
-      call io_int_fetch_data(iunit, r, 'NRDSW', nrdsw, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NRDSW: Assigned missing values"
-          nrdsw=SPVAL
-      endif
+      VarName='NSRFC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        NSRFC=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, NSRFC, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          NSRFC=SPVAL
+        end if
+      end if
+	write(6,*) 'NSRFC= ', NSRFC
 
-      call io_int_fetch_data(iunit, r, 'NSRFC', nsrfc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading NSRFC: Assigned missing values"
-          nsrfc=SPVAL
-      endif
+      VarName='AVRAIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        AVRAIN=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, AVRAIN, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          AVRAIN=SPVAL
+        end if
+      end if
+      write(6,*) 'AVRAIN= ', AVRAIN
+      write(0,*)' after AVRAIN'
 
-      call io_int_fetch_data(iunit, r, 'AVRAIN', avrain, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading AVRAIN: Assigned missing values"
-          avrain=SPVAL
-      endif
+      VarName='AVCNVC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        AVCNVC=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, AVCNVC, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          AVCNVC=SPVAL
+        end if
+      end if
+      write(6,*) 'AVCNVC= ', AVCNVC
 
-      call io_int_fetch_data(iunit, r, 'AVCNVC', avcnvc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading AVCNVC: Assigned missing values"
-          avcnvc=SPVAL
-      endif
+      VarName='ARDLW'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ARDLW=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, ARDLW, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ARDLW=SPVAL
+        end if
+      end if
+      write(6,*) 'ARDLW= ', ARDLW
 
-      call io_int_fetch_data(iunit, r, 'ARDLW', ardlw, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ARDLW: Assigned missing values"
-          ardlw=SPVAL
-      endif
+      VarName='ARDSW'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ARDSW=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, ARDSW, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ARDSW=SPVAL
+        end if
+      end if
+	write(6,*) 'ARDSW= ', ARDSW
+	
+      VarName='ASRFC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ASRFC=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, ASRFC, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ASRFC=SPVAL
+        end if
+      end if
+	write(6,*) 'ASRFC= ', ASRFC	
 
-      call io_int_fetch_data(iunit, r, 'ARDSW', ardsw, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ARDSW: Assigned missing values"
-          ardsw=SPVAL
-      endif
+      VarName='APHTIM'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        APHTIM=SPVAL
+      else
+        n = 1
+        call fetch_data(iunit, r, VarName, pos, n, APHTIM, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          APHTIM=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ASRFC', asrfc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ASRFC: Assigned missing values"
-          asrfc=SPVAL
-      endif
+! reading TKE
+!      VarName='TKE_PBL'
+!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUM3D,
+!     &  IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+!      do l = 1, lm
+!       do j = jsta_2l, jend_2u
+!        do i = 1, im
+!            q2 ( i, j, l ) = dum3d ( i, j, l )
+!        end do
+!       end do
+!      end do
+!      print*,'TKE at ',ii,jj,ll,' = ',q2(ii,jj,ll)
+!
+! reading 10 m wind
+      VarName='U10'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        U10=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, u10, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          U10=SPVAL
+        end if
+      end if
+      if(jj.ge.jsta.and.jj.le.jend)                                     &
+               print*,'U10 at ',ii,jj,' = ',U10(ii,jj)
+      write(0,*)' after U10'
 
-      call io_int_fetch_data(iunit, r, 'APHTIM', aphtim, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading APHTIM: Assigned missing values"
-          aphtim=SPVAL
-      endif
+      VarName='V10'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        V10=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, v10, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          V10=SPVAL
+        end if
+      end if
+      if(jj.ge.jsta.and.jj.le.jend)                                     &
+           print*,'V10 at ',ii,jj,' = ',V10(ii,jj)
+!
+!
+! reading SMSTAV
+      VarName='SMSTAV'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SMSTAV=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, smstav, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SMSTAV=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'U10', u10, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading U10: Assigned missing values"
-          u10=SPVAL
-      endif
+      VarName='SMSTOT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SMSTOT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, smstot, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SMSTOT=SPVAL
+        end if
+      end if
+! reading VEGETATION TYPE 
+      VarName='IVGTYP'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        IVGTYP=NINT(SPVAL)
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, ivgtyp, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          IVGTYP=NINT(SPVAL)
+        end if
+      end if	
 
-      call io_int_fetch_data(iunit, r, 'V10', v10, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading V10: Assigned missing values"
-          v10=SPVAL
-      endif
+      VarName='ISLTYP' 
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ISLTYP=NINT(SPVAL)
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, isltyp, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ISLTYP=NINT(SPVAL)
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'SMSTAV', smstav, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SMSTAV: Assigned missing values"
-          smstav=SPVAL
-      endif
+      VarName='SFCEVP'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SFCEVP=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sfcevp, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SFCEVP=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'SMSTOT', smstot, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SMSTOT: Assigned missing values"
-          smstot=SPVAL
-      endif
+      VarName='SFCEXC'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SFCEXC=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sfcexc, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SFCEXC=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'IVGTYP', ivgtyp, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading IVGTYP: Assigned missing values"
-          ivgtyp=SPVAL
-      endif
+      VarName='ACSNOW'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ACSNOW=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, acsnow, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ACSNOW=SPVAL
+        end if
+      end if
+       
+      VarName='ACSNOM'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        ACSNOM=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, acsnom, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          ACSNOM=SPVAL
+        end if
+      end if
 
-      call io_int_fetch_data(iunit, r, 'ISLTYP', isltyp, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ISLTYP: Assigned missing values"
-          isltyp=SPVAL
-      endif
+      VarName='SST'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        SST=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, sst, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          SST=SPVAL
+        end if
+      end if
+      if(jj.ge.jsta.and.jj.le.jend)                                      &
+            print*,'SST at ',ii,jj,' = ',sst(ii,jj)      
+      write(0,*)' after SST'
 
-      call io_int_fetch_data(iunit, r, 'SFCEVP', sfcevp, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SFCEVP: Assigned missing values"
-          sfcevp=SPVAL
-      endif
+! ADDED TAUX AND TAUY in POST --------------- zhan's doing
+      VarName='TAUX'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        MDLTAUX=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+        n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, mdltaux, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          MDLTAUX=SPVAL
+        end if
+      end if
+      if(jj.ge.jsta.and.jj.le.jend)                &
+        print*,'MDLTAUX at ',ii,jj,' = ',mdltaux(ii,jj)
+      write(0,*)' after MDLTAUX'
 
-      call io_int_fetch_data(iunit, r, 'SFCEXC', sfcexc, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SFCEXC: Assigned missing values"
-          sfcexc=SPVAL
-      endif
+      VarName='TAUY'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        MDLTAUY=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+        n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, mdltauy, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          MDLTAUY=SPVAL
+        end if
+      end if
+      if(jj.ge.jsta.and.jj.le.jend)                 &
+        print*,'MDLTAUY at ',ii,jj,' = ',mdltauy(ii,jj)
+      write(0,*)' after MDLTAUY'
+! zhang's dong ends
 
-      call io_int_fetch_data(iunit, r, 'ACSNOW', acsnow, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ACSNOW: Assigned missing values"
-          acsnow=SPVAL
-      endif
+      VarName='EL_PBL'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        EL_PBL=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          EL_PBL=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             EL_PBL( i, j, l ) = buf3dx ( i, j ,ll)
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample EL= ', &
+                  i,j,l,EL_PBL( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after EL_PBL'
 
-      call io_int_fetch_data(iunit, r, 'ACSNOM', acsnom, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading ACSNOM: Assigned missing values"
-          acsnom=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'SST', sst, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading SST: Assigned missing values"
-          sst=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'TAUX', mdltaux, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TAUX: Assigned missing values"
-          mdltaux=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'TAUY', mdltauy, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading TAUY: Assigned missing values"
-          mdltauy=SPVAL
-      endif
-
-      call io_int_fetch_data(iunit, r, 'EL_PBL', buf3dx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading EL_PBL: Assigned missing values"
-          el_pbl=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  EL_PBL( i, j, l ) = buf3dx ( i, j ,ll)
-              end do
-          end do
-      end do
-
-      call io_int_fetch_data(iunit, r, 'EXCH_H', buf3dx, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading EXCH_H: Assigned missing values"
+      VarName='EXCH_H'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        EXCH_H=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
           EXCH_H=SPVAL
-      endif
-      do l = 1, lm
-          ll=lm-l+1
-          do j = jsta_2l, jend_2u
-              do i = 1, im
-                  EXCH_H( i, j, l ) = buf3dx ( i, j ,ll)
-              end do
-          end do
-      end do 
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             EXCH_H( i, j, l ) = buf3dx ( i, j, ll )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample EXCH= ', &
+                  i,j,l,EXCH_H( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after EXCH_H'
 
-      call io_int_fetch_data(iunit, r, 'THZ0', thz0, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading THZ0: Assigned missing values"
-          thz0=SPVAL
-      endif
+      VarName='THZ0'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        THZ0=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, thz0, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          THZ0=SPVAL
+        end if
+      end if
+      print*,'THZ0 at ',ii,jj,' = ',THZ0(ii,jj)
 
-      call io_int_fetch_data(iunit, r, 'QZ0', qz0, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading QZ0: Assigned missing values"
-          qz0=SPVAL
-      endif
+      VarName='QZ0'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        QZ0=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, qz0, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          QZ0=SPVAL
+        end if
+      end if
+      print*,'QZ0 at ',ii,jj,' = ',QZ0(ii,jj)
 
-      call io_int_fetch_data(iunit, r, 'UZ0', uz0, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading UZ0: Assigned missing values"
-          uz0=SPVAL
-      endif
+      VarName='UZ0'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        UZ0=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, uz0, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          UZ0=SPVAL
+	end if  
+      end if
+      if(jj.ge.jsta.and.jj.le.jend)                                     &
+           print*,'UZ0 at ',ii,jj,' = ',UZ0(ii,jj)
 
-      call io_int_fetch_data(iunit, r, 'VZ0', vz0, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading VZ0: Assigned missing values"
-          vz0=SPVAL
-      endif
+      VarName='VZ0'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        VZ0=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, vz0, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          VZ0=SPVAL
+        end if
+      end if
+      if(jj.ge.jsta.and.jj.le.jend) print*,'VZ0 at ',ii,jj,'=',VZ0(ii,jj)
+
 
 !
 ! Very confusing story ...
@@ -1424,91 +2745,192 @@
 ! For historical reasons model arrays CNVTOP,CNVBOT are renamed HBOT,HTOP
 ! and manipulated throughout the post. 
 
-      call io_int_fetch_data(iunit, r, 'CNVTOP', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CNVTOP: Assigned missing values"
-          htop=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              HTOP ( i, j ) = float(LM)-buf(i,j)+1.0
-              HTOP ( i, j ) = max(1.0,min(HTOP(I,J),float(LM)))
+! retrieve htop and hbot
+!      VarName='HTOP'
+      VarName='CNVTOP'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HTOP=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HTOP=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             HTOP ( i, j ) = float(LM)-buf(i,j)+1.0
+             HTOP ( i, j ) = max(1.0,min(HTOP(I,J),float(LM)))
+           enddo
           enddo
-      enddo
+        end if
+      end if
+       print*,'maxval HTOP: ', maxval(HTOP)
+      write(0,*)' after HTOP'
 
-      call io_int_fetch_data(iunit, r, 'CNVBOT', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CNVBOT: Assigned missing values"
-          hbot=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              HBOT ( i, j ) = float(LM)-buf(i,j)+1.0
-              HBOT ( i, j ) = max(1.0,min(HBOT(I,J),float(LM)))
+!      VarName='HBOT'
+      VarName='CNVBOT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HBOT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HBOT=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             HBOT ( i, j ) = float(LM)-buf(i,j)+1.0
+             HBOT ( i, j ) = max(1.0,min(HBOT(I,J),float(LM)))
+           enddo
           enddo
-      enddo
+        end if
+      end if      
+       print*,'maxval HBOT: ', maxval(HBOT)
+      write(0,*)' after HBOT'
 
-      call io_int_fetch_data(iunit, r, 'HTOPD', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading HTOPD: Assigned missing values"
-          htopd=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              HTOPD ( i, j ) = float(LM)-buf(i,j)+1.0
+      VarName='HTOPD'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HTOPD=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HTOPD=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             HTOPD ( i, j ) = float(LM)-buf(i,j)+1.0
+           enddo
           enddo
-      enddo
+        end if
+      end if
+       print*,'maxval HTOPD: ', maxval(HTOPD)
 
-      call io_int_fetch_data(iunit, r, 'HBOTD', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading HBOTD: Assigned missing values"
-          hbotd=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              HBOTD ( i, j ) = float(LM)-buf(i,j)+1.0
+      VarName='HBOTD'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HBOTD=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HBOTD=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             HBOTD( i, j ) = float(LM)-buf(i,j)+1.0
+           enddo
           enddo
-      enddo
+        end if
+      end if
+       print*,'maxval HBOTD: ', maxval(HBOTD)
 
-      call io_int_fetch_data(iunit, r, 'HTOPS', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading HTOPS: Assigned missing values"
-          htops=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              HTOPS ( i, j ) = float(LM)-buf(i,j)+1.0
+      VarName='HTOPS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HTOPS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HTOPS=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             HTOPS( i, j ) = float(LM)-buf(i,j)+1.0
+           enddo
           enddo
-      enddo
-
-      call io_int_fetch_data(iunit, r, 'HBOTS', buf, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading HBOTS: Assigned missing values"
-          hbots=SPVAL
-      endif
-      do j = jsta_2l, jend_2u
-          do i = 1, im
-              HBOTS ( i, j ) = float(LM)-buf(i,j)+1.0
+        end if
+      end if
+       print*,'maxval HTOPS: ', maxval(HTOPS)
+                                                                                 
+      VarName='HBOTS'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HBOTS=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, buf, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HBOTS=SPVAL
+        else
+          do j = jsta_2l, jend_2u
+           do i = 1, im
+             HBOTS ( i, j ) = float(LM)-buf(i,j)+1.0
+           enddo
           enddo
-      enddo
+        end if
+      end if
+       print*,'maxval HBOTS: ', maxval(HBOTS)
+      write(0,*)' after HBOTS'
 
-      call io_int_fetch_data(iunit, r, 'CUPPT', cuppt, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CUPPT: Assigned missing values"
-          cuppt=SPVAL
-      endif
+      VarName='CUPPT'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CUPPT=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cuppt, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CUPPT=SPVAL
+        end if
+      end if
+       print*,'maxval CUPPT: ', maxval(CUPPT)
 
-      call io_int_fetch_data(iunit, r, 'CPRATE', cprate, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading CPRATE: Assigned missing values"
-          cprate=SPVAL
-      endif
+      VarName='CPRATE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        CPRATE=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, cprate, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          CPRATE=SPVAL
+        end if
+      end if
+       print*,'maxval CPRATE: ', maxval(CPRATE)
 
-      call io_int_fetch_data(iunit, r, 'HBM2', hbm2, ierr)
-      if (ierr .ne. 0) then
-          print*,"Error reading HBM2: Assigned missing values"
-          hbm2=SPVAL
-      endif
+      VarName='HBM2'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        HBM2=SPVAL
+      else
+        pos=pos+(jsta_2l-1)*4*im
+	n=im*(jend_2u-jsta_2l+1)
+        call fetch_data(iunit, r, VarName, pos, n, hbm2, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          HBM2=SPVAL
+        end if
+      end if
 
 !!!! DONE GETTING
 
@@ -1770,6 +3192,8 @@
       write(0,*)' after writes'
 
         call mpi_file_close(iunit,ierr)
+
+!
 
       RETURN
       END
