@@ -82,23 +82,16 @@
       CHARACTER*4 RESTHR
       CHARACTER FNAME*80,ENVAR*50,BLANK*4
       INTEGER IDATB(3),IDATE(8),JDATE(8)
-!     
+!
 !     DECLARE VARIABLES.
-!     
-      REAL SLDPTH2(NSOIL)
-      REAL RINC(5)
-      REAL ETA1(LM), ETA2(LM)
-      REAL DUM1D (LM+1)
-      REAL DUMMY ( IM, JM )
-      REAL DUMMY2 ( IM, JM )
-      REAL FI(IM,JM,2)
-      INTEGER IDUMMY ( IM, JM )
-      REAL DUM3D ( IM, LM, JM )
-      REAL DUM3D2 ( IM, LM+1, JM ),DUMSOIL ( IM, NSOIL, JM )
+!
+      INTEGER, ALLOCATABLE, DIMENSION(:,:)    :: IDUMMY, IBUF
+      REAL,    ALLOCATABLE, DIMENSION(:)      :: SLDPTH2, RINC, ETA1, ETA2,   &
+                                                 DUM1D
+      REAL,    ALLOCATABLE, DIMENSION(:,:)    :: BUF, DUMMY, DUMMY2
+      REAL,    ALLOCATABLE, DIMENSION(:,:,:)  :: FI, DUM3D, DUM3D2, DUMSOIL,  &
+                                                 BUFSOIL, BUF3D, BUF3D2, BUF3DX
 
-      integer ibuf(im,jsta_2l:jend_2u)
-      real buf(im,jsta_2l:jend_2u),bufsoil(im,nsoil,jsta_2l:jend_2u)   &
-        ,buf3d(im,jm,lm),buf3d2(im,jm,lp1),buf3dx(im,lm,jm)
 !jw
       integer ii,jj,js,je,jev,iyear,imn,iday,itmp,ioutcount,istatus,   &
               nsrfc,nrdlw,nrdsw,nheat,nclod,                           &
@@ -117,6 +110,26 @@
 !     START INIT HERE.
 !
       WRITE(6,*)'INITPOST:  ENTER INITPOST'
+
+      ! Allocate the local arrays
+      allocate(SLDPTH2(NSOIL))
+      allocate(RINC(5))
+      allocate(ETA1(LM))
+      allocate(ETA2(LM))
+      allocate(DUM1D(LM+1))
+      allocate(DUMMY(IM, JM))
+      allocate(DUMMY2(IM, JM))
+      allocate(FI(IM,JM,2))
+      allocate(IDUMMY(IM, JM))
+      allocate(DUM3D(IM, LM, JM))
+      allocate(DUM3D2(IM, LM+1, JM))
+      allocate(DUMSOIL(IM, NSOIL, JM))
+      allocate(ibuf(im,jsta_2l:jend_2u))
+      allocate(buf(im,jsta_2l:jend_2u))
+      allocate(bufsoil(im,nsoil,jsta_2l:jend_2u))
+      allocate(buf3d(im,jm,lm))
+      allocate(buf3d2(im,jm,lp1))
+      allocate(buf3dx(im,lm,jm))
 !     
 !     
 !     STEP 1.  READ MODEL OUTPUT FILE
@@ -512,6 +525,7 @@
         print*,VarName," not found in file-Assigned missing values"
         ETA1=SPVAL
       else
+        n = lm
         call fetch_data(iunit, r, VarName, pos, n, ETA1, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
@@ -525,6 +539,7 @@
         print*,VarName," not found in file-Assigned missing values"
         ETA2=SPVAL
       else
+        n = lm
         call fetch_data(iunit, r, VarName, pos, n, ETA2, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
@@ -3191,9 +3206,27 @@
         end if
       write(0,*)' after writes'
 
-        call mpi_file_close(iunit,ierr)
+      call mpi_file_close(iunit,ierr)
 
-!
+      ! Deallocate the local arrays
+      deallocate(SLDPTH2)
+      deallocate(RINC)
+      deallocate(ETA1)
+      deallocate(ETA2)
+      deallocate(DUM1D)
+      deallocate(DUMMY)
+      deallocate(DUMMY2)
+      deallocate(FI)
+      deallocate(IDUMMY)
+      deallocate(DUM3D)
+      deallocate(DUM3D2)
+      deallocate(DUMSOIL)
+      deallocate(ibuf)
+      deallocate(buf)
+      deallocate(bufsoil)
+      deallocate(buf3d)
+      deallocate(buf3d2)
+      deallocate(buf3dx)
 
       RETURN
       END
