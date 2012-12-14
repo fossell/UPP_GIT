@@ -57,7 +57,6 @@
       use gridspec_mod
       use module_io_int_idx, only: io_int_index, io_int_loc, r_info
       use initpost_nmm_bin_mpiio_read, only: fetch_data
-      use, intrinsic :: iso_c_binding, only: c_int32_t
 
 !
 !     INCLUDE/SET PARAMETERS.
