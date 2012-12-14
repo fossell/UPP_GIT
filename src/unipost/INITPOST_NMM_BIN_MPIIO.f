@@ -85,11 +85,10 @@
 !
 !     DECLARE VARIABLES.
 !
-      INTEGER, ALLOCATABLE, DIMENSION(:,:)    :: IDUMMY, IBUF
-      REAL,    ALLOCATABLE, DIMENSION(:)      :: SLDPTH2, RINC, ETA1, ETA2,   &
-                                                 DUM1D
-      REAL,    ALLOCATABLE, DIMENSION(:,:)    :: BUF, DUMMY, DUMMY2
-      REAL,    ALLOCATABLE, DIMENSION(:,:,:)  :: FI, DUM3D, DUM3D2, DUMSOIL,  &
+      INTEGER, ALLOCATABLE, DIMENSION(:,:)    :: IBUF
+      REAL,    ALLOCATABLE, DIMENSION(:)      :: SLDPTH2, RINC, ETA1, ETA2
+      REAL,    ALLOCATABLE, DIMENSION(:,:)    :: BUF, DUMMY
+      REAL,    ALLOCATABLE, DIMENSION(:,:,:)  :: FI, &
                                                  BUFSOIL, BUF3D, BUF3D2, BUF3DX
 
 !jw
@@ -112,24 +111,66 @@
       WRITE(6,*)'INITPOST:  ENTER INITPOST'
 
       ! Allocate the local arrays
-      allocate(SLDPTH2(NSOIL))
-      allocate(RINC(5))
-      allocate(ETA1(LM))
-      allocate(ETA2(LM))
-      allocate(DUM1D(LM+1))
-      allocate(DUMMY(IM, JM))
-      allocate(DUMMY2(IM, JM))
-      allocate(FI(IM,JM,2))
-      allocate(IDUMMY(IM, JM))
-      allocate(DUM3D(IM, LM, JM))
-      allocate(DUM3D2(IM, LM+1, JM))
-      allocate(DUMSOIL(IM, NSOIL, JM))
-      allocate(ibuf(im,jsta_2l:jend_2u))
-      allocate(buf(im,jsta_2l:jend_2u))
-      allocate(bufsoil(im,nsoil,jsta_2l:jend_2u))
-      allocate(buf3d(im,jm,lm))
-      allocate(buf3d2(im,jm,lp1))
-      allocate(buf3dx(im,lm,jm))
+      allocate(SLDPTH2(NSOIL), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate SLDPTH2'
+       stop
+      end if
+      allocate(RINC(5), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate RINC'
+       stop
+      end if
+      allocate(ETA1(LM), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate ETA1'
+       stop
+      end if
+      allocate(ETA2(LM), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate ETA2'
+       stop
+      end if
+      allocate(DUMMY(IM, JM), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate DUMMY'
+       stop
+      end if
+      allocate(FI(IM,JM,2), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate FI'
+       stop
+      end if
+      allocate(ibuf(im,jsta_2l:jend_2u), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate ibuf'
+       stop
+      end if
+      allocate(buf(im,jsta_2l:jend_2u), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate buf'
+       stop
+      end if
+      allocate(bufsoil(im,nsoil,jsta_2l:jend_2u), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate bufsoil'
+       stop
+      end if
+      allocate(buf3d(im,jm,lm), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate buf3d'
+       stop
+      end if
+      allocate(buf3d2(im,jm,lp1), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate buf3d2'
+       stop
+      end if
+      allocate(buf3dx(im,lm,jm), stat=ierr)
+      if (ierr /= 0) then
+       write(6,*)'Error unable to allocate buf3dx'
+       stop
+      end if
 !     
 !     
 !     STEP 1.  READ MODEL OUTPUT FILE
@@ -330,12 +371,9 @@
           SM=SPVAL
         else
           do j = jsta_2l, jend_2u
-!	  do j = jsta, jend
            do i = 1, im
-!             SM(I,J)=DUMMY2(I,J)
              if (j.eq.jm/2 .and. mod(i,10).eq.0)                    &   
                 print*,'sample SM= ',i,j,sm(i,j)
-     
            enddo
           enddo 
         end if 
@@ -371,12 +409,6 @@
           PD=SPVAL
         end if
       end if
-
-!       do j = jsta_2l, jend_2u
-!        do i = 1, im
-!	PD(I,J)=DUMMY2(I,J)
-!        enddo
-!       enddo
 
       VarName='FIS'
       call io_int_loc(VarName, r, pos, n, iret)
@@ -2401,19 +2433,6 @@
         end if
       end if
 
-! reading TKE
-!      VarName='TKE_PBL'
-!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUM3D,
-!     &  IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
-!      do l = 1, lm
-!       do j = jsta_2l, jend_2u
-!        do i = 1, im
-!            q2 ( i, j, l ) = dum3d ( i, j, l )
-!        end do
-!       end do
-!      end do
-!      print*,'TKE at ',ii,jj,ll,' = ',q2(ii,jj,ll)
-!
 ! reading 10 m wind
       VarName='U10'
       call io_int_loc(VarName, r, pos, n, iret)
@@ -3213,14 +3232,8 @@
       deallocate(RINC)
       deallocate(ETA1)
       deallocate(ETA2)
-      deallocate(DUM1D)
       deallocate(DUMMY)
-      deallocate(DUMMY2)
       deallocate(FI)
-      deallocate(IDUMMY)
-      deallocate(DUM3D)
-      deallocate(DUM3D2)
-      deallocate(DUMSOIL)
       deallocate(ibuf)
       deallocate(buf)
       deallocate(bufsoil)
