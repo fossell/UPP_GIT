@@ -120,12 +120,12 @@
        write(6,*)'Error unable to allocate RINC'
        stop
       end if
-      allocate(ETA1(LM), stat=ierr)
+      allocate(ETA1(LM+1), stat=ierr)
       if (ierr /= 0) then
        write(6,*)'Error unable to allocate ETA1'
        stop
       end if
-      allocate(ETA2(LM), stat=ierr)
+      allocate(ETA2(LM+1), stat=ierr)
       if (ierr /= 0) then
        write(6,*)'Error unable to allocate ETA2'
        stop
@@ -556,7 +556,6 @@
         print*,VarName," not found in file-Assigned missing values"
         ETA1=SPVAL
       else
-        n = lm
         call fetch_data(iunit, r, VarName, pos, n, ETA1, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
@@ -570,7 +569,6 @@
         print*,VarName," not found in file-Assigned missing values"
         ETA2=SPVAL
       else
-        n = lm
         call fetch_data(iunit, r, VarName, pos, n, ETA2, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
