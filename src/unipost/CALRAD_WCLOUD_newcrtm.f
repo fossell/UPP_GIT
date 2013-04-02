@@ -703,8 +703,8 @@ SUBROUTINE CALRAD_WCLOUD
                        end do
 
                        !bsf - start
-                       !-- Add subgrid-scale convective clouds for WRF runs
-                       if (MODELNAME == 'NMM' .OR. MODELNAME == 'NCAR' .OR. MODELNAME == 'RAPR') then
+                       !-- Add subgrid-scale convective clouds for BMJ convection:
+                       if (icu_physics==2) then
                           lcbot=nint(hbot(i,j))
                           lctop=nint(htop(i,j))
                           if (lcbot-lctop > 1) then
@@ -1239,8 +1239,8 @@ SUBROUTINE CALRAD_WCLOUD
                        end do
 
                        !bsf - start
-                       !-- Add subgrid-scale convective clouds for WRF runs
-                       if (MODELNAME == 'NMM' .OR. MODELNAME == 'NCAR' .OR. MODELNAME == 'RAPR') then
+                       !-- Add subgrid-scale convective clouds for BMJ convection:
+                       if (icu_physics==2) then
                           lcbot=nint(hbot(i,j))
                           lctop=nint(htop(i,j))
                           if (lcbot-lctop > 1) then

@@ -269,7 +269,7 @@
            icu_physics=itmp
         endif
 
-        if(icu_physics==84) icu_physics=4  ! HWRF SAS = SAS
+        if(icu_physics==84.or.icu_physics==85) icu_physics=4  ! HWRF SAS, mesosas = SAS
         print*,'CU_PHYSICS= ',icu_physics
 
         call ext_int_get_dom_ti_integer(DataHandle,'SF_SURFACE_PHYSICS',  &
