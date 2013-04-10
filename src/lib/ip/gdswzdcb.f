@@ -81,8 +81,8 @@ C$$$
       REAL(KIND=KD):: RLAT1,RLON1,RLAT0,RLON0
       REAL(KIND=KD):: SLAT1,CLAT1,SLAT0,CLAT0
       REAL(KIND=KD):: CLON1,SLATR,CLATR,CLONR
-      REAL(KIND=KD):: RLATR,RLONR,DLATS,DLONS
-      REAL(KIND=KD):: SLAT,CLAT,CLON,SLON
+      REAL(KIND=KD):: RLATR,RLONR,DLATS,DLONS,XPTFC,YPTFC,SLON
+      REAL(KIND=KD):: SLAT,CLAT,CLON,RLATCR,RLONCR,DMIDS,RLATLR,RLONLR
       REAL(KIND=KD):: TERM1,TERM2
       REAL(KIND=KD):: XLONF,XLATF,YLONF,YLATF
       PARAMETER(RERTH=6.3712E6_KD)
@@ -93,6 +93,9 @@ C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         RLON1=KGDS(5)*1.E-3_KD
         RLAT0=KGDS(7)*1.E-3_KD
         RLON0=KGDS(8)*1.E-3_KD
+        DLONS=KGDS(9)*1.E-3_KD
+        DLATS=KGDS(10)*1.E-3_KD
+        DMIDS=SQRT(DLONS*DLONS+DLATS*DLATS)
         IROT=MOD(KGDS(6)/8,2)
         IM=KGDS(2)*2-1
         JM=KGDS(3)
@@ -106,15 +109,21 @@ C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         CLAT1=COS(RLAT1/DPR)
         SLAT0=SIN(RLAT0/DPR)
         CLAT0=COS(RLAT0/DPR)
-        HS=SIGN(1._KD,MOD(RLON1-RLON0+180+3600,360._KD)-180)
+        HS0=SIGN(1._KD,MOD(RLON1-RLON0+180+3600,360._KD)-180)
         CLON1=COS((RLON1-RLON0)/DPR)
         SLATR=CLAT0*SLAT1-SLAT0*CLAT1*CLON1
         CLATR=SQRT(1-SLATR**2)
         CLONR=(CLAT0*CLAT1*CLON1+SLAT0*SLAT1)/CLATR
-        RLATR=DPR*ASIN(SLATR)
-        RLONR=HS*DPR*ACOS(CLONR)
-        DLATS=RLATR/(-(JM-1)/2)
-        DLONS=RLONR/(-(IM-1)/2)
+        RLATLR=DPR*ASIN(SLATR)
+        RLATCR=RLATLR+(JM-1)/2.*DLATS
+        RLONLR=HS0*DPR*ACOS(CLONR)
+        RLONCR=RLONLR+(IM-1)/2.*DLONS
+C        DLATS=RLATR/(-(JM-1)/2)
+C        DLONS=RLONR/(-(IM-1)/2)
+
+        write(0,*) 'in gdswzdcb.f'
+        write(0,*) 'rlatcr=',rlatcr,' rloncr=',rloncr
+        write(0,*) 'dlons=',dlons,' dlats=',dlats
         IF(KSCAN.EQ.0) THEN
           IS1=(JM+1)/2
         ELSE
@@ -129,14 +138,21 @@ C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C  TRANSLATE GRID COORDINATES TO EARTH COORDINATES
         IF(IOPT.EQ.0.OR.IOPT.EQ.1) THEN
+C          Calculate grid center point in rotated coordinates:
+           XPTFC=(JM-1)/2. + ( (IM-1)/2. - IS1 )
+           YPTFC=(JM-1)/2. - ( (IM-1)/2. - IS1 ) + KSCAN
+
           DO N=1,NPTS
             XPTF=YPTS(N)+(XPTS(N)-IS1)
             YPTF=YPTS(N)-(XPTS(N)-IS1)+KSCAN
             IF(XPTF.GE.XMIN.AND.XPTF.LE.XMAX.AND.
      &         YPTF.GE.YMIN.AND.YPTF.LE.YMAX) THEN
-              HS=HI*SIGN(1.,XPTF-(IM+1)/2)
-              RLONR=(XPTF-(IM+1)/2)*DLONS
-              RLATR=(YPTF-(JM+1)/2)*DLATS
+c$$$              HS=HI*SIGN(1.,XPTF-(IM+1)/2)
+c$$$              RLONR=(XPTF-(IM+1)/2)*DLONS
+c$$$              RLATR=(YPTF-(JM+1)/2)*DLATS
+              HS=HI*SIGN(1.,XPTFC+XPTF-1)
+              RLONR=(XPTF-(IM+1)/2)*DLONS+RLONCR
+              RLATR=(YPTF-(JM+1)/2)*DLATS+RLATCR
               CLONR=COS(RLONR/DPR)
               SLATR=SIN(RLATR/DPR)
               CLATR=COS(RLATR/DPR)
@@ -226,8 +242,12 @@ C  TRANSLATE EARTH COORDINATES TO GRID COORDINATES
                 RLONR=HS*DPR*ACOS(CLONR)
                 RLATR=DPR*ASIN(SLATR)
               ENDIF
-              XPTF=(IM+1)/2+RLONR/DLONS
-              YPTF=(JM+1)/2+RLATR/DLATS
+c$$$              XPTF=(IM+1)/2+RLONR/DLONS
+c$$$              YPTF=(JM+1)/2+RLATR/DLATS
+              XPTF=(RLONR-RLONLR)/DLONS+1
+              YPTF=(RLATR-RLATLR)/DLATS+1
+c$$$              XPTF=(IM+1)/2+(RLONR-RLONCR)/DLONS
+c$$$              YPTF=(JM+1)/2+(RLATR-RLATCR)/DLATS
               IF(XPTF.GE.XMIN.AND.XPTF.LE.XMAX.AND.
      &           YPTF.GE.YMIN.AND.YPTF.LE.YMAX) THEN
                 XPTS(N)=IS1+(XPTF-(YPTF-KSCAN))/2

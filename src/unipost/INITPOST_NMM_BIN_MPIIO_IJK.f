@@ -66,6 +66,7 @@
       character(len=31) :: VarName
       integer :: Status
       character startdate*19,SysDepInfo*80,cgar*1
+      real :: dcenlon,dcenlat
       character startdate2(19)*4
 ! 
 !     NOTE: SOME INTEGER VARIABLES ARE READ INTO DUMMY ( A REAL ). THIS IS OK
@@ -290,16 +291,16 @@
 !        DT=tmp
 !        write(6,*) 'DT= ', DT
 
-!        call ext_int_get_dom_ti_real(DataHandle,'CEN_LAT',tmp
-!     + ,1,ioutcount,istatus)
+        call ext_int_get_dom_ti_real(DataHandle,'CEN_LAT',tmp
+     + ,1,ioutcount,istatus)
 
-!        cenlat=nint(1000.*tmp)
-!        write(6,*) 'cenlat= ', cenlat
-!        call ext_int_get_dom_ti_real(DataHandle,'CEN_LON',tmp
-!     + ,1,ioutcount,istatus)
+        cenlat=nint(1000.*tmp)
+        write(6,*) 'cenlat= ', cenlat
+        call ext_int_get_dom_ti_real(DataHandle,'CEN_LON',tmp
+     + ,1,ioutcount,istatus)
 
-!        cenlon=nint(1000.*tmp)
-!        write(6,*) 'cenlon= ', cenlon
+        cenlon=nint(1000.*tmp)
+        write(6,*) 'cenlon= ', cenlon
 !        call ext_int_get_dom_ti_real(DataHandle,'TRUELAT1',tmp
 !     + ,1,ioutcount,istatus)
 !        truelat1=nint(1000.*tmp)
@@ -559,7 +560,7 @@
         else
           print*,VarName, ' from MPIIO READ= ',garb
 	  cenlat=nint(garb*1000.)
-          write(6,*) 'cenlat= ', cenlat
+          write(6,*) 'new cenlat= ', cenlat
         end if	
       end if
       
@@ -575,7 +576,7 @@
         else
           print*,VarName, ' from MPIIO READ= ',garb
 	  cenlon=nint(garb*1000.)
-          write(6,*) 'cenlon= ', cenlon
+          write(6,*) 'new cenlon= ', cenlon
         end if	
       end if
 
@@ -3444,21 +3445,21 @@
 ! jkw changed if statement as per MP's suggestion
 ! jkw        if(mod(im,2).ne.0) then
 ! chuang: test
-        icen=(im+1)/2
-        jcen=(jm+1)/2
-        if(mod(im,2).ne.0)then !per Pyle, jm is always odd
-         if(mod(jm+1,4).ne.0)then
-          cenlat=nint(dummy(icen,jcen)*1000.)
+        icen=im
+        jcen=jm
+         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
+           if(mod(jm+1,4).ne.0)then
+             dcenlat=dummy(icen,jcen)
+           else
+             dcenlat=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
+           end if
          else
-          cenlat=nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
+           if(mod(jm+1,4).ne.0)then
+             dcenlat=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
+           else
+             dcenlat=dummy(icen,jcen)
+           end if
          end if
-        else
-         if(mod(jm+1,4).ne.0)then
-          cenlat=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
-         else
-          cenlat=nint(dummy(icen,jcen)*1000.)
-         end if
-        end if
 
 !        if(mod(im,2).eq.0) then
 !           icen=(im+1)/2
@@ -3487,41 +3488,48 @@
 !lrb changed if statement as per MP's suggestion
 !lrb        if(mod(im,2).ne.0) then
 !Chuang: test
-        icen=(im+1)/2
-        jcen=(jm+1)/2
+        icen=im
+        jcen=jm
         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
          if(mod(jm+1,4).ne.0)then
-          cenlon=nint(dummy(icen,jcen)*1000.)
+          dcenlon=dummy(icen,jcen)
          else
-          cenlon=nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
+          dcenlon=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
          end if
         else
          if(mod(jm+1,4).ne.0)then
-          cenlon=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
+          dcenlon=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
          else
-          cenlon=nint(dummy(icen,jcen)*1000.)
+          dcenlon=dummy(icen,jcen)
          end if
         end if
 
 !        if(mod(im,2).eq.0) then
 !           icen=(im+1)/2
 !           jcen=(jm+1)/2
-!           cenlon=nint(dummy(icen,jcen)*1000.)
+!           dcenlon=nint(dummy(icen,jcen)*1000.)
 !        else
 !           icen=im/2
 !           jcen=(jm+1)/2
-!           cenlon=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
+!           dcenlon=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
 !        end if
        end if
 
-       write(6,*)'lonstart,lonlast,cenlon B calling bcast= ', &
-     &      lonstart,lonlast,cenlon
+       write(6,*)'lonstart,lonlast,dcenlon B calling bcast= ', &
+     &      lonstart,lonlast,dcenlon
        call mpi_bcast(lonstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(lonlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       write(6,*)'lonstart,lonlast,cenlon A calling bcast= ', &
-     &      lonstart,lonlast,cenlon
+       call mpi_bcast(dcenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
+       write(6,*)'lonstart,lonlast,dcenlon A calling bcast= ', &
+     &      lonstart,lonlast,dcenlon
 !
+       if(me==0) then
+          open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
+1013      format(A,'=',F0.3)
+          write(1013,1013) 'clat',dcenlat
+          write(1013,1013) 'clon',dcenlon
+       endif
+
         write(6,*) 'filename in INITPOST=', filename
 
 

@@ -68,6 +68,7 @@
       character(len=31) :: VarName
       integer :: Status
       character startdate*19,SysDepInfo*80
+      real :: dcenlon,dcenlat
 ! 
 !     NOTE: SOME INTEGER VARIABLES ARE READ INTO DUMMY ( A REAL ). THIS IS OK
 !     AS LONG AS REALS AND INTEGERS ARE THE SAME SIZE.
@@ -1938,8 +1939,8 @@
 ! temporary patch for nmm wrf for moving nest. gopal's doing
 ! tms WPP originally here from MP suggestion - error caused by failure in iplib
 !     may one day be unneccesary, but for now - original code in SVN
-         icen=(im+1)/2
-         jcen=(jm+1)/2
+         icen=im/2
+         jcen=jm/2
 
 !tms - grid navigation  for copygb by R.Rozumalski
          latnm = nint(dummy(icen,jm)*1000.)
@@ -1947,17 +1948,15 @@
 
          if(mod(im,2).ne.0)then !per Pyle, jm is always odd
            if(mod(jm+1,4).ne.0)then
-             cenlat=nint(dummy(icen,jcen)*1000.)
+             dcenlat=dummy(icen,jcen)
            else
-             cenlat=nint(0.5*(dummy(icen-1,jcen)     &
-                  +dummy(icen,jcen))*1000.)
+             dcenlat=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
            end if
          else
            if(mod(jm+1,4).ne.0)then
-             cenlat=nint(0.5*(dummy(icen,jcen)     &
-                  +dummy(icen+1,jcen))*1000.)
+             dcenlat=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
            else
-             cenlat=nint(dummy(icen,jcen)*1000.)
+             dcenlat=dummy(icen,jcen)
            end if
          end if
 
@@ -1976,8 +1975,8 @@
         lonlast=nint(dummy(im,jm)*1000.)
 ! temporary patch for nmm wrf for moving nest. gopal's doing
 ! tms change from WPP originally here from MP suggestion a change in ip
-        icen=(im+1)/2
-        jcen=(jm+1)/2
+        icen=im/2
+        jcen=jm/2
 
 !tms - grid navigation  for copygb by R.Rozumalski
         lonem = nint(dummy(icen,jm)*1000.)
@@ -1985,17 +1984,15 @@
 
         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
          if(mod(jm+1,4).ne.0)then
-          cenlon=nint(dummy(icen,jcen)*1000.)
+          dcenlon=dummy(icen,jcen)
          else
-          cenlon=nint(0.5*(dummy(icen-1,jcen)     &
-                 +dummy(icen,jcen))*1000.)
+          dcenlon=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
          end if
         else
          if(mod(jm+1,4).ne.0)then
-          cenlon=nint(0.5*(dummy(icen,jcen)     &
-                 +dummy(icen+1,jcen))*1000.)
+          dcenlon=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
          else
-          cenlon=nint(dummy(icen,jcen)*1000.)
+          dcenlon=dummy(icen,jcen)
          end if
         end if
        end if
@@ -2006,6 +2003,13 @@
        call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        write(6,*)'lonstart,lonlast A calling bcast= ',     &
                   lonstart,lonlast
+
+       if(me==0) then
+          open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
+1013      format(A,'=',F0.3)
+          write(1013,1013) 'clat',dcenlat
+          write(1013,1013) 'clon',dcenlon
+       endif
 
 !
 ! OBTAIN DX FOR NMM WRF
@@ -2118,13 +2122,13 @@
           1,ioutcount,istatus)
 ! temporary patch for nmm wrf
 ! temporary patch for nmm wrf for moving nest. gopal's doing
-!        cenlat=nint(1000.*tmp) !cenlat is now glat(im/2,jm2)
+        cenlat=nint(1000.*tmp) !cenlat is now glat(im/2,jm2)
         write(6,*) 'cenlat= ', cenlat
         call ext_ncd_get_dom_ti_real(DataHandle,'CEN_LON',tmp,          &
           1,ioutcount,istatus)
 ! temporary patch for nmm wrf
 ! temporary patch for nmm wrf for moving nest. gopal's doing
-!        cenlon=nint(1000.*tmp) !cenlon is now glon(im/2,jm/2)
+        cenlon=nint(1000.*tmp) !cenlon is now glon(im/2,jm/2)
         write(6,*) 'cenlon= ', cenlon
 ! JW        call ext_ncd_get_dom_ti_real(DataHandle,'TRUELAT1',tmp
 ! JW     + ,1,ioutcount,istatus)
