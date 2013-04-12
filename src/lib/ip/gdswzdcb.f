@@ -114,9 +114,9 @@ C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         SLATR=CLAT0*SLAT1-SLAT0*CLAT1*CLON1
         CLATR=SQRT(1-SLATR**2)
         CLONR=(CLAT0*CLAT1*CLON1+SLAT0*SLAT1)/CLATR
-        RLATLR=DPR*ASIN(SLATR)
+        RLATLR=DPR*ASIN(MAX(MIN(SLATR,1.0_KD),-1.0_KD))
         RLATCR=RLATLR+(JM-1)/2.*DLATS
-        RLONLR=HS0*DPR*ACOS(CLONR)
+        RLONLR=HS0*DPR*ACOS(MAX(MIN(CLONR,1.0_KD),-1.0_KD))
         RLONCR=RLONLR+(IM-1)/2.*DLONS
 C        DLATS=RLATR/(-(JM-1)/2)
 C        DLONS=RLONR/(-(IM-1)/2)
@@ -171,8 +171,9 @@ c$$$              RLATR=(YPTF-(JM+1)/2)*DLATS
                 CLAT=SQRT(1-SLAT**2)
                 CLON=(CLAT0*CLATR*CLONR-SLAT0*SLATR)/CLAT
                 CLON=MIN(MAX(CLON,-1._KD),1._KD)
-                RLON(N)=MOD(RLON0+HS*DPR*ACOS(CLON)+3600,360._KD)
-                RLAT(N)=DPR*ASIN(SLAT)
+                RLON(N)=MOD(RLON0+HS*DPR*ACOS(MAX(MIN(CLON,1.0_KD),
+     &               -1.0_KD))+3600,360._KD)
+                RLAT(N)=DPR*ASIN(MAX(MIN(SLAT,1.0_KD),-1.0_KD))
               ENDIF
               NRET=NRET+1
               IF(LROT.EQ.1) THEN
@@ -239,8 +240,8 @@ C  TRANSLATE EARTH COORDINATES TO GRID COORDINATES
                 CLATR=SQRT(1-SLATR**2)
                 CLONR=(CLAT0*CLAT*CLON+SLAT0*SLAT)/CLATR
                 CLONR=MIN(MAX(CLONR,-1._KD),1._KD)
-                RLONR=HS*DPR*ACOS(CLONR)
-                RLATR=DPR*ASIN(SLATR)
+                RLONR=HS*DPR*ACOS(MAX(MIN(CLONR,1.0_KD),-1.0_KD))
+                RLATR=DPR*ASIN(MAX(MIN(SLATR,1.0_KD),-1.0_KD))
               ENDIF
 c$$$              XPTF=(IM+1)/2+RLONR/DLONS
 c$$$              YPTF=(JM+1)/2+RLATR/DLATS

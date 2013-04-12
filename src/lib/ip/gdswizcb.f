@@ -101,10 +101,13 @@ C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         SLATR=CLAT0*SLAT1-SLAT0*CLAT1*CLON1
         CLATR=SQRT(1-SLATR**2)
         CLONR=(CLAT0*CLAT1*CLON1+SLAT0*SLAT1)/CLATR
-        RLATLR=DPR*ASIN(SLATR)
+        RLATLR=DPR*ASIN(max(min(SLATR,1.0_KD),-1.0_KD))
         RLATCR=RLATLR+(JM-1)/2.*DLATS
-        RLONLR=HS0*DPR*ACOS(CLONR)
+        RLONLR=HS0*DPR*ACOS(max(min(CLONR,1.0_KD),-1.0_KD))
         RLONCR=RLONLR+(IM-1)/2.*DLONS
+c$$$        write(0,*) 'clonr=',clonr,' clatr=',clatr,' clon1=',clon1
+c$$$        write(0,*)'hs0=',hs0,' acos(clonr)=',acos(clonr),' dlons=',dlons
+c$$$        write(0,*) 'rlonlr=',rlonlr
 C        DLATS=RLATR/(-(JM-1)/2)
 C        DLONS=RLONR/(-(IM-1)/2)
         IF(KSCAN.EQ.0) THEN
@@ -120,8 +123,8 @@ C        DLONS=RLONR/(-(IM-1)/2)
         NRET=0
  3033   format('gdswizcb: 203 proj info: rlat1=',F0.3,' rlon1=',F0.3,
      &       ' rlat0=',F0.3,' rlon0=',F0.3,' dlons=',F0.3,
-     &       ' dlats=',F0.3)
-        write(0,3033) rlat1,rlon1,rlat0,rlon0,dlons,dlats
+     &       ' dlats=',F0.3,' rloncr=',F0.3,' rlatcr=',F0.3)
+        write(0,3033) rlat1,rlon1,rlat0,rlon0,dlons,dlats,rloncr,rlatcr
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C  TRANSLATE GRID COORDINATES TO EARTH COORDINATES
         IF(IOPT.EQ.0.OR.IOPT.EQ.1) THEN
@@ -138,12 +141,14 @@ C          Calculate grid center point in rotated coordinates:
               RLATR=RLATLR+(YPTF-1)*DLATS
 C              HS=HI*SIGN(1.,XPTF-(IM-1)/2.)
               HS=HI*SIGN(1.,XPTFC+XPTF-1)
+              IF(ABS(HS)/=1.) HS=1.
               RLONR=(XPTF-XPTFC)*DLONS+RLONCR
               RLATR=(YPTF-YPTFC)*DLATS+RLATCR
               CLONR=COS(RLONR/DPR)
               SLATR=SIN(RLATR/DPR)
               CLATR=COS(RLATR/DPR)
               SLAT=CLAT0*SLATR+SLAT0*CLATR*CLONR
+c$$$              write(0,*) 'hs=',hs,' rlonr=',rlonr,' rlatr=',rlatr
               IF(SLAT.LE.-1) THEN
                 CLAT=0.
                 CLON=COS(RLON0/DPR)
@@ -158,7 +163,8 @@ C              HS=HI*SIGN(1.,XPTF-(IM-1)/2.)
                 CLAT=SQRT(1-SLAT**2)
                 CLON=(CLAT0*CLATR*CLONR-SLAT0*SLATR)/CLAT
                 CLON=MIN(MAX(CLON,-1._KD),1._KD)
-                RLON(N)=MOD(RLON0+HS*DPR*ACOS(CLON)+3600,360._KD)
+                RLON(N)=MOD(RLON0+HS*DPR*ACOS(max(min(1.0_KD,CLON),
+     &               -1.0_KD))+3600,360._KD)
 c$$$                IF( (RLON(N)>=RLON1) .neqv. (HS0>0) ) THEN
 c$$$                   IF(RLON(N)<180.) THEN
 c$$$                      RLON(N)=RLON(N)-360.
@@ -166,8 +172,11 @@ c$$$                   ELSE
 c$$$                      RLON(N)=RLON(N)+360.
 c$$$                   ENDIF
 c$$$                ENDIF
-                RLAT(N)=DPR*ASIN(SLAT)
+                RLAT(N)=DPR*ASIN(MAX(MIN(SLAT,1.0_KD),-1.0_KD))
               ENDIF
+c$$$ 100          format('N=',I0,' lon=',F0.3,' lat=',F0.3,
+c$$$     &             ' from x=',F0.3,' y=',F0.3,' slat=',F0.3)
+c$$$              write(0,100) n,rlon(n),rlat(n),xptf,yptf,slat
               NRET=NRET+1
               IF(LROT.EQ.1) THEN
                 IF(IROT.EQ.1) THEN
@@ -211,8 +220,8 @@ C  TRANSLATE EARTH COORDINATES TO GRID COORDINATES
                 CLATR=SQRT(1-SLATR**2)
                 CLONR=(CLAT0*CLAT*CLON+SLAT0*SLAT)/CLATR
                 CLONR=MIN(MAX(CLONR,-1._KD),1._KD)
-                RLONR=HS*DPR*ACOS(CLONR)
-                RLATR=DPR*ASIN(SLATR)
+                RLONR=HS*DPR*ACOS(MAX(MIN(CLONR,1.0_KD),-1.0_KD))
+                RLATR=DPR*ASIN(MAX(MIN(SLATR,1.0_KD),-1.0_KD))
               ENDIF
 c$$$              XPTF=(IM+1)/2+RLONR/DLONS
 c$$$              YPTF=(JM+1)/2+RLATR/DLATS
@@ -220,6 +229,9 @@ c$$$              XPTF=(IM-1)/2.+(RLONR-RLONCR)/DLONS
 c$$$              YPTF=(JM-1)/2.+(RLATR-RLATCR)/DLATS
               XPTF=(RLONR-RLONLR)/DLONS+1
               YPTF=(RLATR-RLATLR)/DLATS+1
+c$$$ 200          format('N=',I0,' lon=',F0.3,' lat=',F0.3,
+c$$$     &             ' becomes x=',F0.3,' y=',F0.3)
+c$$$              write(0,200) n,rlon(n),rlat(n),xptf,yptf
               IF(XPTF.GE.XMIN.AND.XPTF.LE.XMAX.AND.
      &           YPTF.GE.YMIN.AND.YPTF.LE.YMAX) THEN
                 XPTS(N)=IS1+(XPTF-(YPTF-KSCAN))/2
