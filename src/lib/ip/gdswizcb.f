@@ -140,7 +140,7 @@ C          Calculate grid center point in rotated coordinates:
               RLONR=RLONLR+(XPTF-1)*DLONS
               RLATR=RLATLR+(YPTF-1)*DLATS
 C              HS=HI*SIGN(1.,XPTF-(IM-1)/2.)
-              HS=HI*SIGN(1.,XPTFC+XPTF-1)
+              HS=HI*SIGN(1._KD,XPTFC+XPTF-1)
               IF(ABS(HS)/=1.) HS=1.
               RLONR=(XPTF-XPTFC)*DLONS+RLONCR
               RLATR=(YPTF-YPTFC)*DLATS+RLATCR
