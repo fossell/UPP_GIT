@@ -205,6 +205,57 @@ FFLAGS_CRTM = -c -byteswapio -Mchkstk -Mdclchk $(SIZE)\
 FL_CRTM     = -Kieee
 
 ###########################################################
+#ARCH	Linux x86_64, PGI compiler, SGI MPT # serial dmpar
+#
+SFC     = pgf90
+SF90    = pgf90 -Mfree
+SCC     = pgcc
+
+DM_FC  = $(SFC)
+DM_F90 = $(SF90)
+DM_CC  = $(SCC)
+
+FC    = CONFIGURE_FC
+F90   = CONFIGURE_F90
+CC    = CONFIGURE_CC
+CPP   = /lib/cpp 
+
+LINUX_OBJ =
+BYTE_ORDER = UPPLITTLEENDIAN
+SIZE_I8R8  = -i8 -r8
+SIZE_I4R8  = -i4 -r8
+SIZE_I4R4  = -i4 -r4
+SIZE       = 
+
+PPDEFINE   = -DLINUX -D$(BYTE_ORDER)
+FPPDEFINE  = $(PPDEFINE)
+
+FDEBUG  = -O0 -g -Mbounds -Mchkfpstk -Mchkptr -Mchkstk -traceback \
+          -Ktrap=ovf,divz
+CRTMDBUG=
+CDEBUG  = -O0 -g -Mbounds -Mchkfpstk -Mchkptr -Mchkstk -traceback \
+          -Ktrap=ovf,divz
+
+FOPT    = -O3
+CRTMOPT =
+COPT    = -O3
+
+CPP_FLAGS = -C -P $(FPPDEFINE)
+INC_FLAGS = -I$(MPI_ROOT)/include
+
+LDFLAGS   = -Wl,-noinhibit-exec -Kieee -L$(MPI_ROOT)/lib
+FFLAGS    = -Kieee -pc 64 -byteswapio $(SIZE) $(FPPDEFINE) \
+            -I$(MPI_ROOT)/include CONFIGURE_FFLAGS
+CFLAGS    = $(PPDEFINE) CONFIGURE_CFLAGS
+ARFLAGS   =
+
+FFLAGS_CRTM = -c -byteswapio -Mchkstk -Mdclchk $(SIZE)\
+              -Minform,inform -Mnosave -Mref_externals -Kieee \
+              -I$(MPI_ROOT)/include CONFIGURE_FFLAGS_CRTM
+FL_CRTM     = -Kieee
+
+
+###########################################################
 #ARCH	Linux i486 i586 i686, Intel compiler	# serial dmpar
 #
 SFC     = ifort
