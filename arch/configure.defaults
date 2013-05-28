@@ -243,7 +243,7 @@ COPT    = -O3
 CPP_FLAGS = -C -P $(FPPDEFINE)
 INC_FLAGS = -I$(MPI_ROOT)/include
 
-LDFLAGS   = -Wl,-noinhibit-exec -Kieee -L$(MPI_ROOT)/lib
+LDFLAGS   = -Wl,-noinhibit-exec -Kieee -L$(MPI_ROOT)/lib -lmpi
 FFLAGS    = -Kieee -pc 64 -byteswapio $(SIZE) $(FPPDEFINE) \
             -I$(MPI_ROOT)/include CONFIGURE_FFLAGS
 CFLAGS    = $(PPDEFINE) CONFIGURE_CFLAGS
