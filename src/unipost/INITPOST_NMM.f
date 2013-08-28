@@ -69,6 +69,7 @@
       integer :: Status
       character startdate*19,SysDepInfo*80
       real :: dcenlon,dcenlat
+      real :: cen1,cen2
 ! 
 !     NOTE: SOME INTEGER VARIABLES ARE READ INTO DUMMY ( A REAL ). THIS IS OK
 !     AS LONG AS REALS AND INTEGERS ARE THE SAME SIZE.
@@ -1970,7 +1971,7 @@
        write(6,*) 'laststart,latlast A calling bcast= ',latstart,latlast
        call collect_loc(gdlon,dummy)
 
-      if(me.eq.0)then
+       calc_center_at_0: if(me.eq.0)then
         lonstart=nint(dummy(1,1)*1000.)
         lonlast=nint(dummy(im,jm)*1000.)
 ! temporary patch for nmm wrf for moving nest. gopal's doing
@@ -1984,25 +1985,39 @@
 
         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
          if(mod(jm+1,4).ne.0)then
-          dcenlon=dummy(icen,jcen)
+            cen1=dummy(icen,jcen)
+            cen2=cen1
          else
-          dcenlon=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
+            cen1=min(dummy(icen-1,jcen),dummy(icen,jcen))
+            cen2=max(dummy(icen-1,jcen),dummy(icen,jcen))
          end if
         else
          if(mod(jm+1,4).ne.0)then
-          dcenlon=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
+            cen1=min(dummy(icen+1,jcen),dummy(icen,jcen))
+            cen2=max(dummy(icen+1,jcen),dummy(icen,jcen))
          else
-          dcenlon=dummy(icen,jcen)
+            cen1=dummy(icen,jcen)
+            cen2=cen1
          end if
         end if
-       end if
-       write(6,*)'lonstart,lonlast B calling bcast= ',    &
-                  lonstart,lonlast
+        ! Trahan fix: Pyle's code broke at the dateline.
+        if(cen2-cen1>180) then
+           ! We're near the dateline
+           dcenlon=mod(0.5*(cen2+cen1+360)+3600+180,360.)-180.
+        else
+           ! We're not near the dateline.  Use the original code,
+           ! unmodified, to maintain bitwise identicality.
+           dcenlon=0.5*(cen1+cen2)
+        endif
+       end if calc_center_at_0
+       write(6,*)'lonstart,lonlast,dcenlon B calling bcast= ',    &
+                  lonstart,lonlast,dcenlon
        call mpi_bcast(lonstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(lonlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       write(6,*)'lonstart,lonlast A calling bcast= ',     &
-                  lonstart,lonlast
+       call mpi_bcast(dcenlon,1,MPI_REAL,0,mpi_comm_comp,irtn)
+       write(6,*)'lonstart,lonlast,dcenlon A calling bcast= ',     &
+                  lonstart,lonlast,dcenlon
 
        if(me==0) then
           open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
