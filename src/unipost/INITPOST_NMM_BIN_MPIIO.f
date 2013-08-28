@@ -66,6 +66,7 @@
       character(len=31) :: VarName
       integer :: Status
       character startdate*19,SysDepInfo*80,cgar*1
+      real :: dcenlon,dcenlat
       character startdate2(19)*4
 ! 
 !     NOTE: SOME INTEGER VARIABLES ARE READ INTO DUMMY ( A REAL ). THIS IS OK
@@ -240,7 +241,7 @@
       if (ierr /= 0) then
          icu_physics=4        ! assume SAS if nothing specified
       endif
-      if(icu_physics==84) icu_physics=4  ! HWRF SAS = SAS
+      if(icu_physics==84 .or. icu_physics==85) icu_physics=4  ! HWRF SAS = SAS
       print*,'CU_PHYSICS= ',icu_physics
 
       call fetch_data(iunit,r,'SF_SURFACE_PHYSICS',dst=isf_physics,ierr=ierr)
@@ -2986,32 +2987,21 @@
 ! jkw changed if statement as per MP's suggestion
 ! jkw        if(mod(im,2).ne.0) then
 ! chuang: test
-        icen=(im+1)/2
-        jcen=(jm+1)/2
-        if(mod(im,2).ne.0)then !per Pyle, jm is always odd
-         if(mod(jm+1,4).ne.0)then
-          cenlat=nint(dummy(icen,jcen)*1000.)
+        icen=im/2
+        jcen=jm/2
+         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
+           if(mod(jm+1,4).ne.0)then
+             dcenlat=dummy(icen,jcen)
+           else
+             dcenlat=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
+           end if
          else
-          cenlat=nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
+           if(mod(jm+1,4).ne.0)then
+             dcenlat=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
+           else
+             dcenlat=dummy(icen,jcen)
+           end if
          end if
-        else
-         if(mod(jm+1,4).ne.0)then
-          cenlat=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
-         else
-          cenlat=nint(dummy(icen,jcen)*1000.)
-         end if
-        end if
-
-!        if(mod(im,2).eq.0) then
-!           icen=(im+1)/2
-!           jcen=(jm+1)/2
-!           cenlat=nint(dummy(icen,jcen)*1000.)
-!        else
-!           icen=im/2
-!           jcen=(jm+1)/2
-!           cenlat=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
-!        end if
-        
       end if
       write(6,*) 'laststart,latlast,cenlat B calling bcast= ', &
      &    latstart,latlast,cenlat
@@ -3029,41 +3019,38 @@
 !lrb changed if statement as per MP's suggestion
 !lrb        if(mod(im,2).ne.0) then
 !Chuang: test
-        icen=(im+1)/2
-        jcen=(jm+1)/2
+        icen=im/2
+        jcen=jm/2
         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
          if(mod(jm+1,4).ne.0)then
-          cenlon=nint(dummy(icen,jcen)*1000.)
+          dcenlon=dummy(icen,jcen)
          else
-          cenlon=nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
+          dcenlon=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
          end if
         else
          if(mod(jm+1,4).ne.0)then
-          cenlon=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
+          dcenlon=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
          else
-          cenlon=nint(dummy(icen,jcen)*1000.)
+          dcenlon=dummy(icen,jcen)
          end if
         end if
-
-!        if(mod(im,2).eq.0) then
-!           icen=(im+1)/2
-!           jcen=(jm+1)/2
-!           cenlon=nint(dummy(icen,jcen)*1000.)
-!        else
-!           icen=im/2
-!           jcen=(jm+1)/2
-!           cenlon=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
-!        end if
        end if
 
-       write(6,*)'lonstart,lonlast,cenlon B calling bcast= ', &
+       write(6,*)'lonstart,lonlast,dcenlon B calling bcast= ', &
      &      lonstart,lonlast,cenlon
        call mpi_bcast(lonstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(lonlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       write(6,*)'lonstart,lonlast,cenlon A calling bcast= ', &
+       write(6,*)'lonstart,lonlast,dcenlon A calling bcast= ', &
      &      lonstart,lonlast,cenlon
 !
+       if(me==0) then
+          open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
+1013      format(A,'=',F0.3)
+          write(1013,1013) 'clat',dcenlat
+          write(1013,1013) 'clon',dcenlon
+       endif
+
         write(6,*) 'filename in INITPOST=', filename
 
 
