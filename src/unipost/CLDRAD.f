@@ -3005,6 +3005,29 @@
         endif
          ENDIF
 !
+!     CURRENT TOP OF THE ATMOSPHERE SHORT WAVE RADIATION.
+         IF (IGET(902).GT.0) THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
+           GRID1=SPVAL
+           ID(1:25)=0
+          ELSE
+           DO J=JSTA,JEND
+           DO I=1,IM
+             GRID1(I,J) = RSWTOA(I,J)
+           ENDDO
+           ENDDO
+           ID(1:25)=0
+          END IF
+         if(grib=="grib1" )then
+          CALL GRIBIT(IGET(902),LVLS(1,IGET(902)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(902))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+         ENDIF
+
+!
 !     CLOUD TOP BRIGHTNESS TEMPERATURE FROM TOA OUTGOING LW.
          IF (IGET(265).GT.0) THEN
 	  GRID1=SPVAL

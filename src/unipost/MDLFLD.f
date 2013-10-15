@@ -687,7 +687,7 @@
            (IGET(750).GT.0).OR.(IGET(751).GT.0).OR.      &
            (IGET(752).GT.0).OR.(IGET(754).GT.0).OR.      &
            (IGET(278).GT.0).OR.(IGET(264).GT.0).OR.      &
-           (IGET(450).GT.0) )  THEN
+           (IGET(450).GT.0).OR.(IGET(903).GT.0) )  THEN
 
       DO 190 L=1,LM
 
@@ -922,6 +922,30 @@
                  cfld=cfld+1
                  fld_info(cfld)%ifld=IAVBLFLD(IGET(250))
                  fld_info(cfld)%lvl=LVLSXML(L,IGET(250))
+                 datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+               endif
+            ENDIF
+          ENDIF
+
+! KRS: Add Thompson Reflectivity as derived within WRF
+! HWRF request OCT 2013
+! Passed in and output as is, no manipulations
+          IF (IGET(903) .GT. 0) THEN
+            IF (LVLS(L,IGET(903)) .GT. 0) THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J)=REFL_10CM(I,J,LL)
+               ENDDO
+               ENDDO
+               if(grib=="grib1" )then
+                 ID(1:25) = 0
+                 ID(02)=129
+                 CALL GRIBIT(IGET(903),L,GRID1,IM,JM)
+               else if(grib=="grib2" )then
+                 cfld=cfld+1
+                 fld_info(cfld)%ifld=IAVBLFLD(IGET(903))
+                 fld_info(cfld)%lvl=LVLSXML(L,IGET(903))
                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                endif
             ENDIF

@@ -2034,7 +2034,14 @@
       DATA IFILV(901),AVBL(901),IQ(901),IS(901),AVBLGRB2(901)      &
      &                      /1,'MODEL SFC V WIND STR',125,001,     &
      &                       'V_FLX ON surface' /
-
+      DATA IFILV(902),AVBL(902),IQ(902),IS(902),AVBLGRB2(902)      &
+     &                      /1,'INSTN OUT TOA SW RAD',211,008,     &
+     &                       'INST USWRF ON top_of_atmos'/
+! HWRF Thompson reflectivity output from wrf
+! Use Table 129 (PDS Octet 4 = 129)
+      DATA IFILV(903),AVBL(903),IQ(903),IS(903),AVBLGRB2(903)      &
+     &                      /1,'THMPSN REFL 10CM MDL',211,109,     &
+     &                       'THMPSN REFL 10CM ON model '/
 !end initialization
 !
    end module RQSTFLD_mod
