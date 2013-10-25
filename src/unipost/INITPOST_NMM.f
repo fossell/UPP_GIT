@@ -373,6 +373,24 @@
       
       if(imp_physics==5)then
 
+!KRS: HWRF Addition for thompson REFL_10cm
+      VarName='REFL_10CM'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D, &
+        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+      do l = 1, lm
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            REFL_10CM ( i, j, l ) = dum3d ( i, j, l )
+        end do
+       end do
+      end do
+      do l=1,lm
+      if(jj.ge. jsta .and. jj.le.jend)print*,'sample L,T= ',L,T(ii,jj,l)
+      end do
+! END KRS
+
+!      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
+
        VarName='Q'
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -1663,6 +1681,15 @@
        do j = jsta_2l, jend_2u
         do i = 1, im
             ASWTOA ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+      VarName='RSWTOA'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,      &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            RSWTOA ( i, j ) = dummy ( i, j )
         end do
        end do
 

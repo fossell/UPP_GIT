@@ -96,6 +96,8 @@
       deallocate(DBZC)
       deallocate(mcvg)
       deallocate(NLICE)
+! KRS: HWRF addition for thompson reflectivity
+      deallocate(REFL_10CM)
 !GFS FIELD
       deallocate(o3)
 ! Add GFS d3d fields
@@ -172,6 +174,7 @@
       deallocate(rswin)
       deallocate(rlwin)
       deallocate(rlwtoa)
+      deallocate(rswtoa)
       deallocate(tg)
       deallocate(sfcshx)
       deallocate(sfclhx)

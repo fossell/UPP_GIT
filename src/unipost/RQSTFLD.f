@@ -2,8 +2,9 @@
 !--------------------------------------------------------------------
       implicit none
 !
-      INTEGER, PARAMETER :: MXFLD=900,MXLVL=70
+      INTEGER, PARAMETER :: MXFLD=999,MXLVL=70
       CHARACTER*20 AVBL(MXFLD),FIELD(MXFLD)
+      CHARACTER*50 AVBLGRB2(MXFLD)
       CHARACTER*6 DATSET      
 !
       LOGICAL RITEHD,RITE2
@@ -1140,6 +1141,162 @@
      &                      /1,'MTSAT1RCH3 NON NADIR',118,008/ !table 130
       DATA IFILV(867),AVBL(867),IQ(867),IS(867)     &
      &                      /1,'MTSAT1RCH4 NON NADIR',118,008/ !table 130   
+
+      DATA IFILV(750),AVBL(750),IQ(750),IS(750),AVBLGRB2(750)      &
+     &                      /1,'WV MIX R ON MDL SFCS',053,109,     &
+     &                         'WV MIX R ON MDL SFCS'/
+      DATA IFILV(751),AVBL(751),IQ(751),IS(751),AVBLGRB2(751)      &
+     &                      /1,'VP TEMP ON MDL SFCS ',189,109,     &
+     &                         'VP TEMP ON MDL SFCS '/
+      DATA IFILV(752),AVBL(752),IQ(752),IS(752),AVBLGRB2(752)      &
+     &                      /1,'NCICE ON MDL SFCS   ',198,109,     &
+     &                         'NCICE ON MDL SFCS   '/
+
+! no entry in GRIB table for NRAIN, use 148 - Meridional flux of gravity wave stress
+      DATA IFILV(754),AVBL(754),IQ(754),IS(754),AVBLGRB2(754)      &
+     &                      /1,'NCRAIN ON MDL SFCS  ',148,109,     &
+     &                         'NCRAIN ON MDL SFCS  '/
+! ---
+      DATA IFILV(546),AVBL(546),IQ(546),IS(546),AVBLGRB2(546)      &
+     &                      /1,'SHELTER POT TEMP    ',013,105,     &
+     &                         'SHELTER POT TEMP    '/
+      DATA IFILV(547),AVBL(547),IQ(547),IS(547),AVBLGRB2(547)      &
+     &                      /1,'SHELTER DEWP DEPRES ',018,105,     &
+     &                         'SHELTER DEWP DEPRES '/
+      DATA IFILV(548),AVBL(548),IQ(548),IS(548),AVBLGRB2(548)      &
+     &                      /1,'SURFACE EQ POT TEMP ',014,001,     &
+     &                         'SURFACE EQ POT TEMP '/
+      DATA IFILV(755),AVBL(755),IQ(755),IS(755),AVBLGRB2(755)      &
+     &                      /1,'EQUIL LEVEL HEIGHT  ',007,247,     &
+     &                         'EQUIL LEVEL HEIGHT  '/
+      DATA IFILV(753),AVBL(753),IQ(753),IS(753),AVBLGRB2(753)      &
+     &                      /1,'PRESSURE OF FRZ LVL ',001,004,     &
+     &                         'PRESSURE OF FRZ LVL '/
+      DATA IFILV(756),AVBL(756),IQ(756),IS(756),AVBLGRB2(756)      &
+     &                      /1,'HIGHEST FRZ LVL PRES',001,204,     &
+     &                         'HIGHEST FRZ LVL PRES'/
+      DATA IFILV(700),AVBL(700),IQ(700),IS(700),AVBLGRB2(700)      &
+     &                      /1,'MAX UPDR HELICITY16 ',216,106,     &
+     &                         'MAX UPDR HELICITY16 '/
+      DATA IFILV(701),AVBL(701),IQ(701),IS(701),AVBLGRB2(701)      &
+     &                      /1,'UPDRAFT HELICITY16  ',214,106,     &
+     &                         'UPDRAFT HELICITY16  '/
+      DATA IFILV(702),AVBL(702),IQ(702),IS(702),AVBLGRB2(702)      &
+     &                      /1,'MAX LTG THREAT1     ',188,200,     &
+     &                         'MAX LTG THREAT1     '/
+      DATA IFILV(703),AVBL(703),IQ(703),IS(703),AVBLGRB2(703)      &
+     &                      /1,'MAX LTG THREAT2     ',186,200,     &
+     &                         'MAX LTG THREAT2     '/
+      DATA IFILV(704),AVBL(704),IQ(704),IS(704),AVBLGRB2(704)      &
+     &                      /1,'MAX LTG THREAT3     ',187,200,     &
+     &                         'MAX LTG THREAT3     '/
+      DATA IFILV(705),AVBL(705),IQ(705),IS(705),AVBLGRB2(705)      &
+     &                      /1,'NCI_LTG             ',241,200,     &
+     &                         'NCI_LTG             '/
+      DATA IFILV(706),AVBL(706),IQ(706),IS(706),AVBLGRB2(706)      &
+     &                      /1,'NCA_LTG             ',242,200,     &
+     &                         'NCA_LTG             '/
+      DATA IFILV(707),AVBL(707),IQ(707),IS(707),AVBLGRB2(707)      &
+     &                      /1,'NCI_WQ              ',243,200,     &
+     &                         'NCI_WQ              '/
+      DATA IFILV(708),AVBL(708),IQ(708),IS(708),AVBLGRB2(708)      &
+     &                      /1,'NCA_WQ              ',244,200,     &
+     &                         'NCA_WQ              '/
+      DATA IFILV(709),AVBL(709),IQ(709),IS(709),AVBLGRB2(709)      &
+     &                      /1,'NCI_REFL            ',245,200,     &
+     &                         'NCI_REFL            '/
+      DATA IFILV(710),AVBL(710),IQ(710),IS(710),AVBLGRB2(710)      &
+     &                      /1,'NCA_REFL            ',246,200,     &
+     &                         'NCA_REFL            '/
+
+! Add variables to produce the same output as in RUC
+      DATA IFILV(749),AVBL(749),IQ(749),IS(749),AVBLGRB2(749)      &
+     &                      /1,'RH WRT PRECIP WATER ',230,200,     &
+     &                         'RH WRT PRECIP WATER '/
+      DATA IFILV(748),AVBL(748),IQ(748),IS(748),AVBLGRB2(748)      &
+     &                      /1,'RADAR REFLECT - 1km ',211,105,     &
+     &                         'RADAR REFLECT - 1km '/
+      DATA IFILV(757),AVBL(757),IQ(757),IS(757),AVBLGRB2(757)      &
+     &                      /1,'RADAR REFLECT - 4km ',211,105,     &
+     &                         'RADAR REFLECT - 4km '/
+      DATA IFILV(758),AVBL(758),IQ(758),IS(758),AVBLGRB2(758)      &
+     &                      /1,'CONV CLD TOP HGHT   ',007,243,     &
+     &                         'CONV CLD TOP HGHT   '/
+      DATA IFILV(760),AVBL(760),IQ(760),IS(760),AVBLGRB2(760)      &
+     &                      /1,'SHELTER MIXING RATIO',053,105,     &
+     &                         'SHELTER MIXING RATIO'/
+      DATA IFILV(762),AVBL(762),IQ(762),IS(762),AVBLGRB2(762)      &
+     &                      /1,'SURFACE MIXING RATIO',053,001,     &
+     &                         'SURFACE MIXING RATIO'/
+      DATA IFILV(761),AVBL(761),IQ(761),IS(761),AVBLGRB2(761)      &
+     &                      /1,'TEMP INSIDE SNOW    ',011,001,     &
+     &                         'TEMP INSIDE SNOW    '/
+! CRA Add variables to produce NCAR fields
+      DATA IFILV(768),AVBL(768),IQ(768),IS(768),AVBLGRB2(768)      &
+     &                      /1,'ECHOTOP             ',222,003,     &
+     &                         'ECHOTOP             '/
+      DATA IFILV(769),AVBL(769),IQ(769),IS(769),AVBLGRB2(769)      &
+     &                      /1,'VIL                 ',147,200,     &
+     &                         'VIL                 '/
+      DATA IFILV(770),AVBL(770),IQ(770),IS(770),AVBLGRB2(770)      &
+     &                      /1,'RADARVIL            ',148,200,     &
+     &                         'RADARVIL            '/
+      DATA IFILV(727),AVBL(727),IQ(727),IS(727),AVBLGRB2(727)      &
+     &                      /1,'GSD UPDRAFT HELICITY',227,106,     &
+     &                       'GSD UPHL ON spec_hgt_lvl_above_grnd'/
+! CRA
+!
+! satellite index 800-899
+! satellite additions: F17 SSMIS nadir:
+      DATA IFILV(800),AVBL(800),IQ(800),IS(800),AVBLGRB2(800)      &
+     &                      /1,'SSMIS F17 TB - CH 15',118,008,     &
+     &                       'SSMISF17TBCH15 ON surface' /
+      DATA IFILV(801),AVBL(801),IQ(801),IS(801),AVBLGRB2(801)      &
+     &                      /1,'SSMIS F17 TB - CH 16',118,008,     &
+     &                       'SSMISF17TBCH16 ON surface' /
+      DATA IFILV(802),AVBL(802),IQ(802),IS(802),AVBLGRB2(802)      &
+     &                      /1,'SSMIS F17 TB - CH 17',118,008,     &
+     &                       'SSMISF17TBCH17 ON surface' /
+      DATA IFILV(803),AVBL(803),IQ(803),IS(803),AVBLGRB2(803)      &
+     &                      /1,'SSMIS F17 TB - CH 18',118,008,     &
+     &                       'SSMISF17TBCH18 ON surface' /
+
+! satellite additions: F17 SSMIS constant 53 degree zenith angle:
+      DATA IFILV(804),AVBL(804),IQ(804),IS(804),AVBLGRB2(804)      &
+     &                      /1,'SSMIS F17 TB 53DEG15',118,008,     &
+     &                       'SSMISF17TB53DCH15 ON top_of_atmos' /
+      DATA IFILV(805),AVBL(805),IQ(805),IS(805),AVBLGRB2(805)      &
+     &                      /1,'SSMIS F17 TB 53DEG16',118,008,     &
+     &                       'SSMISF17TB53DCH16 ON top_of_atmos' /
+      DATA IFILV(806),AVBL(806),IQ(806),IS(806),AVBLGRB2(806)      &
+     &                      /1,'SSMIS F17 TB 53DEG17',118,008,     &
+     &                       'SSMISF17TB53DCH17 ON top_of_atmos' /
+      DATA IFILV(807),AVBL(807),IQ(807),IS(807),AVBLGRB2(807)      &
+     &                      /1,'SSMIS F17 TB 53DEG18',118,008,     &
+     &                       'SSMISF17TB53DCH18 ON top_of_atmos' /
+! Apparent Temperature, 
+! March 2013: use faked Grib1 and Grib2 IDs
+! Sib will no longer support new Grib1 ID and
+! is in the process of getting Grib2 ID from WMO.
+      DATA IFILV(808),AVBL(808),IQ(808),IS(808),AVBLGRB2(808)      &
+     &                      /1,'APPARENT TEMPERATURE',168,105,     &
+     &                       'TIPD ON entire_atmos_single_lyr'/
+
+! HWRF additions (900-949)
+      DATA IFILV(900),AVBL(900),IQ(900),IS(900),AVBLGRB2(900)      &
+     &                      /1,'MODEL SFC U WIND STR',124,001,     &
+     &                       'U_FLX ON surface' /
+      DATA IFILV(901),AVBL(901),IQ(901),IS(901),AVBLGRB2(901)      &
+     &                      /1,'MODEL SFC V WIND STR',125,001,     &
+     &                       'V_FLX ON surface' /
+      DATA IFILV(902),AVBL(902),IQ(902),IS(902),AVBLGRB2(902)      &
+     &                      /1,'INSTN OUT TOA SW RAD',211,008,     &
+     &                       'INST USWRF ON top_of_atmos'/
+! HWRF Thompson reflectivity output from wrf
+! Use Table 129 (PDS Octet 4 = 129)
+      DATA IFILV(903),AVBL(903),IQ(903),IS(903),AVBLGRB2(903)      &
+     &                      /1,'THMPSN REFL 10CM MDL',211,109,     &
+     &                       'THMPSN REFL 10CM ON model '/
 !end initialization
 !
    end module RQSTFLD_mod

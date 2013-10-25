@@ -26,9 +26,10 @@
       ,PBLH(:,:),HBOTD(:,:),HTOPD(:,:),HBOTS(:,:),HTOPS(:,:) &
       ,CLDEFI(:,:),ALBASE(:,:),SI(:,:),LSPA(:,:) &
       ,RSWINC(:,:),VIS(:,:),PD(:,:),MXSNAL(:,:),MIXHT(:,:) &
-      ,SNONC(:,:),EPSR(:,:) &
+      ,SNONC(:,:),EPSR(:,:),RSWTOA(:,:) &
 ! HWRF additions
       ,MDLTAUX(:,:),MDLTAUY(:,:) &
+      ,SWUPT(:,:),ASWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:) &
 ! NAMB additions
       ,SNOAVG(:,:),PSFCAVG(:,:),T10AVG(:,:),AKHSAVG(:,:),AKMSAVG(:,:) &
       ,T10M(:,:),U10MAX(:,:),V10MAX(:,:) &
