@@ -29,7 +29,7 @@
       ,SNONC(:,:),EPSR(:,:),RSWTOA(:,:) &
 ! HWRF additions
       ,MDLTAUX(:,:),MDLTAUY(:,:) &
-      ,SWUPT(:,:),ASWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:) &
+      ,SWUPT(:,:),ACSWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:) &
 ! NAMB additions
       ,SNOAVG(:,:),PSFCAVG(:,:),T10AVG(:,:),AKHSAVG(:,:),AKMSAVG(:,:) &
       ,T10M(:,:),U10MAX(:,:),V10MAX(:,:),u10h(:,:),v10h(:,:) &

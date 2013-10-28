@@ -100,6 +100,7 @@
       deallocate(mcvg)
       deallocate(NLICE)
 ! KRS: HWRF addition for thompson reflectivity
+! or non-ferrier physics. wrf-derived
       deallocate(REFL_10CM)
 !GFS FIELD
       deallocate(o3)
@@ -403,5 +404,11 @@
       deallocate(sscmass)
       deallocate(sssmass25)
       deallocate(sscmass25)
+
+! HWRF RRTMG output 
+      deallocate(swupt)
+      deallocate(acswupt)
+      deallocate(swdnt)
+      deallocate(acswdnt)
       
       end

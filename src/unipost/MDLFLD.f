@@ -951,6 +951,8 @@
             ENDIF
           ENDIF
 
+
+
 !
 !--- TOTAL CONDENSATE ON MDL SURFACE (CWM array; Ferrier, Feb '02)
 !
@@ -2156,6 +2158,27 @@
            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
          endif
       ENDIF
+
+!KRS: HWRF composite radar for non-ferrier physics
+! wrf-derived, simply passed through upp
+      IF (IGET(904).GT.0) THEN
+        DO J=JSTA,JEND
+          DO I=1,IM
+              GRID1(I,J)=REFD_MAX(I,J)
+          ENDDO
+        ENDDO
+        ID(1:25) = 0
+         ID(02)=129
+        if(grib=="grib1") then
+           CALL GRIBIT(IGET(904),LM,GRID1,IM,JM)
+        else if(grib=="grib2")then
+           cfld=cfld+1
+           fld_info(cfld)%ifld=IAVBLFLD(IGET(904))
+           datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+      ENDIF
+
+
 !
 !     COMPUTE VIL (radar derived vertically integrated liquid water in each column)
 !     Per Mei Xu, VIL is radar derived vertically integrated liquid water based
