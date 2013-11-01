@@ -584,6 +584,35 @@
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample qqg= '  &
       ,Qqg(ii,jj,ll)
 
+! KRS: Add concentrations for HWRF output
+      if(imp_physics.eq.8 .or. imp_physics.eq.9)then
+      VarName='QNICE'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D, &
+        IM+1,1,JM+1,LM+1,IM, JS,JE,LM)
+      do l = 1, lm
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            qqni ( i, j, l ) = dum3d ( i, j, l )
+        if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample QQNI= ',    &
+          i,j,l,QQNI ( i, j, l )
+        end do
+       end do
+      end do
+      VarName='QNRAIN'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
+        IM+1,1,JM+1,LM+1,IM, JS,JE,LM)
+      do l = 1, lm
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            qqnr ( i, j, l ) = dum3d ( i, j, l )
+        if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample QQNR= ',    &
+          i,j,l,QQNR ( i, j, l )
+        end do
+       end do
+      end do
+      end if
+! KRS: End add concentrations for HWRF
+
       end if ! end of retrieving hydrometeo for different MP options      
       
 
