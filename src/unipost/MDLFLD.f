@@ -716,6 +716,42 @@
                CALL GRIBIT(IGET(415),L,GRID1,IM,JM)
             ENDIF
           ENDIF
+!---  QNICE ON MDL SURFACE   --tgs
+!
+          IF (IGET(752) .GT. 0) THEN
+            IF (LVLS(L,IGET(752)) .GT. 0)THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+            if(QQNI(I,J,LL).lt.1.e-8) QQNI(I,J,LL)=0.     !tgs
+                 GRID1(I,J)=QQNI(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(11) = L
+               ID(1:25) = 0
+               CALL GRIBIT(IGET(752),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
+
+!
+!---  QNRAIN ON MDL SURFACE   --tgs
+!
+          IF (IGET(754) .GT. 0) THEN
+            IF (LVLS(L,IGET(754)) .GT. 0)THEN
+               LL=LM-L+1
+               DO J=JSTA,JEND
+               DO I=1,IM
+            if(QQNR(I,J,LL).lt.1.e-8)QQNR(I,J,LL)=0.     !tgs
+                 GRID1(I,J)=QQNR(I,J,LL)
+               ENDDO
+               ENDDO
+               ID(1:25) = 0
+               ID(11) = L
+               ID(1:25) = 0
+               CALL GRIBIT(IGET(754),L,GRID1,IM,JM)
+            ENDIF
+          ENDIF
 
 !
 !---  Total cloud fraction on MDL surfaces.  (Ferrier, Nov '04)
@@ -1358,6 +1394,20 @@
 	 ID(02)=129
          CALL GRIBIT(IGET(252),LM,GRID1,IM,JM)
       ENDIF
+
+!KRS: HWRF composite radar for non-ferrier physics
+! wrf-derived, simply passed through upp
+      IF (IGET(904).GT.0) THEN
+        DO J=JSTA,JEND
+          DO I=1,IM
+              GRID1(I,J)=REFD_MAX(I,J)
+          ENDDO
+        ENDDO
+        ID(1:25) = 0
+        ID(02)=129
+        CALL GRIBIT(IGET(904),LM,GRID1,IM,JM)
+      ENDIF
+
 !
 !--   COMPOSITE RADAR REFLECTIVITY FROM RAIN (maximum dBZ in each column due to rain)
 !

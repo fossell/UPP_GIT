@@ -1295,8 +1295,26 @@
 ! HWRF Thompson reflectivity output from wrf
 ! Use Table 129 (PDS Octet 4 = 129)
       DATA IFILV(903),AVBL(903),IQ(903),IS(903),AVBLGRB2(903)      &
-     &                      /1,'THMPSN REFL 10CM MDL',211,109,     &
-     &                       'THMPSN REFL 10CM ON model '/
+     &                      /1,'WRFOUT REFL 10CM MDL',211,109,     &
+     &                       'WRFOUT REFL 10CM ON model '/
+      DATA IFILV(904),AVBL(904),IQ(904),IS(904),AVBLGRB2(904)      &
+     &                      /1,'WRFOUT COMP MAX REF ',212,200,     &
+     &                       'WRFOUT COMP MAX REFLC'/
+! Add Radiation variables output from RRTMG and CAM
+! radiation schemes in wrf. (SWUPT,ACSWUPT,SWDNT,ACSWDNT)
+      DATA IFILV(905),AVBL(905),IQ(905),IS(905),AVBLGRB2(905)      &
+     &                      /1,'INST SW UP TOA RAD  ',211,008,     &
+     &                       'INST SW UPWELL RAD top_of_atmos'/
+      DATA IFILV(906),AVBL(906),IQ(906),IS(906),AVBLGRB2(906)      &
+     &                      /1,'AVE SW UP TOA RAD   ',211,008,     &
+     &                       'AVE SW UPWELL RAD top_of_atmos'/
+      DATA IFILV(907),AVBL(907),IQ(907),IS(907),AVBLGRB2(907)      &
+     &                      /1,'INST SW DOWN TOA RAD',204,008,     &
+     &                       'INST SW DOWNWELL RAD top_of_atmos'/
+      DATA IFILV(908),AVBL(908),IQ(908),IS(908),AVBLGRB2(908)      &
+     &                      /1,'AVE SW DOWN TOA RAD ',204,008,     &
+     &                       'AVE SW DOWNWELL RAD top_of_atmos'/
+
 !end initialization
 !
    end module RQSTFLD_mod

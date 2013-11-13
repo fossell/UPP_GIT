@@ -88,6 +88,8 @@
       deallocate(QQR)
       deallocate(QQS)
       deallocate(QQG)
+      deallocate(QQNI)
+      deallocate(QQNR)
       deallocate(EXTCOF55)
       deallocate(CFR)
       deallocate(DBZ)
@@ -98,6 +100,10 @@
       deallocate(NLICE)
 ! KRS: HWRF addition for thompson reflectivity
       deallocate(REFL_10CM)
+      deallocate(swupt)
+      deallocate(acswupt)
+      deallocate(swdnt)
+      deallocate(acswdnt)
 !GFS FIELD
       deallocate(o3)
 ! Add GFS d3d fields
