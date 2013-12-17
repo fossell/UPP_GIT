@@ -167,6 +167,8 @@
       allocate(QQR(im,jsta_2l:jend_2u,lm))
       allocate(QQS(im,jsta_2l:jend_2u,lm))
       allocate(QQG(im,jsta_2l:jend_2u,lm))
+      allocate(QQNI(im,jsta_2l:jend_2u,lm))
+      allocate(QQNR(im,jsta_2l:jend_2u,lm))
       allocate(EXTCOF55(im,jsta_2l:jend_2u,lm))
       allocate(CFR(im,jsta_2l:jend_2u,lm))
       allocate(DBZ(im,jsta_2l:jend_2u,lm))
@@ -175,6 +177,12 @@
       allocate(DBZC(im,jsta_2l:jend_2u,lm))
       allocate(mcvg(im,jsta_2l:jend_2u,lm))
       allocate(NLICE(im,jsta_2l:jend_2u,lm))
+! KRS: HWRF Addition for thompson reflectivity
+      allocate(REFL_10CM(im,jsta_2l:jend_2u,lm))
+      allocate(swupt(im,jsta_2l:jend_2u))
+      allocate(acswupt(im,jsta_2l:jend_2u))
+      allocate(swdnt(im,jsta_2l:jend_2u))
+      allocate(acswdnt(im,jsta_2l:jend_2u))
 !GFS FIELD
       allocate(o3(im,jsta_2l:jend_2u,lm))
 ! Add GFS d3d fields
@@ -278,6 +286,7 @@
       allocate(rswin(im,jsta_2l:jend_2u))
       allocate(rlwin(im,jsta_2l:jend_2u))
       allocate(rlwtoa(im,jsta_2l:jend_2u))
+      allocate(rswtoa(im,jsta_2l:jend_2u))
       allocate(tg(im,jsta_2l:jend_2u))
       allocate(sfcshx(im,jsta_2l:jend_2u))
       allocate(sfclhx(im,jsta_2l:jend_2u))
