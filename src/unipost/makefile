@@ -57,7 +57,7 @@ OBJS_F =	 VRBLS2D_mod.o VRBLS3D_mod.o VRBLS4D_mod.o MASKS_mod.o PMICRPH.o SOIL_m
           CLMAX.o COLLECT.o  COLLECT_LOC.o DEWPOINT.o FDLVL.o  FGAMMA.o FIXED.o  FRZLVL.o  FRZLVL2.o \
           GET_BITS.o  GRIBIT.o INITPOST.o LFMFLD.o  INITPOST_BIN.o MAPSSLP.o MISCLN.o MIXLEN.o MDL2P.o \
           MDLFLD.o MPI_FIRST.o  MPI_LAST.o NGMFLD.o NGMSLP.o  OTLFT.o OTLIFT.o SLP_new.o SLP_NMM.o \
-          EXCH.o PARA_RANGE.o PROCESS.o INITPOST_NMM.o EXCH2.o READCNTRL.o  SCLFLD.o  SERVER.o \
+          EXCH.o PARA_RANGE.o PROCESS.o ETAMP_Q2F.o INITPOST_NMM.o EXCH2.o READCNTRL.o  SCLFLD.o  SERVER.o \
           SETUP_SERVERS.o SMOOTH.o SURFCE.o SPLINE.o  TABLE.o  TABLEQ.o  TRPAUS.o  TTBLEX.o WETBULB.o \
           WRFPOST.o INITPOST_NMM_BIN.o CALMICT.o MICROINIT.o GPVS.o MDL2SIGMA.o ETCALC.o CANRES.o \
           CALGUST.o WETFRZLVL.o SNFRAC.o MDL2AGL.o SNFRAC_GFS.o INITPOST_RSM.o AVIATION.o DEALLOCATE.o \
@@ -88,6 +88,10 @@ wrflink: $(WRF_DIR)/frame/module_internal_header_util.mod
 # This insures a dependency found in some files -- watch file order above remains -- should
 # be done w/ dependencies
 $(OBJS_F): $(OBJS_FT)
+
+# Make sure ETAMP_Q2F is compiled before running the WRF-NMM INITPOSTs:
+INITPOST_NMM.o: ETAMP_Q2F.o
+INITPOST_NMM_BIN_MPIIO_IJK.o: ETAMP_Q2F.o
 
 clean:	
 	@echo -e "\n<><><><> CLEAN <><><><>\n$@ in `pwd`"

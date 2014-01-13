@@ -114,7 +114,7 @@
 ! Declarations for  :
 !  Comments and code provided for use with copygb - R.Rozumalski - NWS
       INTEGER idxave, dlat, latnm, latsm, nlat, lonem, lonwm, dlon, nlon
-
+      LOGICAL advected_ferrier
       DATA BLANK/'    '/
 !
 !***********************************************************************
@@ -362,7 +362,10 @@
       call ext_ncd_get_dom_ti_integer(DataHandle,'MP_PHYSICS'  &
       ,itmp,1,ioutcount,istatus)
       imp_physics=itmp
-      if (imp_physics .eq. 85) imp_physics = 5  ! HWRF
+      advected_ferrier = (imp_physics==75)
+      if (imp_physics==85 .or. imp_physics==75) then
+         imp_physics = 5  ! HWRF or advected ferrier = ferrier
+      endif
       print*,'MP_PHYSICS= ',imp_physics      
       
       call ext_ncd_get_dom_ti_integer(DataHandle,'CU_PHYSICS'  &
@@ -371,8 +374,7 @@
       if (icu_physics .eq. 84 .or. icu_physics==85) icu_physics = 4  ! HWRF SAS, mesosas = SAS
       print*,'CU_PHYSICS= ',icu_physics      
       
-      if(imp_physics==5)then
-
+      read_q: if(imp_physics==5)then
        VarName='Q'
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -386,7 +388,9 @@
        end do
        print*,'finish reading specific humidity'
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample Q= ',Q(ii,jj,ll)
+       endif read_q
 
+       read_f_cwm: if(imp_physics==5 .and. .not. advected_ferrier) then
        VarName='CWM'  !?????
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -431,8 +435,11 @@
          end do
         end do
        end do
+      endif read_f_cwm
 
-      else  ! retrieve hydrometeo fields directly for non-Ferrier
+      read_QQ: if(imp_physics/=5 .or. advected_ferrier) then
+  ! retrieve hydrometeo fields directly for advected schemes
+      read_qvapor: if(.not.advected_ferrier) then
        VarName='QVAPOR'
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
         IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -449,6 +456,8 @@
        end do
        print*,'finish reading specific humidity'
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample Q= ',Q(ii,jj,ll)
+       endif read_qvapor
+
        qqw=spval
        qqr=spval
        qqs=spval
@@ -497,6 +506,22 @@
        end if
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample qqi= '  &
       ,Qqi(ii,jj,ll)
+      
+
+       if(advected_ferrier) then
+        VarName='QRIMEF'
+        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
+         IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+        do l = 1, lm
+         do j = jsta_2l, jend_2u
+          do i = 1, im
+            qrimef ( i, j, l ) = dum3d ( i, j, l )
+          end do
+         end do
+        end do
+       end if
+       if(jj.ge. jsta .and. jj.le.jend)print*,'sample qrimef= '  &
+      ,Qrimef(ii,jj,ll)
       
 
        if(imp_physics.ne.0)then
@@ -558,8 +583,11 @@
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample qqg= '  &
       ,Qqg(ii,jj,ll)
 
-      end if ! end of retrieving hydrometeo for different MP options      
-      
+       if(advected_ferrier) then
+         ! Compute f_* arrays from q* arrays
+         call etamp_q2f(qrimef)
+       endif
+      endif read_q_stuff
 
 !      call getVariable(fileName,DateStr,DataHandle,'TKE_PBL',DUM3D,
       call getVariable(fileName,DateStr,DataHandle,'Q2',DUM3D,              &

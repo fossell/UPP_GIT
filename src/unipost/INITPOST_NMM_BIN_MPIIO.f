@@ -93,6 +93,7 @@
                                                  BUFSOIL, BUF3D, BUF3D2, BUF3DX
 
 !jw
+      LOGICAL advected_ferrier
       integer ii,jj,js,je,jev,iyear,imn,iday,itmp,ioutcount,istatus,   &
               nsrfc,nrdlw,nrdsw,nheat,nclod,                           &
               iunit,nrecs,I,J,L
@@ -235,7 +236,10 @@
       if (ierr /= 0) then
          imp_physics=5        ! assume ferrier if nothing specified
       endif
-      if(imp_physics==85) imp_physics=5  ! HWRF scheme = Ferrier scheme
+      advected_ferrier = (imp_physics==75)
+      if (imp_physics==85 .or. imp_physics==75) then
+         imp_physics = 5  ! HWRF or advected ferrier = ferrier
+      endif
       print*,'MP_PHYSICS= ',imp_physics
 
       call fetch_data(iunit, r,'CU_PHYSICS', dst=icu_physics, ierr=ierr)
@@ -1156,6 +1160,7 @@
         end if
       end if
 
+      read_f_cwm: if(imp_physics==5 .and. .not. advected_ferrier) then
       varname='CWM'
       call io_int_loc(VarName, r, pos, n, iret)
       if (iret /= 0) then
@@ -1259,6 +1264,225 @@
 	end if 
       end if
       write(0,*)' after F_RimeF'
+      endif read_f_cwm
+      
+      read_QQ: if(imp_physics/=5 .or. advected_ferrier) then
+      read_qvapor: if(.not.advected_ferrier) then
+      varname='QVAPOR'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        Q=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          Q=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             Q( i, j, l ) = buf3dx ( i, ll, j )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
+               'sample Q= ',i,j,l,Q( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QVAPOR'
+      endif read_qvapor
+
+      qqw=spval
+      qqr=spval
+      qqs=spval
+      qqi=spval
+      qqg=spval 
+      cwm=spval
+
+      if(imp_physics/=0) then
+      varname='QCLOUD'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+	    if(imp_physics.eq.3)then 
+             if(t(i,j,l) .ge. TFRZ)then  
+              qqw ( i, j, l ) = dum3d ( i, j, l )
+	     else
+	      qqi  ( i, j, l ) = dum3d ( i, j, l )
+	     end if
+            else ! bug fix provided by J CASE
+             qqw ( i, j, l ) = dum3d ( i, j, l )
+	    end if 
+	    cwm(i,j,l)=dum3d(i,j,l) 	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QCLOUD'
+      endif
+
+      if(imp_physics.ne.1 .and. imp_physics.ne.3  &
+        .and. imp_physics.ne.0)then
+      varname='QICE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             QQI( i, j, l ) = buf3dx ( i, ll, j )
+             cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
+               'sample QQI= ',i,j,l,QQI( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QICE'
+      endif
+
+      if(advected_ferrier) then
+      varname='QRIMEF'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        QRIMEF=SPVAL
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          QRIMEF=SPVAL
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             QRIMEF( i, j, l ) = buf3dx ( i, ll, j )
+	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
+               'sample QRIMEF= ',i,j,l,QRIMEF( i, j, l )	     
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QRIMEF'
+      endif
+
+      if(imp_physics/=0) then
+      varname='QRAIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+! partition rain and snow for WSM3 	
+            if(imp_physics .eq. 3)then
+	     if(t(i,j,l) .ge. TFRZ)then  
+              qqr ( i, j, l ) = dum3d ( i, j, l )
+	     else
+	      qqs ( i, j, l ) = dum3d ( i, j, l )
+	     end if
+            else ! bug fix provided by J CASE
+             qqr ( i, j, l ) = dum3d ( i, j, l )  
+	    end if
+            cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QRAIN'
+      endif
+
+      if(imp_physics.ne.1 .and. imp_physics.ne.3  & 
+        .and. imp_physics.ne.0)then
+      varname='QSNOW'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+            qqs ( i, j, l ) = dum3d ( i, j, l )
+	    cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QSNOW'
+      endif
+
+      if(imp_physics.eq.2 .or. imp_physics.eq.6  & 
+        .or. imp_physics.eq.8)then
+      varname='QGRAUP'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+      else
+	n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+        else
+	  do l = 1, lm
+	   ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+            qqg ( i, j, l ) = dum3d ( i, j, l )
+	    cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+            end do
+           end do
+          end do 
+	end if 
+      end if
+      write(0,*)' after QGRAUP'
+      endif
+
+      if(advected_ferrier) then
+         ! Compute f_* arrays from q* arrays
+         call etamp_q2f(qrimef)
+      endif
+
+      endif read_QQ
 
        varname='CLDFRA'
       call io_int_loc(VarName, r, pos, n, iret)

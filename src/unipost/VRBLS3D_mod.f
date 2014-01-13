@@ -13,7 +13,7 @@
       ,F_ice(:,:,:),F_rain(:,:,:),F_RimeF(:,:,:) &
       ,QQW(:,:,:), QQI(:,:,:), QQR(:,:,:), QQS(:,:,:), QQG(:,:,:) &
       ,CFR(:,:,:), DBZ(:,:,:), DBZR(:,:,:), DBZI(:,:,:), DBZC(:,:,:) &
-      ,TTND(:,:,:),RSWTT(:,:,:),RLWTT(:,:,:) &
+      ,TTND(:,:,:),RSWTT(:,:,:),RLWTT(:,:,:), QRIMEF(:,:,:) &
       ,EXCH_H(:,:,:),TRAIN(:,:,:),TCUCN(:,:,:),EL_PBL(:,:,:) &
       ,MCVG(:,:,:),EXTCOF55(:,:,:),NLICE(:,:,:) &
 ! Add GFS fields     
