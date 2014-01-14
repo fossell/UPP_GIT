@@ -20,7 +20,7 @@
 !      
   logical :: SIGMA,RUN,FIRST,RESTRT
   logical :: global
-  logical :: SMFLAG, use_qrimef
+  logical :: SMFLAG
   integer :: IDAT(5),IHRST, NFCST,NBC,LIST,IOUT,IFHR,NTSTM,            &
              NDDAMP,NPREC,IDTAD,NBOCO,NSHDE,NCP,IMDLTY,NPHS,           &
              NRADS,NRADL,IMIN,ifmin,DataHandle,imp_physics,            &

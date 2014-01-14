@@ -1275,7 +1275,7 @@
         Q=SPVAL
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
           Q=SPVAL
@@ -1284,7 +1284,7 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-             Q( i, j, l ) = buf3dx ( i, ll, j )
+             Q( i, j, l ) = buf3d ( i, j, ll )
 	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
                'sample Q= ',i,j,l,Q( i, j, l )	     
             end do
@@ -1309,7 +1309,7 @@
         print*,VarName," not found in file-Assigned missing values"
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
         else
@@ -1319,14 +1319,14 @@
             do i = 1, im
 	    if(imp_physics.eq.3)then 
              if(t(i,j,l) .ge. TFRZ)then  
-              qqw ( i, j, l ) = dum3d ( i, j, l )
+              qqw ( i, j, l ) = buf3d ( i, j, ll )
 	     else
-	      qqi  ( i, j, l ) = dum3d ( i, j, l )
+	      qqi  ( i, j, l ) = buf3d ( i, j, ll )
 	     end if
             else ! bug fix provided by J CASE
-             qqw ( i, j, l ) = dum3d ( i, j, l )
+             qqw ( i, j, l ) = buf3d ( i, j, ll )
 	    end if 
-	    cwm(i,j,l)=dum3d(i,j,l) 	     
+	    cwm(i,j,l)=buf3d(i,j,ll) 	     
             end do
            end do
           end do 
@@ -1343,7 +1343,7 @@
         print*,VarName," not found in file-Assigned missing values"
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
         else
@@ -1351,8 +1351,8 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-             QQI( i, j, l ) = buf3dx ( i, ll, j )
-             cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+             QQI( i, j, l ) = buf3d ( i, j, ll )
+             cwm(i,j,l)=cwm(i,j,l)+buf3d(i,j,ll)
 	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
                'sample QQI= ',i,j,l,QQI( i, j, l )	     
             end do
@@ -1371,7 +1371,7 @@
         QRIMEF=SPVAL
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
           QRIMEF=SPVAL
@@ -1380,7 +1380,7 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-             QRIMEF( i, j, l ) = buf3dx ( i, ll, j )
+             QRIMEF( i, j, l ) = buf3d ( i, j, ll )
 	     if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,                &
                'sample QRIMEF= ',i,j,l,QRIMEF( i, j, l )	     
             end do
@@ -1398,7 +1398,7 @@
         print*,VarName," not found in file-Assigned missing values"
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
         else
@@ -1409,14 +1409,14 @@
 ! partition rain and snow for WSM3 	
             if(imp_physics .eq. 3)then
 	     if(t(i,j,l) .ge. TFRZ)then  
-              qqr ( i, j, l ) = dum3d ( i, j, l )
+              qqr ( i, j, l ) = buf3d ( i, j, ll )
 	     else
-	      qqs ( i, j, l ) = dum3d ( i, j, l )
+	      qqs ( i, j, l ) = buf3d ( i, j, ll )
 	     end if
             else ! bug fix provided by J CASE
-             qqr ( i, j, l ) = dum3d ( i, j, l )  
+             qqr ( i, j, l ) = buf3d ( i, j, ll )  
 	    end if
-            cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+            cwm(i,j,l)=cwm(i,j,l)+buf3d(i,j,ll)
             end do
            end do
           end do 
@@ -1433,7 +1433,7 @@
         print*,VarName," not found in file-Assigned missing values"
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
         else
@@ -1441,8 +1441,8 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-            qqs ( i, j, l ) = dum3d ( i, j, l )
-	    cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+            qqs ( i, j, l ) = buf3d ( i, j, ll)
+	    cwm(i,j,l)=cwm(i,j,l)+buf3d(i,j,ll)
             end do
            end do
           end do 
@@ -1459,7 +1459,7 @@
         print*,VarName," not found in file-Assigned missing values"
       else
 	n=im*jm*lm
-        call fetch_data(iunit, r, VarName, pos, n, buf3dx, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
         else
@@ -1467,8 +1467,8 @@
 	   ll=lm-l+1
            do j = jsta_2l, jend_2u
             do i = 1, im
-            qqg ( i, j, l ) = dum3d ( i, j, l )
-	    cwm(i,j,l)=cwm(i,j,l)+dum3d(i,j,l)
+            qqg ( i, j, l ) = buf3d ( i, j, ll )
+	    cwm(i,j,l)=cwm(i,j,l)+buf3d(i,j,ll)
             end do
            end do
           end do 

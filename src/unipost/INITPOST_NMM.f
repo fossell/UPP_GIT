@@ -587,7 +587,7 @@
          ! Compute f_* arrays from q* arrays
          call etamp_q2f(qrimef)
        endif
-      endif read_q_stuff
+      endif read_QQ
 
 !      call getVariable(fileName,DateStr,DataHandle,'TKE_PBL',DUM3D,
       call getVariable(fileName,DateStr,DataHandle,'Q2',DUM3D,              &
