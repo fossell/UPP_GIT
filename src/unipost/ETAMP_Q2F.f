@@ -31,7 +31,7 @@
                if(QQR(i,j,l) <= EPSQ) then
                   F_RAIN(i,j,l)=0.
                else
-                  F_RAIN=QQR(I,J,L)/(QQR(I,J,L)+QQW(I,J,L))
+                  F_RAIN(i,j,l)=QQR(I,J,L)/(QQR(I,J,L)+QQW(I,J,L))
                endif
             enddo bigi
          enddo bigj
