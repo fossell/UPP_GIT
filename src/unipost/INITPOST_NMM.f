@@ -373,6 +373,34 @@
       
       if(imp_physics==5)then
 
+!KRS: HWRF Addition for thompson REFL_10cm and REFD_MAX
+      VarName='REFL_10CM'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D, &
+        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+      do l = 1, lm
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            REFL_10CM ( i, j, l ) = dum3d ( i, j, l )
+        end do
+       end do
+      end do
+      do l=1,lm
+      if(jj.ge. jsta .and. jj.le.jend)print*,'sample L,T= ',L,T(ii,jj,l)
+      end do
+
+      VarName='REFD_MAX'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY, &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            REFD_MAX ( i, j ) = dummy ( i, j )
+        end do
+       end do
+! print*,'REFD_MAX at ',ii,jj,' = ',REFD_MAX(ii,jj)
+! END KRS
+
+!      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
+
        VarName='Q'
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -557,6 +585,35 @@
        end if 
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample qqg= '  &
       ,Qqg(ii,jj,ll)
+
+! KRS: Add concentrations for HWRF output
+      if(imp_physics.eq.8 .or. imp_physics.eq.9)then
+      VarName='QNICE'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D, &
+        IM+1,1,JM+1,LM+1,IM, JS,JE,LM)
+      do l = 1, lm
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            qqni ( i, j, l ) = dum3d ( i, j, l )
+        if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample QQNI= ', &
+          i,j,l,QQNI ( i, j, l )
+        end do
+       end do
+      end do
+      VarName='QNRAIN'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
+        IM+1,1,JM+1,LM+1,IM, JS,JE,LM)
+      do l = 1, lm
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            qqnr ( i, j, l ) = dum3d ( i, j, l )
+        if(i.eq.im/2.and.j.eq.(jsta+jend)/2)print*,'sample QQNR= ', &
+          i,j,l,QQNR ( i, j, l )
+        end do
+       end do
+      end do
+      end if
+! KRS: End add concentrations for HWRF
 
       end if ! end of retrieving hydrometeo for different MP options      
       
@@ -1665,6 +1722,57 @@
             ASWTOA ( i, j ) = dummy ( i, j )
         end do
        end do
+
+! KRS: Add RSWTOA to radiation variable options
+      VarName='RSWTOA'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,      &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            RSWTOA ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+! KRS: RRTMG variables for HWRF
+     VarName='SWUPT'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,      &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            SWUPT ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+     VarName='ACSWUPT'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,      &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            ACSWUPT ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+     VarName='SWDNT'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,      &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            SWDNT ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+     VarName='ACSWDNT'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,      &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            ACSWDNT ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+! END KRS RRTMG Vars
+
+
 
 !      VarName='TMN'
 !      VarName='TG'

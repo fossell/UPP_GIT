@@ -12,10 +12,13 @@
       ,T_ADJ(:,:,:) &
       ,F_ice(:,:,:),F_rain(:,:,:),F_RimeF(:,:,:) &
       ,QQW(:,:,:), QQI(:,:,:), QQR(:,:,:), QQS(:,:,:), QQG(:,:,:) &
+      ,QQNI(:,:,:),QQNR(:,:,:) &
       ,CFR(:,:,:), DBZ(:,:,:), DBZR(:,:,:), DBZI(:,:,:), DBZC(:,:,:) &
       ,TTND(:,:,:),RSWTT(:,:,:),RLWTT(:,:,:) &
       ,EXCH_H(:,:,:),TRAIN(:,:,:),TCUCN(:,:,:),EL_PBL(:,:,:) &
       ,MCVG(:,:,:),EXTCOF55(:,:,:),NLICE(:,:,:) &
+! KRS Add HWRF fields     
+      ,REFL_10CM(:,:,:)             &
 ! Add GFS fields     
       ,O3(:,:,:)             &
 ! Add GFS D3D fields
