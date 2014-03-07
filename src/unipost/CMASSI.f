@@ -12,9 +12,9 @@
 !
       REAL MASSI(MDImin:MDImax)
 !
-!--- Mean rain drop diameters vary from 50 microns to 450 microns
+!--- Mean rain drop diameters vary from 50 microns to 1000 microns (1 mm)
 !
-      REAL, PARAMETER :: DMRmin=.05E-3, DMRmax=.45E-3, DelDMR=1.E-6    &
+      REAL, PARAMETER :: DMRmin=.05E-3, DMRmax=1.E-3, DelDMR=1.E-6      &
      &, XMRmin=1.E6*DMRmin, XMRmax=1.E6*DMRmax, N0r0=8.E6, N0rmin=1.e4
       INTEGER, PARAMETER :: MDRmin=XMRmin, MDRmax=XMRmax
 !

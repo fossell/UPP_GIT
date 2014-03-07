@@ -90,8 +90,8 @@ module params_mod
     real, parameter :: QCLDmin=1.E-6
     real, parameter :: CLFRmin=D1
     real, parameter :: NLImin=1.E3
-    real, parameter :: NLImax=5.E3
-    real, parameter :: T_ICE=-30.
+!    real, parameter :: NLImax=5.E3
+    real, parameter :: T_ICE=-40.
     real, parameter :: TRAD_ice=0.5*T_ICE+TFRZ
     real, parameter :: Qconv=0.1E-3
 !
