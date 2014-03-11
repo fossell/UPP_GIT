@@ -12,23 +12,27 @@ include ../../configure.upp
 
 #
 # Shared resources
-LIBS       = $(LIBDIR)/libw3.a
+LIBS       = $(LIBDIR)/libw3nco.a
 
 #
 # Extra flags
-EXTRA_FFLAGS  = -c
+EXTRA_FFLAGS  =
 
 #
 # Objects to be made
-OBJ        =   ndate.o
+SRC        =   ndate.f
+
+OBJ        = $(SRC:.f=.o)
 
 #
 # TARGETS
-all: $(TARGET)
+all: $(BINDIR)/$(TARGET)
 
-$(TARGET): $(OBJ)
-	$(SFC) -o $@ $(OBJ) $(LDFLAGS) $(EXTRA_LDFLAGS) $(LIBS)
-	$(CP) $(TARGET) ../../bin
+$(BINDIR)/$(TARGET): $(TARGET)
+	$(CP) $(TARGET) $(BINDIR)
+
+$(TARGET): $(SRC)
+	$(SFC) -o $@ $(SRC) $(FFLAGS) $(EXTRA_FFLAGS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(LIBS)
 
 clean:
 	@ echo -e "\n <><><><> CLEAN <><><><>\n"
