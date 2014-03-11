@@ -53,7 +53,7 @@
       READ(1) MASSI
       CLOSE(1)
       RQR_DRmin=N0r0*MASSR(MDRmin)    ! Rain content for mean drop diameter of .05 mm
-      RQR_DRmax=N0r0*MASSR(MDRmax)    ! Rain content for mean drop diameter of .45 mm
+      RQR_DRmax=N0r0*MASSR(MDRmax)    ! Rain content for mean drop diameter of 1.0 mm
 !      PI=ACOS(-1.) ! defined in params now
       C_N0r0=PI*RHOL*N0r0
       CN0r0=1.E6/C_N0r0**.25
