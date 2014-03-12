@@ -2027,6 +2027,15 @@
      &                      /1,'APPARENT TEMPERATURE',168,105,     &
      &                       'TIPD ON entire_atmos_single_lyr'/
 
+! Yet more satellite additions: F17 SSMIS constant 53 degree zenith
+! angle channel 12 & 13 (19Ghz):
+      DATA IFILV(809),AVBL(809),IQ(809),IS(809),AVBLGRB2(809)      &
+     &                      /1,'SSMIS F17 TB 53DEG12',118,008,     &
+     &                       'SSMISF17TB53DCH12 ON top_of_atmos' /
+      DATA IFILV(810),AVBL(810),IQ(810),IS(810),AVBLGRB2(810)      &
+     &                      /1,'SSMIS F17 TB 53DEG13',118,008,     &
+     &                       'SSMISF17TB53DCH13 ON top_of_atmos' /
+
 ! HWRF additions (900-949)
       DATA IFILV(900),AVBL(900),IQ(900),IS(900),AVBLGRB2(900)      &
      &                      /1,'MODEL SFC U WIND STR',124,001,     &

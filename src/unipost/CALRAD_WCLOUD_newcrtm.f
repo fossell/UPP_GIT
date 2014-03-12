@@ -200,7 +200,7 @@ SUBROUTINE CALRAD_WCLOUD
        .or. iget(498) > 0 .or. iget(499) > 0 .or. iget(800) > 0  &
        .or. iget(801) > 0 .or. iget(802) > 0 .or. iget(803) > 0  &
        .or. iget(804) > 0 .or. iget(805) > 0 .or. iget(806) > 0  &
-       .or. iget(807) > 0) then
+       .or. iget(807) > 0 .or. iget(809) > 0 .or. iget(810) > 0  ) then
      ! specify numbers of cloud species    
      if(imp_physics==99)then ! Zhao Scheme
         n_clouds=2 ! GFS uses Zhao scheme
@@ -243,8 +243,8 @@ SUBROUTINE CALRAD_WCLOUD
      if (error_status /= 0_i_kind)                                  &
          write(6,*)'ERROR*** crtm_init error_status=',error_status
   
-     ! Discard all ssmis_f17 channels except the four we output:
-     call select_channels(channelinfo(7),4,(/ 15,16,17,18 /))
+     ! Discard all ssmis_f17 channels except the six we output:
+     call select_channels(channelinfo(7),4,(/ 12,13,15,16,17,18 /))
 
      !   lunin=1 ! will read data file in the future, only simulate GOES for now
      !   open(lunin,file='obs_setup',form='unformatted') ! still need to find out filename
@@ -277,7 +277,8 @@ SUBROUTINE CALRAD_WCLOUD
              .or. iget(498) > 0 .or. iget(499) > 0)) .OR. &
              (isis=='ssmis_f17' .and. (iget(800) > 0 .or. iget(801) > 0  &
              .or. iget(802) > 0 .or. iget(803) > 0 .or. iget(804) > 0 &
-             .or. iget(805) > 0 .or. iget(806) > 0 .or. iget(807) > 0)) )then
+             .or. iget(805) > 0 .or. iget(806) > 0 .or. iget(807) > 0 &
+             .or. iget(809) > 0 .or. iget(810) > 0 )) )then
            print*,'obstype, isis= ',obstype,isis
            !       isis='amsua_n15'
 
@@ -966,9 +967,9 @@ SUBROUTINE CALRAD_WCLOUD
               end if  ! end of outputting ssmis
 
               if(isis=='ssmis_f17') then ! writing f17 ssmis to grib
-                 do ixchan=1,4
-                    ichan=ixchan ! using select_channels, we discard channels 1-14 and 19-24
-                    igot=iget(799+ixchan) ! iget(800) ... iget(803)
+                 do ixchan=3,6
+                    ichan=2+ixchan ! using select_channels, we discard channels 1-11, 14 and 19-24
+                    igot=iget(797+ixchan) ! iget(800) ... iget(803)
                     if(igot > 0) then
                        do j=jsta,jend
                           do i=1,im
@@ -997,7 +998,8 @@ SUBROUTINE CALRAD_WCLOUD
            nonnadir: if (iget(456) > 0 .or. iget(457) > 0 .or. iget(458) > 0  &
                    .or. iget(459) > 0 .or. iget(460) > 0 .or. iget(461) > 0         &
                    .or. iget(462) > 0 .or. iget(463) > 0 .or. iget(804) > 0         &
-                   .or. iget(805) > 0 .or. iget(806) > 0 .or. iget(807) > 0) then
+                   .or. iget(805) > 0 .or. iget(806) > 0 .or. iget(807) > 0 & 
+                   .or. iget(809) > 0 .or. iget(810) > 0 ) then
               do j=jsta,jend
                  do i=1,im
 
@@ -1395,14 +1397,19 @@ SUBROUTINE CALRAD_WCLOUD
                !     &   print*,'ERROR*** crtm_destroy error_status=',error_status
 
               if(isis=='ssmis_f17') then ! writing f17 ssmis to grib
-                 do ixchan=1,4
+                 do ixchan=1,6
                     !ichan=14+ixchan  ! channel number
-                    ichan=ixchan ! using select_channels, we discard channels 1-14 and 19-24
-                    igot=iget(803+ixchan) ! iget(804) ... iget(807)
+                    if(ichan<3) then
+                       ichan=ixchan          ! channel 12, 13
+                       igot=iget(808+ixchan) ! iget(809) and 810
+                    else
+                       ichan=2+ixchan        ! channel 15-18
+                       igot=iget(803+ixchan) ! iget(804) ... iget(807)
+                    endif
                     if(igot > 0) then
                        do j=jsta,jend
                           do i=1,im
-                             grid1(i,j)=tb(i,j,ichan)
+                             grid1(i,j)=tb(i,j,ixchan)
                           enddo
                        enddo
                        id(1:25) = 0
@@ -1410,7 +1417,7 @@ SUBROUTINE CALRAD_WCLOUD
                        id(09) = 112
                        id(10) = 117
                        !id(11) = ichan
-                       id(11) = ichan+14
+                       id(11) = ichan
                        if(grib=="grib1") then
                           call gribit(igot,lvls(1,igot), grid1,im,jm)
                        else if(grib=="grib2" )then
