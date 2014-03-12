@@ -107,7 +107,7 @@ truelat2,&
 ! This version of INITPOST shows how to initialize, open, read from, and
 ! close a NetCDF dataset. In order to change it to read an internal (binary)
 ! dataset, do a global replacement of _ncd_ with _int_. 
-
+      real :: dcenlat, dcenlon
       character(len=31) :: VarName
       integer :: Status
       character startdate*19,SysDepInfo*80
@@ -2040,17 +2040,17 @@ print *, 'latnm, latsm', latnm, latsm
       ! cenlat = glat(im/2,jm/2) -Gopal
         if(mod(im,2).ne.0) then
           if(mod(jm+1,4).ne.0)then   !jm always odd -M.Pyle
-            cenlat=nint(dummy(icen,jcen)*1000.)
+             dcenlat=nint(dummy(icen,jcen)*1000.)
           else
-            cenlat=                                                     &
+             dcenlat=                                                     &
               nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
           end if
         else
           if(mod(jm+1,4).ne.0)then
-            cenlat=                                                     &
+             dcenlat=                                                     &
               nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
           else
-            cenlat=nint(dummy(icen,jcen)*1000.)
+             dcenlat=nint(dummy(icen,jcen)*1000.)
           end if  ! jm mod 4 - effective odd/even
         end if  ! im odd/even
        end if  ! rank 0
@@ -2061,6 +2061,13 @@ print *, 'latnm, latsm', latnm, latsm
        call mpi_bcast(latlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(cenlat,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        write(6,*) 'laststart,latlast A calling bcast= ',latstart,latlast
+
+       if(me==0) then
+          open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
+1013      format(A,'=',F0.3)
+          write(1013,1013) 'clat',dcenlat
+          write(1013,1013) 'clon',dcenlon
+       endif
 
        call collect_loc(gdlon,dummy)
        if(me.eq.0)then
@@ -2204,6 +2211,16 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
           1,ioutcount,istatus)
         dyval=nint(tmp*1000.)
         write(6,*) 'dyval= ', dyval
+
+        call ext_ncd_get_dom_ti_real(DataHandle,'CEN_LAT',tmp,          &
+          1,ioutcount,istatus)
+        cenlat=nint(tmp*1000.) ! E-grid dlamda in degree 
+        write(6,*) 'cenlat= ', cenlat
+
+        call ext_ncd_get_dom_ti_real(DataHandle,'CEN_LON',tmp,          &
+          1,ioutcount,istatus)
+        cenlat=nint(tmp*1000.) ! E-grid dlamda in degree 
+        write(6,*) 'cenlon= ', cenlon
 
         ! cenlat and cenlon calculated above gdlon/gdlat - not read from file
 
