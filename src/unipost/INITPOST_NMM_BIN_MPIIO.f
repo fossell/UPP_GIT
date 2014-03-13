@@ -3078,13 +3078,13 @@ print *, 'latnm, latsm', latnm, latsm
            end if
          end if
        endif get_dcenlat
-      write(6,*) 'laststart,latlast,cenlat B calling bcast= ', &
-     &    latstart,latlast,cenlat
+      write(6,*) 'laststart,latlast,dcenlat B calling bcast= ', &
+     &    latstart,latlast,dcenlat
       call mpi_bcast(latstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
       call mpi_bcast(latlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
       call mpi_bcast(dcenlat,1,MPI_REAL,0,mpi_comm_comp,irtn)
-      write(6,*) 'laststart,latlast,cenlat A calling bcast= ', &
-     &    latstart,latlast,cenlat
+      write(6,*) 'laststart,latlast,dcenlat A calling bcast= ', &
+     &    latstart,latlast,dcenlat
 
       call collect_loc(gdlon,dummy)
        get_dcenlon: if(me.eq.0)then

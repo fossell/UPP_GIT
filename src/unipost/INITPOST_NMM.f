@@ -2025,8 +2025,8 @@ truelat2,&
         latstart=nint(dummy(1,1)*1000.)   ! lower left
         latlast=nint(dummy(im,jm)*1000.)  ! upper right
 
-        icen=(im+1)/2  !center grid
-        jcen=(jm+1)/2
+        icen=im/2  !center grid
+        jcen=jm/2
 print *, 'dummy(icen,jcen) = ', dummy(icen,jcen)
 print *, 'dummy(icen-1,jcen) = ', dummy(icen-1,jcen)
 print *, 'dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
@@ -2053,8 +2053,8 @@ print *, 'latnm, latsm', latnm, latsm
            end if
          end if
        endif get_dcenlat
-       write(6,*) 'laststart,latlast,cenlat B calling bcast= ',         &
-                  latstart,latlast,cenlat
+       write(6,*) 'laststart,latlast,dcenlat B calling bcast= ',         &
+                  latstart,latlast,dcenlat
        call mpi_bcast(latstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(latlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(dcenlat,1,MPI_REAL,0,mpi_comm_comp,irtn)
@@ -2227,7 +2227,7 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
 
         call ext_ncd_get_dom_ti_real(DataHandle,'CEN_LON',tmp,          &
           1,ioutcount,istatus)
-        cenlat=nint(tmp*1000.) ! E-grid dlamda in degree 
+        cenlon=nint(tmp*1000.) ! E-grid dlamda in degree 
         write(6,*) 'cenlon= ', cenlon
 
         ! cenlat and cenlon calculated above gdlon/gdlat - not read from file
