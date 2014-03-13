@@ -2044,6 +2044,26 @@
      &                      /1,'MODEL SFC V WIND STR',125,001,     &
      &                       'V_FLX ON surface' /
 
+! HWRF satellite additions: MTSAT-2 imager:
+      DATA IFILV(910),AVBL(910),IQ(910),IS(910)     &
+     &                      /1,'MTSAT2 CH1 NON NADIR',118,008/ !table 130
+      DATA IFILV(911),AVBL(911),IQ(911),IS(911)     &
+     &                      /1,'MTSAT2 CH2 NON NADIR',118,008/ !table 130
+      DATA IFILV(912),AVBL(912),IQ(912),IS(912)     &
+     &                      /1,'MTSAT2 CH3 NON NADIR',118,008/ !table 130
+      DATA IFILV(913),AVBL(913),IQ(913),IS(913)     &
+     &                      /1,'MTSAT2 CH4 NON NADIR',118,008/ !table 130   
+
+!     HWRF satellite additions: MTSAT-1r imager (MTSAT-2 backup satellite):
+      DATA IFILV(914),AVBL(914),IQ(914),IS(914)     &
+     &                      /1,'MTSAT1RCH1 NON NADIR',118,008/ !table 130
+      DATA IFILV(915),AVBL(915),IQ(915),IS(915)     &
+     &                      /1,'MTSAT1RCH2 NON NADIR',118,008/ !table 130
+      DATA IFILV(916),AVBL(916),IQ(916),IS(916)     &
+     &                      /1,'MTSAT1RCH3 NON NADIR',118,008/ !table 130
+      DATA IFILV(917),AVBL(917),IQ(917),IS(917)     &
+     &                      /1,'MTSAT1RCH4 NON NADIR',118,008/ !table 130   
+
 !end initialization
 !
    end module RQSTFLD_mod
