@@ -90,7 +90,8 @@ jend_m,&
 nphs, spl,&
               lsm, dt, dtq2,tsrfc, trdlw, trdsw, idat, ifhr, ifmin,&
 restrt,&
-              theat, tclod, tprec, alsl, lm, im, jm
+              theat, tclod, tprec, alsl, lm, im, jm, &
+              submodelname
       use gridspec_mod, only: latstart, latlast, cenlat, lonstart,&
 lonlast,&
               cenlon, dxval, dyval, maptype, gridtype, truelat1,&
@@ -119,6 +120,7 @@ truelat2,&
 !     INTEGERS - THIS IS OK AS LONG AS INTEGERS AND REALS ARE THE SAME SIZE.
       CHARACTER*4 RESTHR
       INTEGER IDATE(8),JDATE(8)
+      INTEGER :: i_parent_start, j_parent_start
 !
 !     DECLARE VARIABLES.
 !     
@@ -2230,8 +2232,6 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
         cenlon=nint(tmp*1000.) ! E-grid dlamda in degree 
         write(6,*) 'cenlon= ', cenlon
 
-        ! cenlat and cenlon calculated above gdlon/gdlat - not read from file
-
 ! JW        call ext_ncd_get_dom_ti_real(DataHandle,'TRUELAT1',tmp
 ! JW     + ,1,ioutcount,istatus)
 ! JW        truelat1=nint(1000.*tmp)
@@ -2246,6 +2246,14 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
         gridtype = 'E'
         write(6,*) 'maptype, gridtype ', maptype, gridtype
         gridtype='E'
+
+        call ext_ncd_get_dom_ti_integer(DataHandle,'I_PARENT_START',itmp,     &
+          1,ioutcount,istatus)
+        i_parent_start=itmp
+
+        call ext_ncd_get_dom_ti_integer(DataHandle,'J_PARENT_START',itmp,     &
+          1,ioutcount,istatus)
+        j_parent_start=itmp
 
        do j = jsta_2l, jend_2u
         do i = 1, im
@@ -2317,6 +2325,19 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
          ALSL(L) = ALOG(SPL(L))
       END DO
 !
+      if(submodelname == 'NEST') then
+         print *,'NMM NEST mode: use projection center as projection center'
+      elseif(submodelname == 'MOAD') then
+         print *,'NMM MOAD mode: use domain center as projection center'
+         CENLAT=NINT(DCENLAT*1000)
+         CENLON=NINT(DCENLON*1000)
+      elseif(i_parent_start>1 .or. j_parent_start>1) then
+         print *,'No submodel specified for nested domain.  Using projection center as projection center.'
+      else
+         print *,'No submodel specified for MOAD.  Using domain center as projection center'
+      endif
+
+
       if(me.eq.0)then
         ! write out copygb_gridnav.txt
         ! provided by R.Rozumalski - NWS

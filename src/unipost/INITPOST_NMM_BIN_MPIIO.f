@@ -94,7 +94,7 @@
       integer ii,jj,js,je,jev,iyear,imn,iday,itmp,ioutcount,istatus,   &
               nsrfc,nrdlw,nrdsw,nheat,nclod,                           &
               iunit,nrecs,I,J,L
-
+      integer i_parent_start, j_parent_start
       character*80        :: titlestring
       real :: dcenlon, dcenlat
       type(r_info), pointer         :: r(:) => NULL()
@@ -345,6 +345,12 @@
 
       call fetch_data(iunit, r, 'GRIDTYPE', dst=gridtype, ierr=ierr)
       write(6,*) 'gridtype is ', gridtype
+
+      call fetch_data(iunit, r, 'I_PARENT_START', dst=i_parent_start, ierr=ierr)
+      write(6,*) 'i_parent_start is ', i_parent_start
+
+      call fetch_data(iunit, r, 'J_PARENT_START', dst=j_parent_start, ierr=ierr)
+      write(6,*) 'j_parent_start is ', j_parent_start
 
       VarName='HBM2'
       call io_int_loc(VarName, r, pos, n, iret)
@@ -3228,7 +3234,19 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
          ALSL(L) = ALOG(SPL(L))
       END DO
       write(0,*)' after ALSL'
-!
+
+      if(submodelname == 'NEST') then
+         print *,'NMM NEST mode: using projection center as projection center'
+      elseif(submodelname == 'MOAD') then
+         print *,'NMM MOAD mode: using domain center as projection center'
+         CENLAT=NINT(DCENLAT*1000)
+         CENLON=NINT(DCENLON*1000)
+      elseif(i_parent_start>1 .or. j_parent_start>1) then
+         print *,'No submodel specified for nested domain.  Using projection center as projection center.'
+      else
+         print *,'No submodel specified for MOAD.  Using domain center as projection center'
+      endif
+
       if(me.eq.0)then
         ! write out copygb_gridnav.txt
         ! provided by R.Rozumalski - NWS

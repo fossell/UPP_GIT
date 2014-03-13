@@ -251,7 +251,7 @@ SUBROUTINE CALRAD_WCLOUD
          write(6,*)'ERROR*** crtm_init error_status=',error_status
   
      ! Discard all ssmis_f17 channels except the six we output:
-     call select_channels(channelinfo(7),4,(/ 12,13,15,16,17,18 /))
+     call select_channels(channelinfo(7),6,(/ 12,13,15,16,17,18 /))
 
      !   lunin=1 ! will read data file in the future, only simulate GOES for now
      !   open(lunin,file='obs_setup',form='unformatted') ! still need to find out filename
@@ -1420,10 +1420,10 @@ SUBROUTINE CALRAD_WCLOUD
                  do ixchan=1,6
                     !ichan=14+ixchan  ! channel number
                     if(ichan<3) then
-                       ichan=ixchan          ! channel 12, 13
+                       ichan=11+ixchan       ! 1,2 => channel 12, 13
                        igot=iget(808+ixchan) ! iget(809) and 810
                     else
-                       ichan=2+ixchan        ! channel 15-18
+                       ichan=12+ixchan       ! 3-6 => channel 15-18
                        igot=iget(803+ixchan) ! iget(804) ... iget(807)
                     endif
                     if(igot > 0) then
@@ -1436,7 +1436,6 @@ SUBROUTINE CALRAD_WCLOUD
                        id(02) = 2
                        id(09) = 112
                        id(10) = 117
-                       !id(11) = ichan
                        id(11) = ichan
                        if(grib=="grib1") then
                           call gribit(igot,lvls(1,igot), grid1,im,jm)
