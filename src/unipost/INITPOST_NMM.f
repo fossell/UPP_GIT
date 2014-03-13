@@ -109,7 +109,7 @@ truelat2,&
 ! dataset, do a global replacement of _ncd_ with _int_. 
       real :: dcenlat, dcenlon
       character(len=31) :: VarName
-      integer :: Status
+      integer :: Status, cen1, cen2
       character startdate*19,SysDepInfo*80
 ! 
 !     NOTE: SOME INTEGER VARIABLES ARE READ INTO DUMMY ( A REAL ). THIS IS OK
@@ -2021,7 +2021,7 @@ truelat2,&
        print*,'read past GDLON' 
 ! pos east
        call collect_loc(gdlat,dummy)
-       if(me.eq.0)then
+       get_dcenlat: if(me.eq.0)then
         latstart=nint(dummy(1,1)*1000.)   ! lower left
         latlast=nint(dummy(im,jm)*1000.)  ! upper right
 
@@ -2038,39 +2038,30 @@ print *, 'latnm, latsm', latnm, latsm
 
       ! temporary patch for nmm wrf for moving nest
       ! cenlat = glat(im/2,jm/2) -Gopal
-        if(mod(im,2).ne.0) then
-          if(mod(jm+1,4).ne.0)then   !jm always odd -M.Pyle
-             dcenlat=nint(dummy(icen,jcen)*1000.)
-          else
-             dcenlat=                                                     &
-              nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
-          end if
-        else
-          if(mod(jm+1,4).ne.0)then
-             dcenlat=                                                     &
-              nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
-          else
-             dcenlat=nint(dummy(icen,jcen)*1000.)
-          end if  ! jm mod 4 - effective odd/even
-        end if  ! im odd/even
-       end if  ! rank 0
 
+         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
+           if(mod(jm+1,4).ne.0)then
+             dcenlat=dummy(icen,jcen)
+           else
+             dcenlat=0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))
+           end if
+         else
+           if(mod(jm+1,4).ne.0)then
+             dcenlat=0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))
+           else
+             dcenlat=dummy(icen,jcen)
+           end if
+         end if
+       endif get_dcenlat
        write(6,*) 'laststart,latlast,cenlat B calling bcast= ',         &
                   latstart,latlast,cenlat
        call mpi_bcast(latstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(latlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       call mpi_bcast(cenlat,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
+       call mpi_bcast(dcenlat,1,MPI_REAL,0,mpi_comm_comp,irtn)
        write(6,*) 'laststart,latlast A calling bcast= ',latstart,latlast
 
-       if(me==0) then
-          open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
-1013      format(A,'=',F0.3)
-          write(1013,1013) 'clat',dcenlat
-          write(1013,1013) 'clon',dcenlon
-       endif
-
        call collect_loc(gdlon,dummy)
-       if(me.eq.0)then
+       get_dcenlon: if(me.eq.0)then
         lonstart=nint(dummy(1,1)*1000.)
         lonlast=nint(dummy(im,jm)*1000.)
 
@@ -2083,30 +2074,47 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
         lonem = nint(dummy(icen,jm)*1000.)
         lonwm = nint(dummy(icen,1)*1000.)
 
-      ! temporary patch for nmm wrf for moving nest
-      ! cenlon = glon(im/2, jm/2)  -Gopal
-        if(mod(im,2).ne.0) then
-          if(mod(jm+1,4).ne.0)then  !jm always odd -M.Pyle
-            cenlon=nint(dummy(icen,jcen)*1000.)
-          else
-            cenlon=                                                    &
-              nint(0.5*(dummy(icen-1,jcen)+dummy(icen,jcen))*1000.)
-          end if
+        if(mod(im,2).ne.0)then !per Pyle, jm is always odd
+         if(mod(jm+1,4).ne.0)then
+            cen1=dummy(icen,jcen)
+            cen2=cen1
+         else
+            cen1=min(dummy(icen-1,jcen),dummy(icen,jcen))
+            cen2=max(dummy(icen-1,jcen),dummy(icen,jcen))
+         end if
         else
-          if(mod(jm+1,4).ne.0)then
-           cenlon=nint(0.5*(dummy(icen,jcen)+dummy(icen+1,jcen))*1000.)
-          else
-           cenlon=nint(dummy(icen,jcen)*1000.)
-          end if ! jm mod 4 - effective odd/even
-        end if  ! im odd/even
-       end if  ! rank 0
+         if(mod(jm+1,4).ne.0)then
+            cen1=min(dummy(icen+1,jcen),dummy(icen,jcen))
+            cen2=max(dummy(icen+1,jcen),dummy(icen,jcen))
+         else
+            cen1=dummy(icen,jcen)
+            cen2=cen1
+         end if
+        end if
+        ! Trahan fix: Pyle's code broke at the dateline.
+        if(cen2-cen1>180) then
+           ! We're near the dateline
+           dcenlon=mod(0.5*(cen2+cen1+360)+3600+180,360.)-180.
+        else
+           ! We're not near the dateline.  Use the original code,
+           ! unmodified, to maintain bitwise identicality.
+           dcenlon=0.5*(cen1+cen2)
+        endif
+       end if get_dcenlon ! rank 0
        write(6,*)'lonstart,lonlast,cenlon B calling bcast= ',lonstart, &
                   lonlast,cenlon
        call mpi_bcast(lonstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(lonlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
+       call mpi_bcast(dcenlon,1,MPI_REAL,0,mpi_comm_comp,irtn)
        write(6,*)'lonstart,lonlast,cenlon A calling bcast= ',lonstart, &
                   lonlast,cenlon
+
+       if(me==0) then
+          open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
+1013      format(A,'=',F0.3)
+          write(1013,1013) 'clat',dcenlat
+          write(1013,1013) 'clon',dcenlon
+       endif
 !
 ! OBTAIN DX FOR NMM WRF
       VarName='DX_NMM'
