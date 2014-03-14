@@ -120,12 +120,12 @@ SUBROUTINE CALRAD_WCLOUD
   integer(i_kind) err1,err2,err3,err4
   integer(i_kind) i,j,k,msig
   integer(i_kind) lcbot,lctop   !bsf
-  integer jdn,ichan,ixchan,igot
+  integer jdn,ichan,ixchan,igot,iychan,igate
   integer isat
   
   real(r_kind),parameter:: r100=100.0_r_kind
   real,parameter:: ozsmall = 1.e-10 ! to convert to mass mixing ratio
-  real(r_kind) tsfc 
+  real(r_kind) tsfc , tbmax,tbmin
   real(r_kind),dimension(4):: sfcpct
   real(r_kind) snodepth,vegcover
   real snoeqv
@@ -1417,19 +1417,25 @@ SUBROUTINE CALRAD_WCLOUD
                !     &   print*,'ERROR*** crtm_destroy error_status=',error_status
 
               if(isis=='ssmis_f17') then ! writing f17 ssmis to grib
-                 do ixchan=1,6
+                 do iychan=1,6
+                    ixchan=merge(iychan+2,iychan-4,iychan<5)
                     !ichan=14+ixchan  ! channel number
-                    if(ichan<3) then
+                    if(ixchan<3) then
                        ichan=11+ixchan       ! 1,2 => channel 12, 13
-                       igot=iget(808+ixchan) ! iget(809) and 810
+                       igate=808+ixchan      ! iget(809) and 810
                     else
                        ichan=12+ixchan       ! 3-6 => channel 15-18
-                       igot=iget(803+ixchan) ! iget(804) ... iget(807)
+                       igate=801+ixchan      ! iget(804) ... iget(807)
                     endif
+                    igot=iget(igate) 
                     if(igot > 0) then
+                       tbmax=-9e9
+                       tbmin=9e9
                        do j=jsta,jend
                           do i=1,im
                              grid1(i,j)=tb(i,j,ixchan)
+                             if(grid1(i,j)>tbmax) tbmax=grid1(i,j)
+                             if(grid1(i,j)<tbmin) tbmin=grid1(i,j)
                           enddo
                        enddo
                        id(1:25) = 0
@@ -1437,6 +1443,10 @@ SUBROUTINE CALRAD_WCLOUD
                        id(09) = 112
                        id(10) = 117
                        id(11) = ichan
+                       print *, '########################################################################'
+444                    format('GRIB SSMIS_F17 #',I0,' iychan=',I0,' ichan=',I0,' igate=',I0,' MAX=',F10.4,' MIN=',F10.4)
+                       print 444, ixchan,iychan,ichan,igate,tbmax,tbmin
+                       print *, '########################################################################'
                        if(grib=="grib1") then
                           call gribit(igot,lvls(1,igot), grid1,im,jm)
                        else if(grib=="grib2" )then
@@ -1444,6 +1454,11 @@ SUBROUTINE CALRAD_WCLOUD
                           fld_info(cfld)%ifld=IAVBLFLD(igot)
                           datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
                        endif
+                    else
+                       print *, '########################################################################'
+555                    format('SKIP SSMIS_F17 #',I0,' iychan=',I0,' ichan=',I0,' igate=',I0)
+                       print 555, ixchan,iychan,ichan,igate
+                       print *, '########################################################################'
                     endif
                  enddo
               endif
