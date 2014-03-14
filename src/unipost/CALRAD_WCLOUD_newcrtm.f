@@ -85,6 +85,7 @@ SUBROUTINE CALRAD_WCLOUD
   !      &   IRRIGATED_LOW_VEGETATION, TUNDRA, TUNDRA, TUNDRA, TUNDRA,             &
   !      &   COMPACTED_SOIL/)
 
+  integer :: n_sensors
   integer, allocatable:: nmm_to_crtm(:)
   integer, parameter:: ndat=100
   ! CRTM structure variable declarations.
@@ -92,8 +93,8 @@ SUBROUTINE CALRAD_WCLOUD
   !      integer,parameter::  n_clouds = 4 
   integer,parameter::  n_aerosols = 0
   ! Add your sensors here
-  integer(i_kind),parameter:: n_sensors=9
-  character(len=20),parameter,dimension(1:n_sensors):: sensorlist= &
+  integer(i_kind),parameter:: max_sensors=9
+  character(len=20),parameter,dimension(1:max_sensors):: sensorlist= &
       (/'imgr_g12            ', &
         'imgr_g11            ', &
 	'amsre_aqua          ', &
@@ -103,7 +104,7 @@ SUBROUTINE CALRAD_WCLOUD
         'ssmis_f17           ', &
         'imgr_mt2            ', &
         'imgr_mt1r           '/)
-  character(len=10),parameter,dimension(1:n_sensors):: obslist=  &
+  character(len=10),parameter,dimension(1:max_sensors):: obslist=  &
       (/'goes_img  ', &
         'goes_img  ', &
 	'amsre     ', &
@@ -189,6 +190,19 @@ SUBROUTINE CALRAD_WCLOUD
         return
      end if 
   end if 
+
+  ! set n_sensors: determine if optional MTSAT sensors are selected.
+  n_sensors=max_sensors-2
+  mtsat_check: do igate=910,917
+     igot=iget(igate)
+     if(igot>0) then
+        n_sensors=max_sensors
+505     format('iget(igate=',I0,') = ',I0,' > 0 so MTSAT 2 or 1r selected')
+        print 505,igate,igot
+        exit mtsat_check
+     endif
+  enddo mtsat_check
+  write(0,*) 'n_nsensors=',n_sensors
       
   !     START SUBROUTINE CALRAD.
   ifactive: if (iget(327) > 0 .or. iget(328) > 0 .or. iget(329) > 0       &
@@ -243,7 +257,7 @@ SUBROUTINE CALRAD_WCLOUD
      print*,'success in CALRAD= ',success
      allocate( channelinfo(n_sensors))
 
-     error_status = crtm_init(sensorlist,channelinfo,   &
+     error_status = crtm_init(sensorlist(1:n_sensors),channelinfo,   &
           Process_ID=0,Output_Process_ID=0 )
      print*, 'channelinfo after init= ',channelinfo(1)%sensor_id, &
               channelinfo(2)%sensor_id
@@ -286,10 +300,10 @@ SUBROUTINE CALRAD_WCLOUD
              .or. iget(802) > 0 .or. iget(803) > 0 .or. iget(804) > 0 &
              .or. iget(805) > 0 .or. iget(806) > 0 .or. iget(807) > 0 &
              .or. iget(809) > 0 .or. iget(810) > 0 ) ) .or. &
-             (isis=='imgr_mt2' .and. (iget(860)>0 .or. iget(861)>0 & 
-             .or. iget(862)>0 .or. iget(863)>0)) .OR. &
-             (isis=='imgr_mt1r' .and. (iget(864)>0 .or. iget(865)>0 & 
-             .or. iget(866)>0 .or. iget(867)>0)) )then
+             (isis=='imgr_mt2' .and. (iget(910)>0 .or. iget(911)>0 & 
+             .or. iget(912)>0 .or. iget(913)>0)) .OR. &
+             (isis=='imgr_mt1r' .and. (iget(914)>0 .or. iget(915)>0 & 
+             .or. iget(916)>0 .or. iget(917)>0)) )then
            print*,'obstype, isis= ',obstype,isis
            !       isis='amsua_n15'
 
@@ -1466,7 +1480,7 @@ SUBROUTINE CALRAD_WCLOUD
               if(isis=='imgr_mt2') then ! writing MTSAT-2 to grib
                  do ichan=1,4
                     !ichan=14+ichan  ! channel number
-                    igot=iget(860+ichan-1) ! iget(860) ... iget(863)
+                    igot=iget(910+ichan-1) ! iget(910) ... iget(913)
                     if(igot > 0) then
                        do j=jsta,jend
                           do i=1,im
@@ -1492,7 +1506,7 @@ SUBROUTINE CALRAD_WCLOUD
               if(isis=='imgr_mt1r') then ! writing MTSAT-1r to grib
                  do ichan=1,4
                     !ichan=14+ichan  ! channel number
-                    igot=iget(864+ichan-1) ! iget(864) ... iget(867)
+                    igot=iget(914+ichan-1) ! iget(914) ... iget(917)
                     if(igot > 0) then
                        do j=jsta,jend
                           do i=1,im
