@@ -222,7 +222,11 @@
       read(5,114) FULLMODELNAME  
       MODELNAME=FULLMODELNAME(1:4)
       SUBMODELNAME=FULLMODELNAME(5:)
-      if(len_trim(FULLMODELNAME)<5) SUBMODELNAME='NONE'
+      IF(len_trim(FULLMODELNAME)<5) THEN
+         SUBMODELNAME='NONE'
+      ENDIF
+ 303  format('FULLMODELNAME="',A,'" MODELNAME="',A,'" SUBMODELNAME="',A,'"')
+      print 303,FULLMODELNAME,MODELNAME,SUBMODELNAME
 ! assume for now that the first date in the stdin file is the start date
       read(DateStr,300) iyear,imn,iday,ihrst,imin
       write(*,*) 'in WRFPOST iyear,imn,iday,ihrst,imin',                &
@@ -238,7 +242,7 @@
  113  format(a20)
  114  format(a8)
  120  format(a5)
-      print*,'MODELNAME= ',MODELNAME,'grib=',grib,' SUBMODELNAME=',SUBMODELNAME
+      print*,'MODELNAME= ',MODELNAME,'grib=',grib
 !Chuang: If model is GFS, read in flux file name from unit5
       if(MODELNAME .EQ. 'GFS')then
          read(5,111,end=117)fileNameFlux
