@@ -283,7 +283,8 @@ COPT    = -O3
 
 CPP_FLAGS = -C -P $(FPPDEFINE)
 INC_FLAGS = -I$(MPI_ROOT)/include
-LDFLAGS   = -Wl,-noinhibit-exec -L$(MPI_ROOT)/lib -lmpi
+LDFLAGS   = -Wl,-noinhibit-exec -L$(MPI_ROOT)/lib
+LDFLAGS_MPI += -lmpi
 FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian \
             -heap-arrays $(SIZE) $(FPPDEFINE) -I$(MPI_ROOT)/include     \
             CONFIGURE_FFLAGS

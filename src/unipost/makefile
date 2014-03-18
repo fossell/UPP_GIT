@@ -17,6 +17,7 @@ TARGET = unipost.exe
 #
 # build configuration determined before compile
 include ../../configure.upp
+LDFLAGS+=$(LDFLAGS_MPI)
 
 #
 # directories for shared resources
