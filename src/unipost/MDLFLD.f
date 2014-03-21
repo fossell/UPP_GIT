@@ -311,23 +311,15 @@
 
         ENDDO         !-- End DO I loop
         ENDDO         !-- End DO J loop 
-        IF(imp_physics==5 .or. imp_physics==85)THEN
+        IF(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)THEN
   !
   !--- Determine composition of condensate in terms of cloud water,
-  !    rain, and ice (cloud ice & precipitation ice) following the
-  !    *NEWER* the version of the microphysics; radar reflectivity
-  !    is derived to be consistent with the microphysical assumptions 
+  !    rain, and ice (cloud ice & precipitation ice) following
+  !    GSMDRIVE in the model; composition of cloud ice & precipitation
+  !    ice (snow) follows algorithm in GSMCOLUMN; radar reflectivity
+  !    is derived to be consistent with microphysical assumptions 
   !
-           CALL CALMICT_new(P1D,T1D,Q1D,C1D,FI1D,FR1D,FS1D,CUREFL       &
-     &                 ,QW1,QI1,QR1,QS1,DBZ1,DBZR1,DBZI1,DBZC1,NLICE1)
-        ELSE IF(imp_physics==95)THEN
-  !
-  !--- Determine composition of condensate in terms of cloud water,
-  !    rain, and ice (cloud ice & precipitation ice) following the
-  !    *OLDER* the version of the microphysics; radar reflectivity
-  !    is derived to be consistent with the microphysical assumptions 
-  !
-           CALL CALMICT_old(P1D,T1D,Q1D,C1D,FI1D,FR1D,FS1D,CUREFL       &
+           CALL CALMICT(P1D,T1D,Q1D,C1D,FI1D,FR1D,FS1D,CUREFL          &
      &                 ,QW1,QI1,QR1,QS1,DBZ1,DBZR1,DBZI1,DBZC1,NLICE1)
         ELSE
   !
