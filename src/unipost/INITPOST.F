@@ -1067,12 +1067,10 @@ truelat2,&
               enddo
             enddo
           enddo 
-
           do k=1,lm
 !          print *,'332,245 point CFR = ', cfr(332,245,k),k
             print *,'min/max CFR, k= ',minval(CFR(:,:,k)),maxval(CFR(:,:,k)),k
           enddo
-
 !LOW, MID and HIGH cloud fractions
           PTOP_LOW  = 64200.
           PTOP_MID  = 35000.
@@ -1099,6 +1097,7 @@ truelat2,&
                   CFRACH(I,J)=max(CFRACH(I,J),cfr(i,j,k))
                 endif
               enddo
+
             enddo
           enddo
 

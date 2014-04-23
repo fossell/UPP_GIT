@@ -114,7 +114,7 @@ lonlast, dyval, cenlat,&
 !     INTEGERS - THIS IS OK AS LONG AS INTEGERS AND REALS ARE THE SAME SIZE.
 
       INTEGER,dimension(8) :: IDATE, JDATE
-      INTEGER IDUMMY ( IM, JM )
+      INTEGER,dimension(im,jm) :: IDUMMY
 !
 !     DECLARE VARIABLES.
 !     
@@ -1707,12 +1707,10 @@ lonlast, dyval, cenlat,&
               enddo
             enddo
           enddo
-
           do k=1,lm
 !          print *,'332,245 point CFR = ', cfr(332,245,k),k
             print *,'min/max CFR, k= ',minval(CFR(:,:,k)),maxval(CFR(:,:,k)),k
           enddo
-
 !LOW, MID and HIGH cloud fractions
           PTOP_LOW  = 64200.
           PTOP_MID  = 35000.
