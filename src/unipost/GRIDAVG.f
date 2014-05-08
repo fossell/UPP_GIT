@@ -1,9 +1,13 @@
       subroutine H2U(ingrid,outgrid)
 ! This subroutine interpolates from H points onto U points
 ! Author: CHUANG, EMC, Dec. 2010
-      use ctlblk_mod
+
+      use ctlblk_mod, only: spval, jsta, jend, jsta_m, jend, me, num_procs, jm,&
+              im, jsta_2l, jend_2u , jend_m
       use gridspec_mod, only: gridtype
+
       implicit none
+
       INCLUDE "mpif.h"
       integer:: i,j,ie,iw
       real,dimension(IM,JSTA_2L:JEND_2U),intent(in)::ingrid
@@ -31,6 +35,15 @@
 	 outgrid(i,j)=(ingrid(i,j)+ingrid(i,j+1)+ingrid(i+1,j)+ingrid(i+1,j+1))/4.0
 	end do
        end do
+! Fill in boundary points because hysplit fails when 10 m wind has bitmaps
+       do j=jsta,jend_m
+        outgrid(im,j)=outgrid(im-1,j)
+       end do	 
+       IF(me == (num_procs-1))then
+        DO I=1,IM
+         outgrid(i,jm)=outgrid(i,jm-1)
+        END DO
+       END IF      
       ELSE IF(GRIDTYPE == 'C')THEN
        DO J=JSTA,JEND
         DO I=1,IM-1
@@ -45,7 +58,7 @@
       subroutine H2V(ingrid,outgrid)
 ! This subroutine interpolates from H points onto V points
 ! Author: CHUANG, EMC, Dec. 2010
-      use ctlblk_mod
+      use ctlblk_mod, only: spval, jsta, jend, jsta_m, jend_m, im, jsta_2l, jend_2u
       use gridspec_mod, only: gridtype
       implicit none
       INCLUDE "mpif.h"
@@ -90,7 +103,7 @@
       subroutine U2H(ingrid,outgrid)
 ! This subroutine interpolates from U points onto H points
 ! Author: CHUANG, EMC, Dec. 2010
-      use ctlblk_mod
+      use ctlblk_mod, only: spval, jsta, jend, jsta_m, jend_m, im, jsta_2l, jend_2u
       use gridspec_mod, only: gridtype
       implicit none
       INCLUDE "mpif.h"
@@ -134,7 +147,7 @@
       subroutine V2H(ingrid,outgrid)
 ! This subroutine interpolates from V points onto H points
 ! Author: CHUANG, EMC, Dec. 2010
-      use ctlblk_mod
+      use ctlblk_mod, only: spval, jsta, jend, jsta_m, jend_m, im, jsta_2l, jend_2u
       use gridspec_mod, only: gridtype
       implicit none
       INCLUDE "mpif.h"

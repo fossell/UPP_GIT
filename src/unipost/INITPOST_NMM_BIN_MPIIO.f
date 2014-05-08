@@ -67,8 +67,6 @@
       integer :: Status
       character startdate*19,SysDepInfo*80,cgar*1
       character startdate2(19)*4
-      real :: dcenlon,dcenlat
-      real :: cen1,cen2
 ! 
 !     NOTE: SOME INTEGER VARIABLES ARE READ INTO DUMMY ( A REAL ). THIS IS OK
 !     AS LONG AS REALS AND INTEGERS ARE THE SAME SIZE.
@@ -96,9 +94,9 @@
       integer ii,jj,js,je,jev,iyear,imn,iday,itmp,ioutcount,istatus,   &
               nsrfc,nrdlw,nrdsw,nheat,nclod,                           &
               iunit,nrecs,I,J,L
-
+      integer i_parent_start, j_parent_start
       character*80        :: titlestring
-
+      real :: dcenlon, dcenlat
       type(r_info), pointer         :: r(:) => NULL()
       integer(kind=mpi_offset_kind) :: pos
       integer                       :: n
@@ -235,7 +233,12 @@
       if (ierr /= 0) then
          imp_physics=5        ! assume ferrier if nothing specified
       endif
-      if(imp_physics==85) imp_physics=5  ! HWRF scheme = Ferrier scheme
+
+      ! Initializes constants for Ferrier microphysics
+      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
+        CALL MICROINIT(imp_physics)
+      end if
+
       print*,'MP_PHYSICS= ',imp_physics
 
       call fetch_data(iunit, r,'CU_PHYSICS', dst=icu_physics, ierr=ierr)
@@ -342,6 +345,12 @@
 
       call fetch_data(iunit, r, 'GRIDTYPE', dst=gridtype, ierr=ierr)
       write(6,*) 'gridtype is ', gridtype
+
+      call fetch_data(iunit, r, 'I_PARENT_START', dst=i_parent_start, ierr=ierr)
+      write(6,*) 'i_parent_start is ', i_parent_start
+
+      call fetch_data(iunit, r, 'J_PARENT_START', dst=j_parent_start, ierr=ierr)
+      write(6,*) 'j_parent_start is ', j_parent_start
 
       VarName='HBM2'
       call io_int_loc(VarName, r, pos, n, iret)
@@ -536,7 +545,7 @@
 	end if 
       end if
       write(0,*)' after V'
-
+      
 !KRS: HWRF Addition for thompson REFL_10cm and REFD_MAX
 ! Also works for other non-ferrier wrf derived radar 
 
@@ -581,8 +590,66 @@
           REFD_MAX=SPVAL
         end if
       end if
-
 ! END KRS reflectivity
+
+! KRS: Add concentrations for HWRF output
+      if(imp_physics.eq.8 .or. imp_physics.eq.9)then
+      VarName='QNICE'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        qqni=SPVAL
+      else
+        n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          qqni=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             qqni ( i, j, l ) = buf3d ( i, j, ll )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)  &
+               print*, 'sample QQNI (QNICE)M= ',       &
+               i,j,l,QQNI ( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+      write(0,*)' after QNICE'
+
+      VarName='QNRAIN'
+      call io_int_loc(VarName, r, pos, n, iret)
+      if (iret /= 0) then
+        print*,VarName," not found in file-Assigned missing values"
+        qqnr=SPVAL
+      else
+        n=im*jm*lm
+        call fetch_data(iunit, r, VarName, pos, n, buf3d, ierr)
+        if (ierr /= 0) then
+          print*,"Error reading ", VarName,"Assigned missing values"
+          qqnr=SPVAL
+        else
+          do l = 1, lm
+           ll=lm-l+1
+           do j = jsta_2l, jend_2u
+            do i = 1, im
+             qqnr ( i, j, l ) = buf3d ( i, j, ll )
+             if(i.eq.im/2.and.j.eq.(jsta+jend)/2)  &
+               print*, 'sample QQNR (QNRAIN)M= ',       &
+               i,j,l,QQNR ( i, j, l )
+            end do
+           end do
+          end do
+        end if
+      end if
+      write(0,*)' after QNRAIN'
+      end if !imp_physics option
+! KRS: End add concentrations for HWRF
+
       
       varname='DX_NMM'
       call io_int_loc(VarName, r, pos, n, iret)
@@ -2569,13 +2636,44 @@
       if (iret /= 0) then
         print*,VarName," not found in file-Assigned missing values"
         U10=SPVAL
+        U10H=SPVAL
       else
         pos=pos+(jsta_2l-1)*4*im
 	n=im*(jend_2u-jsta_2l+1)
-        call fetch_data(iunit, r, VarName, pos, n, u10, ierr)
+        call fetch_data(iunit, r, VarName, pos, n, u10h, ierr)
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
           U10=SPVAL
+          U10H=SPVAL
+        else
+        ! 10m winds are computed on mass pts by model - place on V
+        ! points for copygb interpolation
+          DO J=JSTA_M,JEND_M
+            DO I=2,IM-1
+             IE=I+MOD(J,2)
+             IW=IE-1
+             u10(i,j)=(u10h(IW,J)+u10h(IE,J) & ! assuming e grid
+              +u10h(I,J+1)+u10h(I,J-1))/4.0
+            END DO
+            u10(1,j)=0.5*(u10h(1,j)+u10h(1,j+1))
+            u10(im,j)=0.5*(u10h(im,j)+u10h(im,j+1))
+          END DO
+
+          ! Complete first row
+          IF (JSTA_M.EQ.2) THEN
+            DO I=1, IM-1
+              u10(I,1)=0.5*(u10h(I,1)+u10h(I+1,1))
+            END DO
+            u10(im,1) = u10h(im,1)
+          END IF
+
+          ! Complete last row
+          IF (JEND_M.EQ.(JM-1)) THEN
+            DO I=1, IM-1
+              u10(I,jm)=0.5*(u10h(I,jm)+u10h(I+1,jm))
+            END DO
+            u10(im,jm) = u10h(im,jm)
+          END IF
         end if
       end if
       if(jj.ge.jsta.and.jj.le.jend)                                     &
@@ -2587,6 +2685,7 @@
       if (iret /= 0) then
         print*,VarName," not found in file-Assigned missing values"
         V10=SPVAL
+        V10H=SPVAL
       else
         pos=pos+(jsta_2l-1)*4*im
 	n=im*(jend_2u-jsta_2l+1)
@@ -2594,6 +2693,36 @@
         if (ierr /= 0) then
           print*,"Error reading ", VarName,"Assigned missing values"
           V10=SPVAL
+          V10H=SPVAL
+        else
+        ! 10m winds are computed on mass pts by model - place on V
+        ! points for copygb interpolation
+          DO J=JSTA_M,JEND_M
+            DO I=2,IM-1
+              IE=I+MOD(J,2)
+              IW=IE-1
+              v10(i,j)=(v10h(IW,J)+v10h(IE,J) & ! assuming e grid
+               +v10h(I,J+1)+v10h(I,J-1))/4.0
+            END DO
+            v10(1,j)=0.5*(v10h(1,j-1)+v10h(1,j+1))
+            v10(im,j)=0.5*(v10h(im,j-1)+v10h(im,j+1))
+          END DO
+
+          ! Complete first row
+          IF (JSTA_M.EQ.2) THEN
+            DO I=1, IM-1
+              v10(I,1)=0.5*(v10h(I,1)+v10h(I+1,1))
+            END DO
+            v10(im,1) = v10h(im,1)
+          END IF
+
+          ! Complete last row
+          IF (JEND_M.EQ.(JM-1)) THEN
+            DO I=1, IM-1
+              v10(I,jm)=0.5*(v10h(I,jm)+v10h(I+1,jm))
+            END DO
+            v10(im,jm) = v10h(im,jm)
+          END IF
         end if
       end if
       if(jj.ge.jsta.and.jj.le.jend)                                     &
@@ -3112,15 +3241,24 @@
 
 ! pos east
       call collect_loc(gdlat,dummy)
-      if(me.eq.0)then
-        latstart=nint(dummy(1,1)*1000.)
-        latlast=nint(dummy(im,jm)*1000.)
-! temporary patch for nmm wrf for moving nest. gopal's doing
-! jkw changed if statement as per MP's suggestion
-! jkw        if(mod(im,2).ne.0) then
-! chuang: test
-        icen=im/2
-        jcen=jm/2
+       get_dcenlat: if(me.eq.0)then
+        latstart=nint(dummy(1,1)*1000.)   ! lower left
+        latlast=nint(dummy(im,jm)*1000.)  ! upper right
+
+        icen=(im+1)/2  !center grid
+        jcen=(jm+1)/2
+print *, 'dummy(icen,jcen) = ', dummy(icen,jcen)
+print *, 'dummy(icen-1,jcen) = ', dummy(icen-1,jcen)
+print *, 'dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
+
+      ! Grid navigation for copygb - R.Rozumalski
+        latnm = nint(dummy(icen,jm)*1000.)
+        latsm = nint(dummy(icen,1)*1000.)
+print *, 'latnm, latsm', latnm, latsm
+
+      ! temporary patch for nmm wrf for moving nest
+      ! cenlat = glat(im/2,jm/2) -Gopal
+
          if(mod(im,2).ne.0)then !per Pyle, jm is always odd
            if(mod(jm+1,4).ne.0)then
              dcenlat=dummy(icen,jcen)
@@ -3134,24 +3272,28 @@
              dcenlat=dummy(icen,jcen)
            end if
          end if
-      end if
-      write(6,*) 'laststart,latlast,cenlat B calling bcast= ', &
-     &    latstart,latlast,cenlat
+       endif get_dcenlat
+      write(6,*) 'laststart,latlast,dcenlat B calling bcast= ', &
+     &    latstart,latlast,dcenlat
       call mpi_bcast(latstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
       call mpi_bcast(latlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-      call mpi_bcast(cenlat,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-      write(6,*) 'laststart,latlast,cenlat A calling bcast= ', &
-     &    latstart,latlast,cenlat
+      call mpi_bcast(dcenlat,1,MPI_REAL,0,mpi_comm_comp,irtn)
+      write(6,*) 'laststart,latlast,dcenlat A calling bcast= ', &
+     &    latstart,latlast,dcenlat
 
       call collect_loc(gdlon,dummy)
-
-       calc_center_at_0: if(me.eq.0)then
+       get_dcenlon: if(me.eq.0)then
         lonstart=nint(dummy(1,1)*1000.)
         lonlast=nint(dummy(im,jm)*1000.)
-! temporary patch for nmm wrf for moving nest. gopal's doing
-! tms change from WPP originally here from MP suggestion a change in ip
-        icen=im/2
-        jcen=jm/2
+
+        ! icen, jcen set above
+print *, 'lon dummy(icen,jcen) = ', dummy(icen,jcen)
+print *, 'lon dummy(icen-1,jcen) = ', dummy(icen-1,jcen)
+print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
+
+      ! Grid navigation for copygb - R.Rozumalski
+        lonem = nint(dummy(icen,jm)*1000.)
+        lonwm = nint(dummy(icen,1)*1000.)
 
         if(mod(im,2).ne.0)then !per Pyle, jm is always odd
          if(mod(jm+1,4).ne.0)then
@@ -3179,26 +3321,25 @@
            ! unmodified, to maintain bitwise identicality.
            dcenlon=0.5*(cen1+cen2)
         endif
-       end if calc_center_at_0
-       write(6,*)'lonstart,lonlast,dcenlon B calling bcast= ', &
-     &      lonstart,lonlast,dcenlon
+       end if get_dcenlon ! rank 0
+
+       write(6,*)'lonstart,lonlast,cenlon B calling bcast= ', &
+     &      lonstart,lonlast,cenlon
        call mpi_bcast(lonstart,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
        call mpi_bcast(lonlast,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       call mpi_bcast(dcenlon,1,MPI_INTEGER,0,mpi_comm_comp,irtn)
-       write(6,*)'lonstart,lonlast,dcenlon A calling bcast= ', &
-     &      lonstart,lonlast,dcenlon
+       call mpi_bcast(dcenlon,1,MPI_REAL,0,mpi_comm_comp,irtn)
+       write(6,*)'lonstart,lonlast,cenlon A calling bcast= ', &
+     &      lonstart,lonlast,cenlon
 !
+        write(6,*) 'filename in INITPOST=', filename
+
        if(me==0) then
           open(1013,file='this-domain-center.ksh.inc',form='formatted',status='unknown')
 1013      format(A,'=',F0.3)
           write(1013,1013) 'clat',dcenlat
           write(1013,1013) 'clon',dcenlon
        endif
-
-        write(6,*) 'filename in INITPOST=', filename
-
-
+!
 !MEB not sure how to get these 
        do j = jsta_2l, jend_2u
         do i = 1, im
@@ -3282,9 +3423,95 @@
          ALSL(L) = ALOG(SPL(L))
       END DO
       write(0,*)' after ALSL'
-!
-!HC WRITE IGDS OUT FOR WEIGHTMAKER TO READ IN AS KGDSIN
-        if(me.eq.0)then
+
+      if(submodelname == 'NEST') then
+         print *,'NMM NEST mode: using projection center as projection center'
+      elseif(submodelname == 'MOAD') then
+         print *,'NMM MOAD mode: using domain center as projection center'
+         CENLAT=NINT(DCENLAT*1000)
+         CENLON=NINT(DCENLON*1000)
+      elseif(i_parent_start>1 .or. j_parent_start>1) then
+         print *,'No submodel specified for nested domain.  Using projection center as projection center.'
+      else
+         print *,'No submodel specified for MOAD.  Using domain center as projection center'
+      endif
+
+      if(me.eq.0)then
+        ! write out copygb_gridnav.txt
+        ! provided by R.Rozumalski - NWS
+
+        inav=10
+
+        TRUELAT1 = CENLAT
+        TRUELAT2 = CENLAT
+
+        IFDX = NINT (dxval*107.)
+        IFDY = NINT (dyval*110.)
+
+        open(inav,file='copygb_gridnav.txt',form='formatted',     &
+             status='unknown')
+
+        print *, ' MAPTYPE  :',maptype
+        print *, ' IM       :',IM*2-1
+        print *, ' JM       :',JM
+        print *, ' LATSTART :',LATSTART
+        print *, ' LONSTART :',LONSTART
+        print *, ' CENLAT   :',CENLAT
+        print *, ' CENLON   :',CENLON
+        print *, ' TRUELAT2 :',TRUELAT2
+        print *, ' TRUELAT1 :',TRUELAT1
+        print *, ' DX       :',IFDX*0.001
+        print *, ' DY       :',IFDY*0.001
+
+        IF(MAPTYPE.EQ.0 .OR. MAPTYPE.EQ.203)THEN  !A STAGGERED E-GRID
+
+          IMM = 2*IM-1
+          IDXAVE = ( IFDY + IFDX ) * 0.5
+
+          ! If the Center Latitude of the domain is located within 15 degrees
+          ! of the equator then use a a regular Lat/Lon navigation for the
+          ! remapped grid in copygb; otherwise, use a Lambert conformal.  Make
+          ! sure to specify the correct pole for the S. Hemisphere (LCC).
+          !
+          IF ( abs(CENLAT).GT.15000) THEN
+             write(6,*)'  Copygb LCC Navigation Information'
+             IF (CENLAT .GT.0) THEN ! Northern Hemisphere
+                write(6,1000)    IMM,JM,LATSTART,LONSTART,CENLON,     &
+                                 IFDX,IFDY,CENLAT,CENLAT
+                write(inav,1000) IMM,JM,LATSTART,LONSTART,CENLON,     &
+                                 IFDX,IFDY,CENLAT,CENLAT
+             ELSE  ! Southern Hemisphere
+                write(6,1001)    IMM,JM,LATSTART,LONSTART,CENLON,     &
+                                 IFDX,IFDY,CENLAT,CENLAT
+                write(inav,1001) IMM,JM,LATSTART,LONSTART,CENLON,     &
+                                 IFDX,IFDY,CENLAT,CENLAT
+             END IF
+          ELSE
+             dlat = (latnm-latsm)/(JM-1)
+             nlat = INT (dlat)
+
+             if (lonem .lt. 0) lonem = 360000. + lonem
+             if (lonwm .lt. 0) lonwm = 360000. + lonwm
+
+             dlon = lonem-lonwm
+             if (dlon .lt. 0.) dlon = dlon + 360000.
+             dlon = (dlon)/(IMM-1)
+             nlon = INT (dlon)
+
+             write(6,*)'  Copygb Lat/Lon Navigation Information'
+             write(6,2000)    IMM,JM,latsm,lonwm,latnm,lonem,nlon,nlat
+             write(inav,2000) IMM,JM,latsm,lonwm,latnm,lonem,nlon,nlat
+          ENDIF
+          close(inav)
+
+ 1000     format('255 3 ',2(I3,x),I6,x,I7,x,'8 ',I7,x,2(I6,x),'0 64',     &
+                 2(x,I6))
+ 1001     format('255 3 ',2(I3,x),I6,x,I7,x,'8 ',I7,x,2(I6,x),'128 64',   &
+                 2(x,I6),' -90000 0')
+ 2000     format('255 0 ',2(I3,x),2(I7,x),'8 ',2(I7,x),2(I7,x),'64')
+        END IF  ! maptype
+
+        !HC WRITE IGDS OUT FOR WEIGHTMAKER TO READ IN AS KGDSIN
         print*,'writing out igds'
         igdout=110
 !        open(igdout,file='griddef.out',form='unformatted'
@@ -3350,6 +3577,18 @@
           WRITE(igdout)0
           WRITE(igdout)0
           WRITE(igdout)0
+
+        ! following for hurricane wrf post
+          open(inav,file='copygb_hwrf.txt',form='formatted',            &
+              status='unknown')
+           LATEND=LATSTART+(JM-1)*dyval
+           LONEND=LONSTART+(IMM-1)*dxval
+           write(10,1010) IMM,JM,LATSTART,LONSTART,LATEND,LONEND,       &
+                 dxval,dyval
+
+1010      format('255 0 ',2(I3,x),I6,x,I7,x,'136 ',I6,x,I7,x,           &
+                 2(I6,x),'64')
+          close (inav)
         END IF
         end if
       write(0,*)' after writes'

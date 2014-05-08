@@ -32,18 +32,37 @@
 !     LANGUAGE: FORTRAN
 !     MACHINE : CRAY C-90
 !$$$  
-      use vrbls3d
-      use vrbls2d
-      use soil
-      use masks
-      use kinds, only             : i_llong
-      use wrf_io_flags_mod
-      use params_mod
-      use lookup_mod
-      use ctlblk_mod
-      use gridspec_mod
-      use rqstfld_mod
-      use nemsio_module
+      use vrbls3d, only: t, q, uh, vh, q2, cwm, f_ice, f_rain, f_rimef, cfr, pint,&
+              pint, alpint, pmid, pmidv, zint, zmid, wh, rlwtt, rswtt,&
+              ttnd, tcucn, train, el_pbl, exch_h, omga
+      use vrbls2d, only: f, pd, fis, pblh, mixht, ustar, z0, ths, qs, twbs, qwbs, prec,&
+              acprec, cuprec, lspa, sno, snoavg, psfcavg, t10avg, t10m, akhsavg, akmsavg,&
+              refd_max, w_up_max, w_dn_max, up_heli_max, si, cldefi, th10, q10, pshltr,&
+              tshltr, qshltr, maxtshltr, mintshltr, maxrhshltr, minrhshltr, akhs, akms, albase,&
+              albedo, czen, cfracl, cfracm, islope, cmc, grnflx, pctsno, soiltb, vegfrc,&
+              acfrcv, acfrst, ssroff, bgroff, czmean, mxsnal, radot, sigt4, tg, sr, cfrach,&
+              rlwin, rlwtoa, alwin, alwout, alwtoa, rswin, rswinc, rswout, aswin,aswout,&
+              aswtoa, sfcshx, sfclhx, subshx, snopcx, sfcuvx, potevp, ncfrcv, ncfrst, u10h,&
+              u10, v10h, v10, u10max, v10max, smstav, smstot, sfcevp, ivgtyp, acsnow, acsnom,&
+              sst, thz0, qz0, uz0, vz0, htop, isltyp, sfcexc, hbot, htopd, htops, cuppt, cprate,&
+              hbotd, hbots
+      use soil, only: sldpth, sh2o, smc, stc
+      use masks, only: lmv, lmh, htm, vtm, dx, dy, hbm2, gdlat, gdlon, sm, sice
+      use kinds, only: i_llong
+      use wrf_io_flags_mod, only:
+      use params_mod, only: pi, dtr, g, d608, rd
+      use lookup_mod, only: thl, plq, ptbl, ttbl, rdq, rdth, rdp, rdthe, pl, qs0, sqs, sthe, the0,&
+              ttblq, rdpq, rdtheq, stheq, the0q
+      use ctlblk_mod, only: me, mpi_comm_comp, global, icnt, idsp, jsta, ihrst, imin, idat, sdat,&
+              ifhr, ifmin, filename, restrt, imp_physics, isf_surface_physics, icu_physics, jend,&
+              dt, spval, gdsdegr, grib, pdtop, pt, tmaxmin, nsoil, lp1, jend_m, nprec, nphs, avrain,&
+              avcnvc, ardlw, ardsw, asrfc, novegtype, spl, lsm, dtq2, tsrfc, trdlw, trdsw, theat, tclod,&
+              tprec, alsl, lm , im, jm, jsta_2l, jend_2u, ivegsrc
+      use gridspec_mod, only: dyval, dxval, cenlat, cenlon, maptype, gridtype, latstart, latlast, latnw,&
+              latse, lonstart, lonlast, lonnw, lonse, latstartv, latlastv, cenlatv, lonstartv,&
+              lonlastv, cenlonv
+      use rqstfld_mod, only:
+      use nemsio_module, only: nemsio_gfile, nemsio_getfilehead, nemsio_close, nemsio_getheadvar
 !
 !     INCLUDE/SET PARAMETERS.
       implicit none
@@ -68,8 +87,9 @@
 !     INTEGERS - THIS IS OK AS LONG AS INTEGERS AND REALS ARE THE SAME SIZE.
       LOGICAL RUNB,SINGLRST,SUBPOST,NEST,HYDRO
       LOGICAL IOOMG,IOALL
-      logical, parameter :: debugprint = .true.
+      logical, parameter :: debugprint = .false.
       logical fliplayer ! whether or not to flip layer
+      logical :: convert_rad_to_deg=.false.
 !      logical global
       CHARACTER*32 LABEL
       CHARACTER*40 CONTRL,FILALL,FILMST,FILTMP,FILTKE,FILUNV                  &
@@ -77,12 +97,11 @@
       CHARACTER*4 RESTHR
       CHARACTER FNAME*80,ENVAR*50,BLANK*4
       integer nfhour ! forecast hour from nems io file
-      INTEGER IDATB(3),IDATE(8),JDATE(8)
+      INTEGER IDATE(8),JDATE(8)
 !     
 !     DECLARE VARIABLES.
 !     
       REAL FACT,tsph,tstart
-      REAL SLDPTH2(NSOIL)
       REAL RINC(5)
       REAL ETA1(LM+1), ETA2(LM+1)
       REAL GARB
@@ -336,6 +355,54 @@
       call mpi_bcast(imp_physics,1,MPI_INTEGER,0,mpi_comm_comp,iret)	
       print*,'MP_PHYSICS= ',imp_physics
 
+! Initializes constants for Ferrier microphysics       
+      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
+       CALL MICROINIT(imp_physics)
+      end if
+      
+      VarName='sf_surface_physi'
+      if(me == 0)then
+        call nemsio_getheadvar(nfile,trim(VarName),iSF_SURFACE_PHYSICS,iret)
+        if (iret /= 0) then
+          print*,VarName," not found in file-Assigned 2 for NOAH LSM as default"
+          iSF_SURFACE_PHYSICS=2
+        end if
+      end if
+      call mpi_bcast(iSF_SURFACE_PHYSICS,1,MPI_INTEGER,0,mpi_comm_comp,iret)
+      print*,'SF_SURFACE_PHYSICS= ',iSF_SURFACE_PHYSICS
+
+! IVEGSRC=1 for IGBP and 0 for USGS
+      VarName='IVEGSRC'
+      if(me == 0)then
+        call nemsio_getheadvar(nfile,trim(VarName),IVEGSRC,iret)
+        if (iret /= 0) then
+          print*,VarName," not found in file-Assigned 1 for IGBP as default"
+          IVEGSRC=1
+        end if
+      end if
+      call mpi_bcast(IVEGSRC,1,MPI_INTEGER,0,mpi_comm_comp,iret)
+      print*,'IVEGSRC= ',IVEGSRC
+
+! set novegtype based on vegetation classification
+      if(ivegsrc==1)then
+       novegtype=20
+      else if(ivegsrc==0)then 
+       novegtype=24 
+      end if
+      print*,'novegtype= ',novegtype
+
+      VarName='CU_PHYSICS'
+      if(me == 0)then
+        call nemsio_getheadvar(nfile,trim(VarName),iCU_PHYSICS,iret)
+        if (iret /= 0) then
+          print*,VarName," not found in file-Assigned 2 for BMJ as default"
+          iCU_PHYSICS=2
+        end if
+      end if
+      call mpi_bcast(iCU_PHYSICS,1,MPI_INTEGER,0,mpi_comm_comp,iret)
+      print*,'CU_PHYSICS= ',iCU_PHYSICS
+      
+
       allocate(bufy(jm))
       VarName='DX'
 !      if(me == 0)then
@@ -389,7 +456,7 @@
          print*,VarName," not found in file-Assigned missing values"
          dyval=spval
 	else
-	 dyval=garb*1000.
+	 dyval=garb*gdsdegr
         end if
       end if
       call mpi_bcast(dyval,1,MPI_REAL,0,mpi_comm_comp,iret)
@@ -402,7 +469,7 @@
          print*,VarName," not found in file-Assigned missing values"
          dxval=spval
 	else
-	 dxval=garb*1000.
+	 dxval=garb*gdsdegr
         end if
       end if
       call mpi_bcast(dxval,1,MPI_REAL,0,mpi_comm_comp,iret)
@@ -417,7 +484,7 @@
          print*,VarName," not found in file-Assigned missing values"
          cenlat=spval
 	else
-	 cenlat=nint(garb*1000.) 
+	 cenlat=nint(garb*gdsdegr) 
         end if
       end if
       call mpi_bcast(cenlat,1,MPI_INTEGER,0,mpi_comm_comp,iret)      
@@ -429,7 +496,11 @@
          print*,VarName," not found in file-Assigned missing values"
          cenlon=spval
 	else
-	 cenlon=nint(garb*1000.) 
+         if(grib=="grib1") then
+	   cenlon=nint(garb*gdsdegr) 
+         elseif(grib=="grib2") then
+           cenlon=nint((garb+360.)*gdsdegr) 
+         endif
         end if
       end if
       call mpi_bcast(cenlon,1,MPI_INTEGER,0,mpi_comm_comp,iret)
@@ -492,17 +563,31 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,gdlat)
-      if(debugprint.and.me==0)print*,'glat(1,1)= ',gdlat(1,1)
-      if(debugprint)print*,'sample ',VarName,' = ',gdlat(im/2,(jsta+jend)/2)
-      if(debugprint)print*,'max min lat=',maxval(gdlat),minval(gdlat)
+      
       call collect_loc(gdlat,dummy)
+! decides whether or not to convert to degree
+      if(me.eq.0)then 
+       if(maxval(abs(dummy))<pi)then ! convert from radian to degree
+        if(debugprint)print*,'convert from radian to degree'
+        dummy=dummy*180./pi 
+	convert_rad_to_deg=.true.
+       end if
+      end if
+      call mpi_bcast(convert_rad_to_deg,1,MPI_LOGICAL,0,mpi_comm_comp,iret)
+      if(convert_rad_to_deg)call mpi_scatterv(dummy(1,1),icnt,idsp,mpi_real &
+      ,gdlat(1,jsta),icnt(me),mpi_real,0,MPI_COMM_COMP,iret)      
+      if(debugprint)print*,'sample ',VarName,' = ',gdlat(im/2,(jsta+jend)/2)
+      if(debugprint)print*,'max min lat=',maxval(gdlat),minval(gdlat),'im=',im, &
+        'jsta_2l=',jsta_2l,'jend_2u=',jend_2u
+      !call collect_loc(gdlat,dummy)
+      if(me==0.and.debugprint)print*,'after collect lat=',dummy(1,1),dummy(im,jm)
       if(me.eq.0)then
         ii=(1+im)/2
 	jj=(1+jm)/2
-        latstart=nint(dummy(1,1)*1000.)
-        latlast=nint(dummy(im,jm)*1000.)
-        latnw=nint(dummy(1,jm)*1000.)
-        latse=nint(dummy(im,1)*1000.)
+        latstart=nint(dummy(1,1)*gdsdegr)
+        latlast=nint(dummy(im,jm)*gdsdegr)
+        latnw=nint(dummy(1,jm)*gdsdegr)
+        latse=nint(dummy(im,1)*gdsdegr)
 !	dyval=nint((dummy(1,2)-dummy(1,1))*1000.)
 !	dyval=106 ! hard wire for AQ domain testing
 	if(mod(im,2)==0)then
@@ -531,6 +616,7 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,gdlon)
+      if(convert_rad_to_deg)gdlon=gdlon*180./pi
       if(global)then
 !       do j=jsta,jend
 !        do i=1,im
@@ -542,16 +628,19 @@
 	 gdlon(1,j)=gdlon(1,j)-360.0
 	end do
        end if
-      end if
-      if(debugprint.and.me==0)print*,'glon(1,1)= ',gdlon(1,1) 	 
+      end if 	 
       if(debugprint)print*,'sample ',VarName,' = ',(gdlon(i,(jsta+jend)/2),i=1,im,8)
       if(debugprint)print*,'max min lon=',maxval(gdlon),minval(gdlon)
       call collect_loc(gdlon,dummy)
       if(me.eq.0)then
-        lonstart=nint(dummy(1,1)*1000.)
-        lonlast=nint(dummy(im,jm)*1000.)
-        lonnw=nint(dummy(1,jm)*1000.)
-        lonse=nint(dummy(im,1)*1000.)
+        if(grib=='grib2') then
+          if(dummy(1,1)<0) dummy(1,1)=dummy(1,1)+360.
+          if(dummy(im,jm)<0) dummy(im,jm)=dummy(im,jm)+360.
+        endif
+        lonstart=nint(dummy(1,1)*gdsdegr)
+        lonlast=nint(dummy(im,jm)*gdsdegr)
+        lonnw=nint(dummy(1,jm)*gdsdegr)
+        lonse=nint(dummy(im,1)*gdsdegr)
 !        dxval=nint((dummy(2,1)-dummy(1,1))*1000.)
 !	dxval=124 ! hard wire for AQ domain testing
 	if(mod(im,2)==0)then
@@ -567,6 +656,7 @@
       write(6,*)'lonstart,lonlast A calling bcast=',lonstart,lonlast
       print*,'dxval, cenlon= ',dxval, cenlon
 
+      convert_rad_to_deg=.false.
       varname='vlat'
       VcoordName='sfc'
       l=1
@@ -577,10 +667,13 @@
       if(debugprint)print*,'max min vlat=',maxval(buf),minval(buf)
       call collect_loc(buf,dummy)
       if(me.eq.0)then
-        ii=(1+im)/2
-	jj=(1+jm)/2
-        latstartv=nint(dummy(1,1)*1000.)
-        latlastv=nint(dummy(im,jm)*1000.)
+        if(maxval(abs(dummy))<pi)then ! convert from radian to degree
+	  dummy(1,1)=dummy(1,1)*180./pi
+	  dummy(im,jm)=dummy(im,jm)*180./pi
+	  convert_rad_to_deg=.true.
+	end if	  
+        latstartv=nint(dummy(1,1)*gdsdegr)
+        latlastv=nint(dummy(im,jm)*gdsdegr)
 !        cenlatv=nint(dummy(ii,jj)*1000.)
 !	print*,'latstartv,cenlatv B bcast= ',latstartv,cenlatv
       end if
@@ -601,10 +694,15 @@
       if(debugprint)print*,'max min vlon=',maxval(buf),minval(buf)
       call collect_loc(buf,dummy)
       if(me.eq.0)then
-        ii=(1+im)/2
-	jj=(1+jm)/2
-        lonstartv=nint(dummy(1,1)*1000.)
-        lonlastv=nint(dummy(im,jm)*1000.) 
+        if(convert_rad_to_deg)then
+	  dummy(1,1)=dummy(1,1)*180./pi
+	  dummy(im,jm)=dummy(im,jm)*180./pi
+	end if
+        if(grib=='grib2') then
+          if(dummy(1,1)<0) dummy(1,1)=dummy(1,1)+360.
+        endif
+        lonstartv=nint(dummy(1,1)*gdsdegr)
+        lonlastv=nint(dummy(im,jm)*gdsdegr)
 !        cenlonv=nint(dummy(ii,jj)*1000.)
 !	print*,'lonstartv,cenlonv B bcast= ',lonstartv,cenlonv
       end if
@@ -906,7 +1004,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,sno)
       if(debugprint)print*,'sample ',VarName,' = ',sno(im/2,(jsta+jend)/2)
-     
+
       varname='snoavg'
       VcoordName='sfc'
       l=1
@@ -1025,7 +1123,8 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,pshltr)
-      if(debugprint)print*,'sample ',VarName,' = ',pshltr(im/2,(jsta+jend)/2)      
+      if(debugprint)print*,'sample ',VarName,' = ',pshltr(im/2,(jsta+jend)/2), &
+        'max=',maxval(pshltr(1:im,jsta:jend)),minval(pshltr(1:im,jsta:jend))
 
       varname='tshltr'
       VcoordName='sfc'
@@ -1042,7 +1141,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,qshltr)
       if(debugprint)print*,'sample ',VarName,' = ',qshltr(im/2,(jsta+jend)/2)    
-      
+
       tmaxmin=1.
 !      call mpi_bcast(TMAXMIN,1,MPI_REAL,0,mpi_comm_comp,iret)
 
@@ -1052,7 +1151,7 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,maxtshltr)
-      if(debugprint)print*,'sample ',VarName,' = ',maxtshltr(im/2,(jsta+jend)/2)
+      if(debugprint)print*,'sample ',VarName,' = ',maxtshltr(im/2,(jsta+jend)/2)    
 
       varname='t02min'
       VcoordName='sfc'
@@ -1060,7 +1159,7 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,mintshltr)
-      if(debugprint)print*,'sample ',VarName,' = ',mintshltr(im/2,(jsta+jend)/2)
+      if(debugprint)print*,'sample ',VarName,' = ',mintshltr(im/2,(jsta+jend)/2)    
 
       varname='rh02max'
       VcoordName='sfc'
@@ -1068,7 +1167,7 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,maxrhshltr)
-      if(debugprint)print*,'sample ',VarName,' = ',maxrhshltr(im/2,(jsta+jend)/2)
+      if(debugprint)print*,'sample ',VarName,' = ',maxrhshltr(im/2,(jsta+jend)/2)    
 
       varname='rh02min'
       VcoordName='sfc'
@@ -1076,8 +1175,8 @@
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,minrhshltr)
-      if(debugprint)print*,'sample ',VarName,' = ',minrhshltr(im/2,(jsta+jend)/2)
-
+      if(debugprint)print*,'sample ',VarName,' = ',minrhshltr(im/2,(jsta+jend)/2)    
+      
 ! model level q2      
       VarName='q2'
       VcoordName='mid layer'
@@ -1270,12 +1369,6 @@
       ,l,impf,jmpf,nframe,islope)
       if(debugprint)print*,'sample ',VarName,' = ',islope(im/2,(jsta+jend)/2)
       
-	
-!	varname='SOILTB'
-!	write(6,*) 'call getVariableB for : ', VarName
-!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUMMY,
-!     &  IM,1,JM,1,IM,JS,JE,1)
-
 ! either assign SLDPTH to be the same as eta (which is original
 ! setup in WRF LSM) or extract thickness of soil layers from wrf
 ! output
@@ -1958,7 +2051,6 @@
       ,l,impf,jmpf,nframe,buf)
       AVRAIN=buf(im/2,(jsta+jend)/2)
       if(debugprint)print*,'sample ',VarName,' = ',AVRAIN 
-      print*,'sample ',VarName,' = ',AVRAIN 
 
       VarName='AVCNVC'
       VcoordName='sfc'
@@ -1996,26 +2088,17 @@
       ASRFC=buf(im/2,(jsta+jend)/2)
       if(debugprint)print*,'sample ',VarName,' = ',ASRFC 
 
-! reading TKE
-!      VarName='TKE_PBL'
-!      call getVariableB(fileName,DateStr,DataHandle,VarName,DUM3D,
-!     &  IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
-!      do l = 1, lm
-!       do j = jsta_2l, jend_2u
-!        do i = 1, im
-!            q2 ( i, j, l ) = dum3d ( i, j, l )
-!        end do
-!       end do
-!      end do
-!      print*,'TKE at ',ii,jj,ll,' = ',q2(ii,jj,ll)
-!
 ! reading 10 m wind
       VarName='u10'
       VcoordName='10 m above gnd'
       l=1
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
-      ,l,impf,jmpf,nframe,u10)
+      ,l,impf,jmpf,nframe,u10h)
+! Chuang Aug 2012: 10 m winds are computed on mass points in the model
+! post interpolates them onto V points because copygb interpolates
+! wind points differently and 10 m winds are identified as 33/34
+      call h2u(u10h,u10)
       if(debugprint)print*,'sample ',VarName,' = ',u10(im/2,(jsta+jend)/2)
       
       VarName='v10'
@@ -2023,9 +2106,9 @@
       l=1
       call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
-      ,l,impf,jmpf,nframe,v10)
+      ,l,impf,jmpf,nframe,v10h)
+      call h2u(v10h,v10)
       if(debugprint)print*,'sample ',VarName,' = ',v10(im/2,(jsta+jend)/2)
-
 
       VarName='u10max'
       VcoordName='10 m above gnd'
@@ -2034,7 +2117,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,u10max)
       if(debugprint)print*,'sample ',VarName,' = ',u10max(im/2,(jsta+jend)/2)
-
+      
       VarName='v10max'
       VcoordName='10 m above gnd'
       l=1
@@ -2042,7 +2125,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,v10max)
       if(debugprint)print*,'sample ',VarName,' = ',v10max(im/2,(jsta+jend)/2)
-
+            
 ! reading SMSTAV
       VarName='smstav'
       VcoordName='sfc'
@@ -2070,18 +2153,13 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,sfcevp) ! temporary use sfcevp because it's real in nemsio
 
-!     do j=jsta,jend
-!      do i=1,im
-!       if(sfcevp(i,j)> 27.0 .or. sfcevp(i,j)<1.0)print*, &
-!         'bad vegtype=',i,j,sfcevp(i,j) 
-!      end do
-!     end do 	
+!      do j=jsta,jend
+!       do i=1,im
+!        if(sfcevp(i,j)> 27.0 .or. sfcevp(i,j)<1.0)print*, &
+!	'bad vegtype=',i,j,sfcevp(i,j) 
+!       end do
+!      end do 	
         
-      call collect_loc(sfcevp,dummy)
-      if(me==0)novegtype=NINT(maxval(dummy))
-      call mpi_bcast(novegtype,1,MPI_INTEGER,0,mpi_comm_comp,iret)
-      print*,'novegtype= ',novegtype
-
       where(sfcevp /= spval)IVGTYP=nint(sfcevp)
       if(debugprint)print*,'sample ',VarName,' = ',IVGTYP(im/2,(jsta+jend)/2)
 
@@ -2151,7 +2229,7 @@
       ,l,impf,jmpf,nframe,sst)
       if(debugprint)print*,'sample ',VarName,' = ',sst(im/2,(jsta+jend)/2)
 
-!      VarName='EL_MYJ' ! not in nems io yet
+!      VarName='EL_PBL' ! not in nems io yet
       VarName='xlen_mix'
       VcoordName='mid layer'
       do l=1,lm
@@ -2159,8 +2237,8 @@
         ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
         ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
-        ,l,impf,jmpf,nframe,el_pbl(1,jsta_2l,ll))
-        if(debugprint)print*,'sample l ',VarName,' = ',ll,el_pbl(im/2,(jsta+jend)/2,ll)
+        ,l,impf,jmpf,nframe,EL_PBL(1,jsta_2l,ll))
+        if(debugprint)print*,'sample l ',VarName,' = ',ll,EL_PBL(im/2,(jsta+jend)/2,ll)
       end do ! do loop for l
 
       VarName='exch_h'
@@ -2415,39 +2493,41 @@
             WRITE(igdout)DXVAL
             WRITE(igdout)DYVAL
             WRITE(igdout)64
-            WRITE(igdout)0
-            WRITE(igdout)0
-            WRITE(igdout)0  
             WRITE(igdout)LATLAST
             WRITE(igdout)LONLAST
+            WRITE(igdout)0  
+            WRITE(igdout)0
+            WRITE(igdout)0
           END IF
           open(111,file='copygb_gridnav.txt',form='formatted' &
              ,status='unknown')
 	  IF(MAPTYPE.EQ.203)THEN  !A STAGGERED E-GRID   
             write(111,1000) 2*IM-1,JM,LATSTART,LONSTART,CENLON, &
-                NINT(DX(1,1)),NINT(DY(1,1)),CENLAT,CENLAT
+                NINT(dxval*107.),NINT(dyval*110.),CENLAT,CENLAT
 	  ELSE IF(MAPTYPE.EQ.205)THEN  !A STAGGERED B-GRID
 	    write(111,1000) IM,JM,LATSTART,LONSTART,CENLON, &
-                NINT(DX(1,1)),NINT(DY(1,1)),CENLAT,CENLAT,  &
+                NINT(dxval*107.),NINT(dyval*110.),CENLAT,CENLAT,  &
                 LATLAST,LONLAST
 	  END IF		
 1000      format('255 3 ',2(I4,x),I6,x,I7,x,'8 ',I7,x,2(I6,x),'0 64', &
                 3(x,I6),x,I7)
           close(111)	  
-!         
+!
           IF (MAPTYPE.EQ.205)THEN  !A STAGGERED B-GRID
             open(112,file='latlons_corners.txt',form='formatted' &
              ,status='unknown')
             write(112,1001)LATSTART,LONSTART,LATSE,LONSE,LATNW,LONNW, &
                 LATLAST,LONLAST
 1001        format(4(I6,x,I7,x))
-          close(112)	  
+          close(112)
           ENDIF
 
         end if
 
 ! close all files
         call nemsio_close(nfile,iret=status)
+!
+       write(0,*)'end of INIT_NEMS'
 
       RETURN
       END
