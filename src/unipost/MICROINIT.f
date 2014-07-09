@@ -57,6 +57,7 @@
        QLImax1=0.9E-3
        QLImax2=2.5E-3
        FLARGE2=0.07     !-- Set but no longer used
+       filename = "hires_micro_lookup.dat"
 !
 !-- Adjusts NLImax from a value of NLImax1 for ice contents <= QLImax1
 !   to NLImax2 for ice contents >= QLImax2
@@ -73,6 +74,7 @@
        NLImax2=20.E3
        CLImax=0.
        FLARGE2=0.2
+       filename = "nam_micro_lookup.dat"
       else  !-- Should be imp_physics==95
        DMRmax=.45E-3
        T_ICE=-40.  
@@ -80,13 +82,14 @@
        NLImax2=5.E3
        CLImax=0.
        FLARGE2=0.03
+       filename = "nam_micro_lookup.dat"
       end if 
       XMRmax=1.E6*DMRmax 
       MDRmax=XMRmax
       allocate(MASSR(MDRmin:MDRmax))
       TRAD_ice=0.5*T_ICE+TFRZ
       
-      OPEN (UNIT=1,FILE="eta_micro_lookup.dat",convert='big_endian',FORM="UNFORMATTED")
+      OPEN (UNIT=1,FILE=filename,convert='big_endian',FORM="UNFORMATTED")
       DO I=1,3
         READ(1)
       ENDDO
