@@ -140,7 +140,7 @@
 	icnt = 0
 	iscale = 0
 	range = rmax - rmin
-	IF ( range .le. 0.00 ) THEN
+	IF ( range .lt. 1e-6 ) THEN
 	    nmbts = 8
 	    RETURN
 	END IF
