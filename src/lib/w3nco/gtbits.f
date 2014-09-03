@@ -41,11 +41,13 @@ C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C  ROUND FIELD AND DETERMINE EXTREMES WHERE BITMAP IS ON
       DS=10.**IDS
       IF(IBM.EQ.0) THEN
-        GROUND(1)=NINT(G(1)*DS)/DS
+C        GROUND(1)=NINT(G(1)*DS)/DS
+        GROUND(1)=DINT(G(1)*DS)/DS
         GMAX=GROUND(1)
         GMIN=GROUND(1)
         DO I=2,LEN
-          GROUND(I)=NINT(G(I)*DS)/DS
+C          GROUND(I)=NINT(G(I)*DS)/DS
+          GROUND(I)=DINT(G(I)*DS)/DS
           GMAX=MAX(GMAX,GROUND(I))
           GMIN=MIN(GMIN,GROUND(I))
         ENDDO
@@ -55,12 +57,14 @@ C  ROUND FIELD AND DETERMINE EXTREMES WHERE BITMAP IS ON
           DO I=1,I1-1
             GROUND(I)=0.
           ENDDO
-          GROUND(I1)=NINT(G(I1)*DS)/DS
+C          GROUND(I1)=NINT(G(I1)*DS)/DS
+          GROUND(I1)=DINT(G(I1)*DS)/DS
           GMAX=GROUND(I1)
           GMIN=GROUND(I1)
           DO I=I1+1,LEN
             IF(MG(I).NE.0) THEN
-              GROUND(I)=NINT(G(I)*DS)/DS
+C              GROUND(I)=NINT(G(I)*DS)/DS
+              GROUND(I)=DINT(G(I)*DS)/DS
               GMAX=MAX(GMAX,GROUND(I))
               GMIN=MIN(GMIN,GROUND(I))
             ELSE
