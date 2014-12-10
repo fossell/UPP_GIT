@@ -99,6 +99,13 @@
       deallocate(DBZC)
       deallocate(mcvg)
       deallocate(NLICE)
+!     Wm Lewis: added
+      deallocate(NRAIN)
+!      deallocate(effr_i)
+!      deallocate(effr_c)
+!      deallocate(effr_r)
+!      deallocate(effr_s)
+!      deallocate(effr_g)
 ! KRS: HWRF addition for thompson reflectivity
 ! or non-ferrier physics. wrf-derived
       deallocate(REFL_10CM)

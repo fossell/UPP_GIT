@@ -118,16 +118,24 @@
 !
 !     COMPUTE/POST FIELDS ON SIGMA SURFACES.
       btim = timef()
+      print*,'CALL MDL2THANDPV'
       CALL MDL2THANDPV(kth,kpv,th,pv)
+
+!!
+!      btim=timef()
+!      print*,'CALL EFFR'
+!      CALL EFFR
+
 !
 !     POST RADIANCE AND BRIGHTNESS FIELDS.
       btim = timef()
+      print*,'CALL CALRAD_WCLOUD'
       CALL CALRAD_WCLOUD
 !     
 !     END OF ROUTINE.
 !     
       NTLFLD=cfld
-      print *,'nTLFLD=',NTLFLD
+      print *,'NTLFLD=',NTLFLD
 !
       RETURN
       END

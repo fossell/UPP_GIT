@@ -10,6 +10,7 @@
 !   .
 !
 ! PROGRAM HISTORY LOG:
+!   14-12-01   WM LEWIS: ADDED ADDNL VARIABLES FOR SAT OUPUT
 !   00-01-06  TUCCILLO - ORIGINAL
 !   01-10-25  H CHUANG - MODIFIED TO PROCESS HYBRID MODEL OUTPUT
 !   02-06-19  MIKE BALDWIN - WRF VERSION
@@ -40,13 +41,14 @@
       use vrbls3d, only: u, v, t, q, uh, vh, wh, pmid, pmidv, pint, alpint, zmid,&
               zint, q2, omga, t_adj, ttnd, rswtt, rlwtt, exch_h, train, tcucn,&
               el_pbl, cwm, f_ice, f_rain, f_rimef, qqw, qqi, qqr, qqs,qqg, qqni, qqnr,&
-              extcof55, cfr, dbz, dbzr, dbzi, dbzc, mcvg, nlice, o3, vdifftt,&
+              extcof55, cfr, dbz, dbzr, dbzi, dbzc, mcvg, nlice, nrain, o3, vdifftt,&
               tcucns, vdiffmois, dconvmois, sconvmois, nradtt, o3vdiff, o3prod,&
               o3tndy, mwpv, unknown, vdiffzacce, zgdrag, cnvctummixing, vdiffmacce,&
               mgdrag, cnvctvmmixing, ncnvctcfrac, cnvctumflx, cnvctdmflx, cnvctdetmflx,&
               cnvctzgdrag, cnvctmgdrag, icing_gfip, asy, ssa, duem, dusd, dudp,&
               duwt, suem, susd, sudp, suwt, ocem, ocsd, ocdp, ocwt, bcem, bcsd,&
-              bcdp, bcwt, ssem, sssd, ssdp, sswt, ext, dpres, rhomid
+              bcdp, bcwt, ssem, sssd, ssdp, sswt, ext, dpres, rhomid 
+!             ,effr_i, effr_c, effr_r, effr_s, effr_g
       use vrbls2d, only: wspd10max, w_up_max, w_dn_max, w_mean, refd_max, up_heli_max,&
               up_heli_max16, grpl_max, up_heli, up_heli16, ltg1_max, ltg2_max, &
               ltg3_max, nci_ltg, nca_ltg, nci_wq, nca_wq, nci_refd, &

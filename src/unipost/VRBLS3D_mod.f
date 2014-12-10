@@ -20,6 +20,10 @@
       ,TTND(:,:,:),RSWTT(:,:,:),RLWTT(:,:,:), REF_10CM(:,:,:)        &
       ,EXCH_H(:,:,:),TRAIN(:,:,:),TCUCN(:,:,:),EL_PBL(:,:,:)         &
       ,MCVG(:,:,:),EXTCOF55(:,:,:),NLICE(:,:,:)                      &
+!! Wm Lewis: added
+      ,NRAIN(:,:,:)                                                  &
+!,effr_i(:,:,:),effr_c(:,:,:)                      &
+!      ,effr_r(:,:,:),effr_s(:,:,:),effr_g(:,:,:)                     &
 ! KRS Add HWRF fields     
       ,REFL_10CM(:,:,:)             &
 ! Add GFS fields     
