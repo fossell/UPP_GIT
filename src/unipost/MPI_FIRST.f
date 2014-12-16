@@ -48,7 +48,6 @@
               cnvctzgdrag, cnvctmgdrag, icing_gfip, asy, ssa, duem, dusd, dudp,&
               duwt, suem, susd, sudp, suwt, ocem, ocsd, ocdp, ocwt, bcem, bcsd,&
               bcdp, bcwt, ssem, sssd, ssdp, sswt, ext, dpres, rhomid 
-!             ,effr_i, effr_c, effr_r, effr_s, effr_g
       use vrbls2d, only: wspd10max, w_up_max, w_dn_max, w_mean, refd_max, up_heli_max,&
               up_heli_max16, grpl_max, up_heli, up_heli16, ltg1_max, ltg2_max, &
               ltg3_max, nci_ltg, nca_ltg, nci_wq, nca_wq, nci_refd, &

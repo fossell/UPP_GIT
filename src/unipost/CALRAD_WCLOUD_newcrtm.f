@@ -56,6 +56,7 @@ SUBROUTINE CALRAD_WCLOUD
   use crtm_surface_define, only: crtm_surface_destroy, crtm_surface_associated, &
        crtm_surface_zero
   use crtm_channelinfo_define, only: crtm_channelinfo_type
+!  use crtm_channelinfo_define, only: crtm_channelinfo_type, AntCorr_type
   use crtm_parameters, only: limit_exp,toa_pressure,max_n_layers,MAX_SENSOR_SCAN_ANGLE
   use crtm_cloud_define, only:  water_cloud,ice_cloud,rain_cloud,snow_cloud,graupel_cloud,hail_cloud
   use message_handler, only: success,warning, display_message
@@ -426,7 +427,7 @@ SUBROUTINE CALRAD_WCLOUD
 
            microwave=amsua .or. amsub .or. mhs .or. msu .or. hsb .or. micrim
 
-           ! Determine specific sensor
+           ! check sensor list
            sensorindex = 0
            sensor_search: do j = 1, n_sensors
               if (channelinfo(j)%sensor_id == isis ) then
@@ -440,29 +441,8 @@ SUBROUTINE CALRAD_WCLOUD
               stop
            endif
 
-           ! Set CRTM to process given satellite/sensor
-           !       Error_Status = CRTM_Set_ChannelInfo(isis, ChannelInfo)
-           !       if (error_status /= success)                                 &
-           !     &    write(6,*)'ERROR*** crtm_set_channelinfo error_status=',  &
-           !     &    error_status,' for satsensor=',isis
-
-!        local_nChannels        = 24
-!        local_nFOVs            = -1
-!        local_Detector         = -1
-!        local_WMO_Sensor_Id    = WMO_SSMIS
-!        local_WMO_Satellite_Id = WMO_DMSP19
-!        local_SensorName       = 'SSMIS'
-!        local_SatelliteName    = 'DMSP-19'
-
-
-           ! Allocate structures for radiative transfer
-           print*,'channel number= ',channelinfo(sensorindex)%n_channels
-!           print*,'WMO Satellite ID=',channelinfo(sensorindex)%WMO_Satellite_Id
-!           print*,'WMO Sensor Id=',channelinfo(sensorindex)%WMO_Sensor_Id  
-
-!          manually reset Satellite ID for F19 and F20
-!          INTEGER, PUBLIC, PARAMETER :: WMO_DMSP19      = 287
-!          INTEGER, PUBLIC, PARAMETER :: WMO_DMSP20      = 289
+!          set Satellite IDs for F19 and F20 to valid values since CRTM will not
+!          simulate an instrument w/o a WMO ID:
            if(isis=='ssmis_f19')channelinfo(sensorindex)%WMO_Satellite_Id=287
            if(isis=='ssmis_f20')channelinfo(sensorindex)%WMO_Satellite_Id=289
 
@@ -475,8 +455,6 @@ SUBROUTINE CALRAD_WCLOUD
                          lm,max_n_layers
               stop 2
            end if
-
-!           print*,'bf crtm_atmpshere' 
 
            CALL crtm_atmosphere_create(atmosphere(1),lm,n_absorbers,n_clouds &
                         ,n_aerosols)
@@ -1433,7 +1411,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 175 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1456,7 +1434,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 181 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1479,7 +1457,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 187 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1503,8 +1481,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 193 + ixchan
-                  print*,'id8=',id(8)
-                  print*,'gribbing ixchan'
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1527,7 +1504,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 200 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1550,7 +1527,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 207 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1573,7 +1550,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 214 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1596,7 +1573,7 @@ SUBROUTINE CALRAD_WCLOUD
                   id(1:25) = 0
                   id(02) = 133
                   id(8) = 221 + ixchan
-                  print*,'id8=',id(8)
+!                  print*,'id8=',id(8)
                   if (grib=="grib1") then
                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                   endif
@@ -1673,7 +1650,7 @@ SUBROUTINE CALRAD_WCLOUD
                     id(1:25) = 0
                     id(02) = 129
                     id(8) = 212 + ixchan
-                    print*,'id8=',id(8)
+!                    print*,'id8=',id(8)
                     if (grib=="grib1") then
                      call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                     endif
@@ -1696,7 +1673,7 @@ SUBROUTINE CALRAD_WCLOUD
                     id(1:25) = 0
                     id(02) = 130
                     id(8) = 240 + ixchan
-                    print*,'id8=',id(8)
+!                    print*,'id8=',id(8)
                     if (grib=="grib1") then
                      call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                     endif
@@ -1719,7 +1696,7 @@ SUBROUTINE CALRAD_WCLOUD
                     id(1:25) = 0
                     id(02) = 133
                     id(8) = 229 + ixchan
-                    print*,'id8=',id(8)
+!                    print*,'id8=',id(8)
                     if (grib=="grib1") then
                      call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                     endif
@@ -1742,7 +1719,7 @@ SUBROUTINE CALRAD_WCLOUD
                     id(1:25) = 0
                     id(02) = 133
                     id(8) = 236 + ixchan
-                    print*,'id8=',id(8)
+!                    print*,'id8=',id(8)
                     if (grib=="grib1") then
                      call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                     endif
@@ -1765,7 +1742,7 @@ SUBROUTINE CALRAD_WCLOUD
                     id(1:25) = 0
                     id(02) = 133
                     id(8) = 240 + ixchan
-                    print*,'id8=',id(8)
+!                    print*,'id8=',id(8)
                     if (grib=="grib1") then
                      call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
                     endif

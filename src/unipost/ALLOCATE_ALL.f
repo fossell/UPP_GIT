@@ -100,11 +100,6 @@
       allocate(NLICE(im,jsta_2l:jend_2u,lm))
 !     Wm Lewis: added 
       allocate(NRAIN(im,jsta_2l:jend_2u,lm))
-!      allocate(effr_i(im,jsta_2l:jend_2u,lm))
-!      allocate(effr_c(im,jsta_2l:jend_2u,lm))
-!      allocate(effr_r(im,jsta_2l:jend_2u,lm))
-!      allocate(effr_s(im,jsta_2l:jend_2u,lm))
-!      allocate(effr_g(im,jsta_2l:jend_2u,lm))
 ! KRS: HWRF Addition for thompson reflectivity
 ! or non-ferrier physics. wrf-derived
       allocate(REFL_10CM(im,jsta_2l:jend_2u,lm))
