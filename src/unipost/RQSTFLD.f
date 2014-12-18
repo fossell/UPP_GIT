@@ -1471,7 +1471,7 @@
       DATA IFILV(444),AVBL(444),IQ(444),IS(444),AVBLGRB2(444)      &
      &                      /1,'LIGHTNING           ',187,001,     &
      &                       'LTNG ON surface'/
-! 
+
 ! GOES WEST
       DATA IFILV(446),AVBL(446),IQ(446),IS(446),AVBLGRB2(446)      &
      &                      /1,'GOES W TB - CH 2    ',241,008,     &
@@ -1485,6 +1485,7 @@
       DATA IFILV(449),AVBL(449),IQ(449),IS(449),AVBLGRB2(449)      &
      &                      /1,'GOES W TB - CH 5    ',244,008,     &
      &                       'SBT115 ON top_of_atmos'/ !Table 130
+
 ! NCAR GFIP
       DATA IFILV(450),AVBL(450),IQ(450),IS(450),AVBLGRB2(450)      &
      &                      /1,'NCAR IN-FLIGHT ICING',168,100,     &
@@ -1506,17 +1507,31 @@
       DATA IFILV(455),AVBL(455),IQ(455),IS(455),AVBLGRB2(455)      &
      &                      /1,'HAINES INDEX        ',250,001,     &
      &                       'HINDEX ON surface'/
-
-!    2014-12-09 WM LEWIS MODIFIED GOESE (12) AND GOESW (11) FOR USE
-!    WITH LVLS-DRIVEN CONTROL OF CHANNEL SELECTION
-!    GOES-12 imager (L(1)-L(4) -> ID8: 213-216 -> CH2, CH3, CH4, CH5)
       DATA IFILV(456),AVBL(456),IQ(456),IS(456),AVBLGRB2(456)      &
-     &                      /1,'GOES-12 NON-NADIR   ',213,008,     &
+     &                      /1,'GOESE TB-2 NON NADIR',213,008,     &
      &                       'SBT122 ON top_of_atmos'/ !table 129
-!    GOES-11 imager (L(1)-L(4) -> ID8: 241-244 -> CH2, CH3, CH4, CH5)
+      DATA IFILV(457),AVBL(457),IQ(457),IS(457),AVBLGRB2(457)      &
+     &                      /1,'GOESE TB-3 NON NADIR',214,008,     &
+     &                       'SBT123 ON top_of_atmos'/ !table 129
+      DATA IFILV(458),AVBL(458),IQ(458),IS(458),AVBLGRB2(458)      &
+     &                      /1,'GOESE TB-4 NON NADIR',215,008,     &
+     &                       'SBT124 ON top_of_atmos'/ !table 129
+      DATA IFILV(459),AVBL(459),IQ(459),IS(459),AVBLGRB2(459)      &
+     &                      /1,'GOESE TB-5 NON NADIR',216,008,     &
+     &                       'SBT126 ON top_of_atmos'/ !table 129
       DATA IFILV(460),AVBL(460),IQ(460),IS(460),AVBLGRB2(460)      &
-     &                      /1,'GOES-11 NON-NADIR   ',241,008,     &
+     &                      /1,'GOESW TB-2 NON NADIR',241,008,     &
      &                       'SBT112 ON top_of_atmos'/ !table 130
+      DATA IFILV(461),AVBL(461),IQ(461),IS(461),AVBLGRB2(461)      &
+     &                      /1,'GOESW TB-3 NON NADIR',242,008,     &
+     &                       'SBT113 ON top_of_atmos'/ !table 130
+      DATA IFILV(462),AVBL(462),IQ(462),IS(462),AVBLGRB2(462)      &
+     &                      /1,'GOESW TB-4 NON NADIR',243,008,     &
+     &                       'SBT114 ON top_of_atmos'/ !table 130
+      DATA IFILV(463),AVBL(463),IQ(463),IS(463),AVBLGRB2(463)      &
+     &                      /1,'GOESW TB-5 NON NADIR',244,008,     &
+     &                       'SBT115 ON top_of_atmos'/ !table 130
+
 
 ! NCAR GFIP Severity
       DATA IFILV(480),AVBL(480),IQ(480),IS(480),AVBLGRB2(480)      &
@@ -1526,9 +1541,10 @@
       DATA IFILV(482),AVBL(482),IQ(482),IS(482),AVBLGRB2(482)      &
      &                      /1,'PRESS AT FD HEIGHTS ',001,103,     &
                              'PRES ON spec_alt_above_mean_sea_lvl'/
+
       DATA IFILV(483),AVBL(483),IQ(483),IS(483),AVBLGRB2(483)      &
      &                      /1,'AMSRE TB - CH 9     ',176,008,     &
-                             'AMSRETBCH9 ON top_of_atmos'/ !table 133   
+                             'AMSRETBCH9 ON top_of_atmos'/ !table 133
       DATA IFILV(484),AVBL(484),IQ(484),IS(484),AVBLGRB2(484)      &
      &                      /1,'AMSRE TB - CH 10    ',177,008,     &
                              'AMSRETBCH10 ON top_of_atmos'/ !table 133
@@ -1546,37 +1562,11 @@
      &                      /1,'TMI TB - CH 7       ',177,008,     &
      &                       'TMITBCH7 ON top_of_atmos'/ !table 133
       DATA IFILV(490),AVBL(490),IQ(490),IS(490),AVBLGRB2(490)      &
-     &                      /1,'TMI TB - CH 8       ',178,008,     &     
+     &                      /1,'TMI TB - CH 8       ',178,008,     &
      &                       'TMITBCH8 ON top_of_atmos'/ !table 133
       DATA IFILV(491),AVBL(491),IQ(491),IS(491),AVBLGRB2(491)      &
      &                      /1,'TMI TB - CH 9       ',179,008,     &
      &                       'TMITBCH9 ON top_of_atmos'/ !table 133
-!!    SSMI_F15
-!      DATA IFILV(492),AVBL(492),IQ(492),IS(492),AVBLGRB2(492)      &
-!     &                      /1,'SSMI TB - CH 4      ',176,008,     &
-!     &                       'SSMITBCH4 ON top_of_atmos'/ !table 133
-!      DATA IFILV(493),AVBL(493),IQ(493),IS(493),AVBLGRB2(493)      &
-!     &                      /1,'SSMI TB - CH 5      ',177,008,     &
-!     &                       'SSMITBCH5 ON top_of_atmos'/ !table 133
-!      DATA IFILV(494),AVBL(494),IQ(494),IS(494),AVBLGRB2(494)      &
-!     &                      /1,'SSMI TB - CH 6      ',178,008,     &
-!     &                       'SSMITBCH6 ON top_of_atmos'/ !table 133
-!      DATA IFILV(495),AVBL(495),IQ(495),IS(495),AVBLGRB2(495)      &
-!     &                      /1,'SSMI TB - CH 7      ',179,008,     &
-!     &                       'SSMITBCH7 ON top_of_atmos'/ !table 133
-!!    SSMI/S F20
-!      DATA IFILV(496),AVBL(496),IQ(496),IS(496),AVBLGRB2(496)      &
-!     &                      /1,'SSMIS TB - CH 15    ',176,008,     &
-!     &                       'SSMISTBCH15 ON top_of_atmos'/ !table 133
-!      DATA IFILV(497),AVBL(497),IQ(497),IS(497),AVBLGRB2(497)      &
-!     &                      /1,'SSMIS TB - CH 16    ',177,008,     &
-!     &                       'SSMISTBCH16 ON top_of_atmos'/ !table 133
-!      DATA IFILV(498),AVBL(498),IQ(498),IS(498),AVBLGRB2(498)      &
-!     &                      /1,'SSMIS TB - CH 17    ',178,008,     &
-!     &                       'SSMISTBCH17 ON top_of_atmos'/ !table 133
-!      DATA IFILV(499),AVBL(499),IQ(499),IS(499),AVBLGRB2(499)      &
-!     &                      /1,'SSMIS TB - CH 18    ',179,008,     &
-!     &                       'SSMISTBCH18 ON top_of_atmos'/ !table 133
 
 !
 ! NAMB additions

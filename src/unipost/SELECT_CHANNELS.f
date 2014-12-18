@@ -77,8 +77,6 @@
       integer :: L(nchannels)
       integer :: igot
 
-!      print*,'in select_channels_l,nchannels=',nchannels
-
       if(nchannels>channelinfo%n_channels) then
          write(6,*) 'ERROR*** tried to use more channels than sensor has'
          write(6,*) '  ',nchannels,' > ',channelinfo%n_channels
@@ -92,11 +90,9 @@
             write(6,*) '  in SELECT_CHANNELS at index ',i
             stop 19
          endif
-!         print*,'L,channel',L(i),channels(i)
          if(L(i).eq.1)then
            k=k+1
            temp(k)=channelinfo%Channel_Index(channels(i))
-!           print*,'selected channel,',channels(i)
          endif
       enddo 
 
@@ -106,7 +102,7 @@
        return
       else
        channelinfo%n_channels=k
-       channelinfo%Channel_Index(1:nchannels)=temp(1:k)
+       channelinfo%Channel_Index(1:k)=temp(1:k)
       endif
 
       end subroutine SELECT_CHANNELS_L 

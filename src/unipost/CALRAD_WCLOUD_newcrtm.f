@@ -11,6 +11,7 @@ SUBROUTINE CALRAD_WCLOUD
   !   11-02-06 Jun WANG   - addgrib2 option 
   !   14-12-09 WM LEWIS ADDED:
   !            FUNCTION EFFR TO COMPUTE EFFECTIVE PARTICLE RADII 
+  !            CHANNEL SELECTION USING LVLS FROM WRF_CNTRL.PARM
   !
   ! USAGE:    CALL MDLFLD
   !   INPUT ARGUMENT LIST:
@@ -246,7 +247,8 @@ SUBROUTINE CALRAD_WCLOUD
        .or. iget(843) > 0 .or. iget(844) > 0 .or. iget(845) > 0  &
        .or. iget(846) > 0 .or. iget(847) > 0 .or. iget(848) > 0  &
        .or. iget(849) > 0 .or. iget(850) > 0 .or. iget(851) > 0  &
-       .or. iget(852) > 0 .or. iget(860) > 0 .or. iget(861) > 0  &
+       .or. iget(852) > 0 .or. iget(856) > 0 .or. iget(857) > 0  &
+       .or. iget(860) > 0 .or. iget(861) > 0  &
        .or. iget(862) > 0 .or. iget(863) > 0 .or. iget(864) > 0  &
        .or. iget(865) > 0 .or. iget(866) > 0 .or. iget(867) > 0  &
        .or. iget(868) > 0 .or. iget(869) > 0 .or. iget(870) > 0  &
@@ -299,22 +301,16 @@ SUBROUTINE CALRAD_WCLOUD
      if (error_status /= 0_i_kind)                                  &
          write(6,*)'ERROR*** crtm_init error_status=',error_status
 
-     ! Restrict channel list to those which are selected in LVLS
+     ! Restrict channel list to those which are selected for simulation 
+     ! in the LVLS filed of wrf_cntrl.parm (does not currently apply 
+     ! to all sensors / channels).
 
-     ! GOES-11
-     if(iget(460)>0)then
-     call select_channels_L(channelinfo(4),4,(/ 1,2,3,4 /),lvls(1:4,iget(460)),iget(460))
-     endif
-     ! GOES-12
-     if(iget(456)>0)then
-     call select_channels_L(channelinfo(3),4,(/ 1,2,3,4 /),lvls(1:4,iget(456)),iget(456))
-     endif
      ! GOES-13
      if(iget(868)>0)then
      call select_channels_L(channelinfo(2),4,(/ 1,2,3,4 /),lvls(1:4,iget(868)),iget(868))
      endif
      ! GOES-15
-     if(iget(872))then
+     if(iget(872)>0)then
      call select_channels_L(channelinfo(1),4,(/ 1,2,3,4 /),lvls(1:4,iget(872)),iget(872))
      endif
      ! SSMI, F13-F15 (19H,19V,37H,37V,85H,85V)
@@ -337,10 +333,10 @@ SUBROUTINE CALRAD_WCLOUD
      if(iget(832)>0)then
      call select_channels_L(channelinfo(12),7,(/ 9,12,13,15,16,17,18 /),lvls(1:7,iget(832)),iget(832))
      endif
-     if(iget(839))then
+     if(iget(839)>0)then
      call select_channels_L(channelinfo(13),7,(/ 9,12,13,15,16,17,18 /),lvls(1:7,iget(839)),iget(839))
      endif
-     if(iget(846))then
+     if(iget(846)>0)then
      call select_channels_L(channelinfo(14),7,(/ 9,12,13,15,16,17,18 /),lvls(1:7,iget(846)),iget(846))
      endif
      ! SEVIRI
@@ -364,7 +360,8 @@ SUBROUTINE CALRAD_WCLOUD
         obstype=obslist(isat) 
         isis=trim(sensorlist(isat))
 
-        sensor_avail: if((isis=='imgr_g12' .and. (iget(327) > 0 .or. iget(328) >0 &
+        sensor_avail: if( &
+             (isis=='imgr_g12' .and. (iget(327) > 0 .or. iget(328) > 0 &
              .or. iget(329) > 0 .or. iget(330) > 0 .or. iget(456) > 0   &
              .or. iget(457) > 0 .or. iget(458) > 0 .or. iget(459) > 0 )) .OR. &
              (isis=='imgr_g11' .and. (iget(446) > 0 .or. iget(447) > 0 &
@@ -374,19 +371,19 @@ SUBROUTINE CALRAD_WCLOUD
              .or. iget(485) > 0 .or. iget(486) > 0)) .OR. &
              (isis=='tmi_trmm' .and. (iget(488) > 0 .or. iget(489) > 0  &
              .or. iget(490) > 0 .or. iget(491) > 0)) .OR. &
-             (isis=='ssmi_f13' .and. (iget(800) > 0 )) .OR. &
-             (isis=='ssmi_f14' .and. (iget(806) > 0 )) .OR. &
-             (isis=='ssmi_f15' .and. (iget(812) > 0 )) .OR. &
-             (isis=='ssmis_f16' .and. (iget(818) > 0)) .OR. &
-             (isis=='ssmis_f17' .and. (iget(825) > 0)) .OR. &
-             (isis=='ssmis_f18' .and. (iget(832) > 0)) .OR. &
-             (isis=='ssmis_f19' .and. (iget(839) > 0)) .OR. &
-             (isis=='ssmis_f20' .and. (iget(846) > 0)) .OR. &
-             (isis=='imgr_mt2' .and. (iget(860)>0)) .OR. &
-             (isis=='imgr_mt1r' .and. (iget(864)>0)) .OR. &
-             (isis=='imgr_g13' .and. (iget(868)>0)) .OR. &
-             (isis=='imgr_g15' .and. (iget(872)>0)) .OR. &
-             (isis=='seviri_m10' .and. (iget(876)>0)) )then
+             (isis=='ssmi_f13' .and. iget(800) > 0 ) .OR. &
+             (isis=='ssmi_f14' .and. iget(806) > 0 ) .OR. &
+             (isis=='ssmi_f15' .and. iget(812) > 0 ) .OR. &
+             (isis=='ssmis_f16' .and. iget(818) > 0) .OR. &
+             (isis=='ssmis_f17' .and. iget(825) > 0) .OR. &
+             (isis=='ssmis_f18' .and. iget(832) > 0) .OR. &
+             (isis=='ssmis_f19' .and. iget(839) > 0) .OR. &
+             (isis=='ssmis_f20' .and. iget(846) > 0) .OR. &
+             (isis=='imgr_mt2' .and. iget(860)>0) .OR. &
+             (isis=='imgr_mt1r' .and. iget(864)>0) .OR. &
+             (isis=='imgr_g13' .and. iget(868)>0) .OR. &
+             (isis=='imgr_g15' .and. iget(872)>0) .OR. &
+             (isis=='seviri_m10' .and. iget(876)>0) )then
            print*,'obstype, isis= ',obstype,isis
            !       isis='amsua_n15'
 
@@ -517,17 +514,16 @@ SUBROUTINE CALRAD_WCLOUD
            surface(1)%sensordata%WMO_Satellite_id = channelinfo(sensorindex)%WMO_Satellite_id
            surface(1)%sensordata%sensor_channel = channelinfo(sensorindex)%sensor_channel
 
-           ! Loop through all grid points
-           !
-           ! First compute nadir simulated radiance because it is what is being computed operationally
-           nadir: if (iget(327) > 0 .or. iget(328) > 0 .or. iget(329) > 0       &
-                .or. iget(330) > 0 .or. iget(446) > 0 .or. iget(447) > 0  & 
-                .or. iget(448) > 0 .or. iget(449) > 0 .or. iget(483) > 0  & 
-                .or. iget(484) > 0 .or. iget(485) > 0 .or. iget(486) > 0  &
-                .or. iget(488) > 0 .or. iget(489) > 0 .or. iget(490) > 0  &
-                .or. iget(491) > 0 .or. iget(492) > 0 .or. iget(493) > 0  &
-                .or. iget(494) > 0 .or. iget(495) > 0 .or. iget(496) > 0  &
-                .or. iget(497) > 0 .or. iget(498) > 0 .or. iget(499) > 0) then
+           ! run crtm for nadir instruments / channels
+           
+           nadir: if ( (isis=='imgr_g12' .and. (iget(327)>0 .or. &
+                       iget(328)>0 .or. iget(329)>0 .or. iget(330)>0)) .or. &
+                       (isis=='imgr_g11' .and. (iget(446)>0 .or. &
+                       iget(447)>0 .or. iget(448)>0 .or. iget(449)>0)) .or. &
+                       (isis=='amsre_aqua' .and. (iget(483) > 0 .or. iget(484) > 0  &
+                       .or. iget(485) > 0 .or. iget(486) > 0)) .OR. &
+                       (isis=='tmi_trmm' .and. (iget(488) > 0 .or. iget(489) > 0  &
+                       .or. iget(490) > 0 .or. iget(491) > 0)) )then
 
               do j=jsta,jend
                  do i=1,im
@@ -918,6 +914,7 @@ SUBROUTINE CALRAD_WCLOUD
                        enddo
                        id(1:25) = 0
                        id(02) = 133
+                       id(8) = 175 + ixchan 
                        if (grib=="grib1") then
                           call gribit(igot,lvls(1,igot), grid1,im,jm)
                        else
@@ -928,7 +925,7 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               end if  ! end of outputting amsre
-      
+
               if (isis=='tmi_trmm')then  ! writing trmm to grib (37 & 85.5 GHz)
                  do ixchan=1,4
                     ichan=5+ixchan
@@ -941,6 +938,7 @@ SUBROUTINE CALRAD_WCLOUD
                        enddo
                        id(1:25) = 0
                        id(02) = 133
+                       id(8) = 175 + ixchan 
                        if (grib=="grib1") then
                           call gribit(igot,lvls(1,igot), grid1,im,jm)
                        else
@@ -951,43 +949,76 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               end if  ! end of outputting trmm
-      
+
+              if (isis=='imgr_g11')then  ! writing goes 11 to grib
+                 do ixchan=1,4
+                    ichan=ixchan
+                    igot=445+ixchan
+                    if(igot>0) then
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,ichan)
+                          enddo
+                       enddo
+                       id(1:25) = 0
+                       id(02) = 130
+                       id(8) = 240 + ixchan
+                       if (grib=="grib1") then
+                          call gribit(igot,lvls(1,igot), grid1,im,jm)
+                       else
+                          cfld=cfld+1
+                          fld_info(cfld)%ifld=IAVBLFLD(igot)
+                          datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
+                       endif
+                    endif ! IGOT
+                 enddo
+              end if  ! end of outputting goes 11
+
+              if (isis=='imgr_g12')then  ! writing goes 12 to grib
+                 do ixchan=1,4   ! write brightness temperatures
+                    ichan=ixchan
+                    igot=iget(326+ixchan)
+                    if(igot>0) then
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,ichan)
+                           enddo
+                        enddo
+                        id(1:25) = 0
+                        id(02) = 129
+                        id(8) = 212 + ixchan
+                        if (grib=="grib1") then
+                           call gribit(igot,lvls(1,igot), grid1,im,jm)
+                        else
+                           cfld=cfld+1
+                           fld_info(cfld)%ifld=IAVBLFLD(igot)
+                           datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
+                        endif
+                    endif
+                 enddo
+               endif ! end of outputting goes 12
+
            end if nadir ! end if for computing nadir simulated radiance    
 
-           ! rerun crtm again for users who wish to factor in satellite zenith angle      
-           nonnadir: if (iget(456) > 0 .or. iget(457) > 0 .or. iget(458) > 0  &
-                   .or. iget(459) > 0 .or. iget(460) > 0 .or. iget(461) > 0         &
-                   .or. iget(462) > 0 .or. iget(463) > 0 .or. iget(800) > 0         &
-                   .or. iget(801) > 0 .or. iget(802) > 0 .or. iget(803) > 0         &
-                   .or. iget(804) > 0 &
-                   .or. iget(805) > 0 .or. iget(806) > 0 .or. iget(807) > 0    &
-                   .or. iget(808) > 0 .or. iget(809) > 0 .or. iget(810) > 0    &
-                   .or. iget(811) > 0 .or. iget(812) > 0 .or. iget(813) > 0    &
-                   .or. iget(814) > 0 .or. iget(815) > 0 .or. iget(816) > 0    &
-                   .or. iget(817) > 0 &
-                   .or. iget(818) > 0 .or. iget(819) > 0 .or. iget(820) > 0    &
-                   .or. iget(821) > 0 .or. iget(822) > 0 .or. iget(823) > 0    &
-                   .or. iget(824) > 0 &
-                   .or. iget(825) > 0 .or. iget(826) > 0 .or. iget(827) > 0    &
-                   .or. iget(828) > 0 .or. iget(829) > 0 .or. iget(830) > 0    &
-                   .or. iget(831) > 0 &
-                   .or. iget(832) > 0 .or. iget(833) > 0 .or. iget(834) > 0    &
-                   .or. iget(835) > 0 .or. iget(836) > 0 .or. iget(837) > 0    &
-                   .or. iget(838) > 0 &
-                   .or. iget(839) > 0 .or. iget(840) > 0 .or. iget(841) > 0    &
-                   .or. iget(842) > 0 .or. iget(843) > 0 .or. iget(844) > 0    &
-                   .or. iget(845) > 0 &
-                   .or. iget(846) > 0 .or. iget(847) > 0 .or. iget(848) > 0    &
-                   .or. iget(849) > 0 .or. iget(850) > 0 .or. iget(851) > 0    &
-                   .or. iget(852) > 0 &
-                   .or. iget(860) > 0 .or. iget(861) > 0 .or. iget(862) > 0    &
-                   .or. iget(863) > 0 .or. iget(864) > 0 .or. iget(865) > 0    &
-                   .or. iget(866) > 0 .or. iget(867) > 0 &
-                   .or. iget(868) > 0 .or. iget(869) > 0 .or. iget(870) > 0    &
-                   .or. iget(871) > 0 .or. iget(872) > 0 .or. iget(873) > 0    &
-                   .or. iget(874) > 0 .or. iget(875) > 0 .or. iget(876) > 0    &
-                   .or. iget(877) > 0 .or. iget(878) > 0 .or. iget(879) > 0    &
-                   .or. iget(880) > 0 .or. iget(881) > 0 .or. iget(882) > 0 ) then
+           ! run crtm for non-nadir instruments / channels 
+
+           nonnadir: if((isis=='ssmi_f13' .and. iget(800) > 0 ) .OR. &
+                        (isis=='ssmi_f14' .and. iget(806) > 0 ) .OR. &
+                        (isis=='ssmi_f15' .and. iget(812) > 0 ) .OR. &
+                        (isis=='ssmis_f16' .and. iget(818) > 0) .OR. &
+                        (isis=='ssmis_f17' .and. iget(825) > 0) .OR. &
+                        (isis=='ssmis_f18' .and. iget(832) > 0) .OR. &
+                        (isis=='ssmis_f19' .and. iget(839) > 0) .OR. &
+                        (isis=='ssmis_f20' .and. iget(846) > 0) .OR. &
+                        (isis=='imgr_mt2' .and. iget(860)>0) .OR. &
+                        (isis=='imgr_mt1r' .and. iget(864)>0) .OR. &
+                        (isis=='imgr_g13' .and. iget(868)>0) .OR. &
+                        (isis=='imgr_g15' .and. iget(872)>0) .OR. &
+                        (isis=='seviri_m10' .and. iget(876)>0) .OR. &
+                        (isis=='imgr_g12' .and. (iget(456)>0 .or. &
+                        iget(457)>0 .or. iget(458)>0 .or. iget(459)>0)) .or. &
+                        (isis=='imgr_g11' .and. (iget(460)>0 .or. &
+                        iget(461)>0 .or. iget(462)>0 .or. iget(463)>0)))then
 
               do j=jsta,jend
                  do i=1,im
@@ -1635,51 +1666,53 @@ SUBROUTINE CALRAD_WCLOUD
                  enddo
               endif
 
-              if (isis=='imgr_g12')then  ! writing goes 12 to grib
-                 nc=0
-                 do ixchan=1,4
-                   igot=iget(456)
-                   ichan=ixchan
-                   if(lvls(ixchan,igot).eq.1)then
-                    nc=nc+1
-                    do j=jsta,jend
-                     do i=1,im
-                      grid1(i,j)=tb(i,j,nc)
-                     enddo
-                    enddo
-                    id(1:25) = 0
-                    id(02) = 129
-                    id(8) = 212 + ixchan
-!                    print*,'id8=',id(8)
-                    if (grib=="grib1") then
-                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
-                    endif
-                 endif
-                 enddo
-              end if  ! end of outputting goes 12 
-
               if (isis=='imgr_g11')then  ! writing goes 11 to grib
-                 nc=0
                  do ixchan=1,4
-                   igot=iget(460)
-                   ichan=ixchan
-                   if(lvls(ixchan,igot).eq.1)then
-                    nc=nc+1
-                    do j=jsta,jend
-                     do i=1,im
-                      grid1(i,j)=tb(i,j,nc)
-                     enddo
-                    enddo
-                    id(1:25) = 0
-                    id(02) = 130
-                    id(8) = 240 + ixchan
-!                    print*,'id8=',id(8)
-                    if (grib=="grib1") then
-                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    ichan=ixchan
+                    igot=iget(459+ixchan)
+                    if(igot>0) then
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,ichan)
+                          enddo
+                       enddo
+                       id(1:25) = 0
+                       id(02) = 130
+                       id(8) = 240 + ixchan 
+                       if(grib=="grib1") then
+                          call gribit(igot,lvls(1,igot), grid1,im,jm)
+                       else if(grib=="grib2" )then
+                          cfld=cfld+1
+                          fld_info(cfld)%ifld=IAVBLFLD(igot)
+                          datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
+                       endif
                     endif
-                 endif
+                enddo
+              endif ! end of outputting goes 11
+
+              if (isis=='imgr_g12')then  ! writing goes 12 to grib
+                 do ixchan=1,4
+                    ichan=ixchan
+                    igot=iget(455+ixchan)
+                    if(igot>0) then
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,ichan)
+                          enddo
+                       enddo
+                       id(1:25) = 0
+                       id(02) = 129
+                       id(8) = 212 + ixchan
+                       if(grib=="grib1") then
+                          call gribit(igot,lvls(1,igot), grid1,im,jm)
+                       else if(grib=="grib2" )then
+                          cfld=cfld+1
+                          fld_info(cfld)%ifld=IAVBLFLD(igot)
+                          datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
+                       endif
+                    endif
                  enddo
-              end if  ! end of outputting goes 11
+              end if  ! end of outputting goes 12
 
               if (isis=='seviri_m10')then  ! writing msg/severi 10
                  nc=0
