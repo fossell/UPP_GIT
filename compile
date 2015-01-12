@@ -32,7 +32,7 @@ else
    echo " "
    echo " Usage:"
    echo " compile"
-   echo "   make will be called from this directory
+   echo "   make will be called from this directory"
    echo " "
    echo "*****"
    exit(1)
