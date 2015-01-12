@@ -765,42 +765,53 @@ SUBROUTINE CALRAD_WCLOUD
                                    print*,'bad atmosphere cloud ice'
                              end if
                           else if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
-	                     atmosphere(1)%cloud(1)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'C')
-	                     atmosphere(1)%cloud(1)%water_content(k) = max(0.,qqw(i,j,k)*dpovg)
-	                     atmosphere(1)%cloud(2)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'I')
-	                     atmosphere(1)%cloud(2)%water_content(k) = max(0.,qqi(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(3)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'R')
-	                     atmosphere(1)%cloud(3)%water_content(k) = max(0.,qqr(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(4)%water_content(k) = 0.
-                             atmosphere(1)%cloud(5)%water_content(k) = 0.
-                             atmosphere(1)%cloud(6)%water_content(k) = 0.
-	                     if(F_RimeF(i,j,k)<=5.0)then
-                                atmosphere(1)%cloud(4)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'S')
-	                        atmosphere(1)%cloud(4)%water_content(k) = max(0.,qqs(i,j,k)*dpovg)
-	                     else if(F_RimeF(i,j,k)<=20.0)then 
-	                        atmosphere(1)%cloud(5)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'G')
-	                        atmosphere(1)%cloud(5)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
-	                     else
-	                        atmosphere(1)%cloud(6)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'H')
-	                        atmosphere(1)%cloud(6)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
-	                     end if  
+                             atmosphere(1)%cloud(1)%effective_radius(k) = 10.
+                             atmosphere(1)%cloud(1)%water_content(k) = max(0.,qqw(i,j,k)*dpovg)
+                             atmosphere(1)%cloud(2)%effective_radius(k) = 25.
+                             atmosphere(1)%cloud(2)%water_content(k) = max(0.,qqi(i,j,k)*dpovg)
+                             RHOX=1000.
+                             RHO=pmid(i,j,k)/(RD*T(I,J,K)*(1.+D608*Q(I,J,K)))
+                             atmosphere(1)%cloud(3)%effective_radius(k) = 0.
+                             if(NRAIN(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(3)%effective_radius(k) =   &
+                                   1.0E6*1.5*(RHO*qqr(i,j,k)/(PI*RHOX*NRAIN(I,J,K)))**(1./3.)
+                             atmosphere(1)%cloud(3)%water_content(k) = max(0.,qqr(i,j,k)*dpovg)
+                             if(F_RimeF(i,j,k)<=5.0)then
+                                RHOX=100
+                                if(NLICE(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(4)%effective_radius(k) =   &
+                                   1.0E6*1.5*(RHO*qqs(i,j,k)/(PI*RHOX*NLICE(I,J,K)))**(1./3.) !convert to microns
+                                atmosphere(1)%cloud(4)%water_content(k) = max(0.,qqs(i,j,k)*dpovg)
+                                atmosphere(1)%cloud(5)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(5)%water_content(k) =0.
+                                atmosphere(1)%cloud(6)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(6)%water_content(k) =0.
+                             else if(F_RimeF(i,j,k)<=20.0)then
+                                atmosphere(1)%cloud(4)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(4)%water_content(k) =0.
+                                RHOX=400.
+                                if(NLICE(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(5)%effective_radius(k) =   &
+                                         1.0E6*1.5*(RHO*qqs(i,j,k)/(PI*RHOX*NLICE(I,J,K)))**(1./3.)
+                                atmosphere(1)%cloud(5)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
+                                atmosphere(1)%cloud(6)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(6)%water_content(k) =0.
+                             else
+                                atmosphere(1)%cloud(4)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(4)%water_content(k) =0.
+                                atmosphere(1)%cloud(5)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(5)%water_content(k) =0.
+                                RHOX=900.
+                                if(NLICE(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(6)%effective_radius(k) =  &
+                                       1.0E6*1.5*(RHO*qqs(i,j,k)/(PI*RHOX*NLICE(I,J,K)))**(1./3.)
+                                   atmosphere(1)%cloud(6)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
+                             end if
                              if(debugprint .and. i==im/2 .and. j==jsta)   &
                                 print*,'sample precip ice radius= ',i,j,k, F_RimeF(i,j,k), &
-	                        atmosphere(1)%cloud(4)%effective_radius(k), atmosphere(1)%cloud(4)%water_content(k), &
-	                        atmosphere(1)%cloud(5)%effective_radius(k), atmosphere(1)%cloud(5)%water_content(k), &
-	                        atmosphere(1)%cloud(6)%effective_radius(k), atmosphere(1)%cloud(6)%water_content(k)
+                                atmosphere(1)%cloud(4)%effective_radius(k), atmosphere(1)%cloud(4)%water_content(k), &
+                                atmosphere(1)%cloud(5)%effective_radius(k), atmosphere(1)%cloud(5)%water_content(k), &
+                                atmosphere(1)%cloud(6)%effective_radius(k), atmosphere(1)%cloud(6)%water_content(k)
 	
                           else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2)then
                              atmosphere(1)%cloud(1)%water_content(k)=max(0.,qqw(i,j,k)*dpovg)
@@ -1306,37 +1317,54 @@ SUBROUTINE CALRAD_WCLOUD
                                    print*,'bad atmosphere cloud ice'
                              end if
                           else if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
-                             atmosphere(1)%cloud(1)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'C')
+                             atmosphere(1)%cloud(1)%effective_radius(k) = 10.
                              atmosphere(1)%cloud(1)%water_content(k) = max(0.,qqw(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(2)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'I')
+                             atmosphere(1)%cloud(2)%effective_radius(k) = 25.
                              atmosphere(1)%cloud(2)%water_content(k) = max(0.,qqi(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(3)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'R')
+                             RHOX=1000.
+                             RHO=pmid(i,j,k)/(RD*T(I,J,K)*(1.+D608*Q(I,J,K)))
+                             atmosphere(1)%cloud(3)%effective_radius(k) = 0.
+                             if(NRAIN(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(3)%effective_radius(k) =   &
+                                   1.0E6*1.5*(RHO*qqr(i,j,k)/(PI*RHOX*NRAIN(I,J,K)))**(1./3.)
                              atmosphere(1)%cloud(3)%water_content(k) = max(0.,qqr(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(4)%water_content(k) = 0.
-                             atmosphere(1)%cloud(5)%water_content(k) = 0.
-                             atmosphere(1)%cloud(6)%water_content(k) = 0.
                              if(F_RimeF(i,j,k)<=5.0)then
-                                atmosphere(1)%cloud(4)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'S')
+                                RHOX=100
+                                if(NLICE(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(4)%effective_radius(k) =   &
+                                   1.0E6*1.5*(RHO*qqs(i,j,k)/(PI*RHOX*NLICE(I,J,K)))**(1./3.) !convert to microns
                                 atmosphere(1)%cloud(4)%water_content(k) = max(0.,qqs(i,j,k)*dpovg)
+                                atmosphere(1)%cloud(5)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(5)%water_content(k) =0.
+                                atmosphere(1)%cloud(6)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(6)%water_content(k) =0.
                              else if(F_RimeF(i,j,k)<=20.0)then
-                                atmosphere(1)%cloud(5)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'G')
+                                atmosphere(1)%cloud(4)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(4)%water_content(k) =0.
+                                RHOX=400.
+                                if(NLICE(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(5)%effective_radius(k) =   &
+                                         1.0E6*1.5*(RHO*qqs(i,j,k)/(PI*RHOX*NLICE(I,J,K)))**(1./3.)
                                 atmosphere(1)%cloud(5)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
+                                atmosphere(1)%cloud(6)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(6)%water_content(k) =0.
                              else
-                                atmosphere(1)%cloud(6)%effective_radius(k) = effr(pmid(i,j,k),t(i,j,k), &
-                             q(i,j,k),qqw(i,j,k),qqi(i,j,k),qqr(i,j,k),f_rimef(i,j,k),nlice(i,j,k), &
-                             nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'H')
-                                atmosphere(1)%cloud(6)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
-                             endif
+                                atmosphere(1)%cloud(4)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(4)%water_content(k) =0.
+                                atmosphere(1)%cloud(5)%effective_radius(k) = 0.
+                                atmosphere(1)%cloud(5)%water_content(k) =0.
+                                RHOX=900.
+                                if(NLICE(I,J,K)>0.) &
+                                   atmosphere(1)%cloud(6)%effective_radius(k) =  &
+                                       1.0E6*1.5*(RHO*qqs(i,j,k)/(PI*RHOX*NLICE(I,J,K)))**(1./3.)
+                                   atmosphere(1)%cloud(6)%water_content(k) =max(0.,qqs(i,j,k)*dpovg)
+                             end if
+                             if(debugprint .and. i==im/2 .and. j==jsta)   &
+                                print*,'sample precip ice radius= ',i,j,k, F_RimeF(i,j,k), &
+                                atmosphere(1)%cloud(4)%effective_radius(k), atmosphere(1)%cloud(4)%water_content(k), &
+                                atmosphere(1)%cloud(5)%effective_radius(k), atmosphere(1)%cloud(5)%water_content(k), &
+                                atmosphere(1)%cloud(6)%effective_radius(k), atmosphere(1)%cloud(6)%water_content(k)
+
                           else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2)then
                              atmosphere(1)%cloud(1)%water_content(k)=max(0.,qqw(i,j,k)*dpovg)
                              atmosphere(1)%cloud(2)%water_content(k)=max(0.,qqi(i,j,k)*dpovg)
@@ -2293,6 +2321,7 @@ REAL FUNCTION EFFR(pmid,t,q,qqw,qqi,qqr,f_rimef, nlice, nrain, &
       if( qqr > min_qr) then
       rhox=1000.
       effr=2.*1.0E6*1.5*(rho*qqr/(pi*rhox*nrain))**(1./3.)
+
 !      old UPP    
 !      effr=2.*200.
 !      effr=min(200.,effr)
