@@ -1468,11 +1468,11 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 175 + ixchan
-!                  print*,'id8=',id(8)
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11300+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1491,11 +1491,12 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 181 + ixchan
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
 !                  print*,'id8=',id(8)
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11400+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1514,11 +1515,12 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 187 + ixchan
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
 !                  print*,'id8=',id(8)
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11500+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1538,11 +1540,11 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 193 + ixchan
-!                  print*,'id8=',id(8)
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11600+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1561,11 +1563,12 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 200 + ixchan
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
 !                  print*,'id8=',id(8)
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11700+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1584,11 +1587,12 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 207 + ixchan
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
 !                  print*,'id8=',id(8)
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11800+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1607,11 +1611,12 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 214 + ixchan
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
 !                  print*,'id8=',id(8)
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,11900+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1630,11 +1635,12 @@ SUBROUTINE CALRAD_WCLOUD
                     enddo
                   enddo
                   id(1:25) = 0
-                  id(02) = 133
-                  id(8) = 221 + ixchan
+                  id(02) = 2
+                  id(08) = 118
+                  id(09) = 109
 !                  print*,'id8=',id(8)
                   if (grib=="grib1") then
-                    call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                    call gribit(igot,12000+ixchan, grid1,im,jm)
                   endif
                  endif
               enddo
@@ -1653,11 +1659,10 @@ SUBROUTINE CALRAD_WCLOUD
                        enddo
                        id(1:25) = 0
                        id(02) = 2
-                       id(09) = 112
-                       id(10) = 2
-                       id(11) = ichan
+                       id(08) = 118
+                       id(09) = 109
                        if(grib=="grib1") then
-                          call gribit(igot,lvls(ichan,igot), grid1,im,jm)
+                          call gribit(igot,20000+ichan, grid1,im,jm)
                        else if(grib=="grib2" )then
                           cfld=cfld+1
                           fld_info(cfld)%ifld=IAVBLFLD(igot)
@@ -1680,11 +1685,10 @@ SUBROUTINE CALRAD_WCLOUD
                        enddo
                        id(1:25) = 0
                        id(02) = 2
-                       id(09) = 112
-                       id(10) = 2
-                       id(11) = ichan
+                       id(08) = 118
+                       id(09) = 109
                        if(grib=="grib1") then
-                          call gribit(igot,lvls(ichan,igot), grid1,im,jm)
+                          call gribit(igot,10000+ichan, grid1,im,jm)
                        else if(grib=="grib2" )then
                           cfld=cfld+1
                           fld_info(cfld)%ifld=IAVBLFLD(igot)
@@ -1755,11 +1759,12 @@ SUBROUTINE CALRAD_WCLOUD
                      enddo
                     enddo
                     id(1:25) = 0
-                    id(02) = 133
-                    id(8) = 229 + ixchan
+                    id(02) = 2
+                    id(08) = 118
+                    id(09) = 109
 !                    print*,'id8=',id(8)
                     if (grib=="grib1") then
-                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                     call gribit(igot,1000+ichan, grid1,im,jm)
                     endif
                  endif
                  enddo
@@ -1778,11 +1783,12 @@ SUBROUTINE CALRAD_WCLOUD
                      enddo
                     enddo
                     id(1:25) = 0
-                    id(02) = 133
-                    id(8) = 236 + ixchan
+                    id(02) = 2
+                    id(08) = 118
+                    id(09) = 109
 !                    print*,'id8=',id(8)
                     if (grib=="grib1") then
-                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                     call gribit(igot,1300+ixchan, grid1,im,jm)
                     endif
                  endif
                  enddo
@@ -1801,11 +1807,12 @@ SUBROUTINE CALRAD_WCLOUD
                      enddo
                     enddo
                     id(1:25) = 0
-                    id(02) = 133
-                    id(8) = 240 + ixchan
+                    id(02) = 2
+                    id(08) = 118
+                    id(09) = 109
 !                    print*,'id8=',id(8)
                     if (grib=="grib1") then
-                     call gribit(igot,lvls(ixchan,igot), grid1,im,jm)
+                     call gribit(igot,1500+ixchan, grid1,im,jm)
                     endif
                  endif
                  enddo

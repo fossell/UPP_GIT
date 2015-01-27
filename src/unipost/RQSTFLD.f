@@ -2027,42 +2027,42 @@
 !    WITH LVLS-DRIVEN CONTROL OF CHANNEL SELECTION
 !    SSMI_F13 (L(1)-L(6) -> ID8: 176-181 -> 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(800),AVBL(800),IQ(800),IS(800),AVBLGRB2(800)      &
-     &                      /1,'F13 SSMI NON-NADIR  ',176,008,     &
+     &                      /1,'F13 SSMI NON-NADIR  ',118,109,     &
      &                       'SSMI TB top_of_atmos  '/ !table 133
 
 !    SSMI_F14 (L(1)-L(6) -> ID8: 182-187 -> 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(806),AVBL(806),IQ(806),IS(806),AVBLGRB2(806)      &
-     &                      /1,'F14 SSMI NON-NADIR  ',182,008,     &
+     &                      /1,'F14 SSMI NON-NADIR  ',118,109,     &
      &                       'SSMI TB top_of_atmos  '/ !table 133
 
 !    SSMI_F15 (L(1)-L(6) -> ID8: 188-193 -> 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(812),AVBL(812),IQ(812),IS(812),AVBLGRB2(812)      &
-     &                      /1,'F15 SSMI NON-NADIR  ',188,008,     &
+     &                      /1,'F15 SSMI NON-NADIR  ',118,109,     &
      &                       'SSMI TB top_of_atmos  '/ !table 133
 
 !    SSMIS_F16 (L(1)-L(7) -> ID8: 194-200 -> 183H, 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(818),AVBL(818),IQ(818),IS(818),AVBLGRB2(818)      &
-     &                      /1,'F16 SSMIS NON-NADIR ',194,008,     &
+     &                      /1,'F16 SSMIS NON-NADIR ',118,109,     &
      &                       'SSMIS TB top_of_atmos '/ !table 133
 
 !    SSMIS_F17 (L(1)-L(7) -> ID8: 201-207 -> 183H, 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(825),AVBL(825),IQ(825),IS(825),AVBLGRB2(825)      &
-     &                      /1,'F17 SSMIS NON-NADIR ',201,008,     &
+     &                      /1,'F17 SSMIS NON-NADIR ',118,109,     &
      &                       'SSMIS TB top_of_atmos '/ !table 133
 
 !    SSMIS_F18 (L(1)-L(7) -> ID8: 208-214 -> 183H, 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(832),AVBL(832),IQ(832),IS(832),AVBLGRB2(832)      &
-     &                      /1,'F18 SSMIS NON-NADIR ',208,008,     &
+     &                      /1,'F18 SSMIS NON-NADIR ',118,109,     &
      &                       'SSMIS TB top_of_atmos '/ !table 133
 
 !    SSMIS_F19 (L(1)-L(7) -> ID8: 215-221 -> 183H, 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(839),AVBL(839),IQ(839),IS(839),AVBLGRB2(839)      &
-     &                      /1,'F19 SSMIS NON-NADIR ',215,008,     &
+     &                      /1,'F19 SSMIS NON-NADIR ',118,109,     &
      &                       'SSMIS TB top_of_atmos '/ !table 133
 
 !    SSMIS_F20 (L(1)-L(7) -> ID8: 222-228 -> 183H, 19H, 19V, 37H, 37V, 85H, 85V)
       DATA IFILV(846),AVBL(846),IQ(846),IS(846),AVBLGRB2(846)      &
-     &                      /1,'F20 SSMIS NON-NADIR ',222,008,     &
+     &                      /1,'F20 SSMIS NON-NADIR ',118,109,     &
      &                       'SSMIS TB top_of_atmos '/ !table 133
 
 ! Apparent Temperature, 
@@ -2077,30 +2077,30 @@
 !     LVLS-DRIVEN CHANNEL SELECTION (L(1)-L(4)> CH1-CH4)
 !     HWRF satellite additions: MTSAT-2 imager:
       DATA IFILV(860),AVBL(860),IQ(860),IS(860),AVBLGRB2(860)  &
-     &                      /1,'MTSAT2 NON-NADIR    ',118,008, & !table 130
+     &                      /1,'MTSAT2 NON-NADIR    ',118,109, & !table 130
      &                       'MTSAT2 CH1 NON NAD top_of_atmos'/
 
 !     LVLS-DRIVEN CHANNEL SELECTION (L(1)-L(4)> CH1-CH4)
 !     HWRF satellite additions: MTSAT-1r imager (MTSAT-2 backup satellite):
       DATA IFILV(864),AVBL(864),IQ(864),IS(864),AVBLGRB2(864)  &
-     &                      /1,'MTSAT1R NON-NADIR   ',118,008, & !table 130
+     &                      /1,'MTSAT1R NON-NADIR   ',118,109, & !table 130
      &                       'MTSAT1RCH1 NON NAD top_of_atmos'/
 
 !     2014-12-09 WM LEWIS ADDED GOES-13, GOES-15, MSG-10
 !     GOES-13 imager (L(1)-L(4) -> ID8: 237-240 -> CH2, CH3, CH4, CH5)
       DATA IFILV(868),AVBL(868),IQ(868),IS(868),AVBLGRB2(868)      &
-     &                      /1,'GOES-13 NON-NADIR   ',237,008,     &
+     &                      /1,'GOES-13 NON-NADIR   ',118,109,     &
      &                       'GOES-13 IMGR TB TOA   '/ !Table 130
 
 !    GOES-15 imager (L(1)-L(4) -> ID8: 241-244 -> CH2, CH3, CH4, CH5)
       DATA IFILV(872),AVBL(872),IQ(872),IS(872),AVBLGRB2(872)      &
-     &                      /1,'GOES-15 NON-NADIR   ',241,008,     &
+     &                      /1,'GOES-15 NON-NADIR   ',118,109,     &
      &                       'GOES-15 IMGR TB TOA   '/ !Table 130
 
 !    MSG/SEVIRI imager (L(1)-L(7) -> ID8: 230-236 -> 
 !    CH5, CH6, CH7, CH8, CH9, CH10, CH11)
       DATA IFILV(876),AVBL(876),IQ(876),IS(876),AVBLGRB2(876)      &
-     &                      /1,'SEVIRI NON-NADIR    ',230,008,     &
+     &                      /1,'SEVIRI NON-NADIR    ',118,109,     &
      &                       'MSG/SEVIRI TB TOA     '/ !Table 130
 
 
