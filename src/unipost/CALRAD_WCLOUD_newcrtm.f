@@ -97,7 +97,7 @@ SUBROUTINE CALRAD_WCLOUD
   !      integer,parameter::  n_clouds = 4 
   integer,parameter::  n_aerosols = 0
   ! Add your sensors here
-  integer(i_kind),parameter:: n_sensors=17
+  integer(i_kind),parameter:: n_sensors=18
   character(len=20),parameter,dimension(1:n_sensors):: sensorlist= &
       (/'imgr_g15            ', &
         'imgr_g13            ', &
@@ -115,25 +115,27 @@ SUBROUTINE CALRAD_WCLOUD
         'ssmis_f20           ', &
         'seviri_m10          ', &
         'imgr_mt2            ', &
-        'imgr_mt1r           '/)
-  character(len=10),parameter,dimension(1:n_sensors):: obslist=  &
-      (/'goes_img  ', &
-        'goes_img  ', &
-        'goes_img  ', &
-        'goes_img  ', &
-        'amsre     ', &
-        'tmi       ', &
-        'ssmi      ', &
-        'ssmi      ', &
-        'ssmi      ', &
-        'ssmis     ', &
-        'ssmis     ', &
-        'ssmis     ', &
-        'ssmis     ', &
-        'ssmis     ', &
-        'seviri    ', &
-        'imgr_mt2  ', &
-        'imgr_mt1r ' /)
+        'imgr_mt1r           ', &
+        'imgr_insat3d        '/)
+  character(len=12),parameter,dimension(1:n_sensors):: obslist=  &
+      (/'goes_img    ', &
+        'goes_img    ', &
+        'goes_img    ', &
+        'goes_img    ', &
+        'amsre       ', &
+        'tmi         ', &
+        'ssmi        ', &
+        'ssmi        ', &
+        'ssmi        ', &
+        'ssmis       ', &
+        'ssmis       ', &
+        'ssmis       ', &
+        'ssmis       ', &
+        'ssmis       ', &
+        'seviri      ', &
+        'imgr_mt2    ', &
+        'imgr_mt1r   ', &
+        'imgr_insat3d'/)
 !
   integer(i_kind) sensorindex
   integer(i_kind) lunin,nobs,nchanl,nreal
@@ -163,11 +165,11 @@ SUBROUTINE CALRAD_WCLOUD
   real,parameter:: constoz = 604229.0_r_kind 
   real sublat,sublon
   real RHO,RHOX
-  character(10)::obstype
+  character(12)::obstype
   character(20)::isis
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb  &
-            ,goes_img,seviri, mhs
+            ,goes_img,seviri, mhs,insat3d
   logical avhrr,avhrr_navy,lextra,ssu
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,change
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
@@ -351,6 +353,10 @@ SUBROUTINE CALRAD_WCLOUD
      if(iget(864)>0)then
      call select_channels_L(channelinfo(17),4,(/ 1,2,3,4 /),lvls(1:4,iget(864)),iget(864))
      endif
+     ! INSAT 3D (Kalpana)
+     if(iget(864)>0)then
+     call select_channels_L(channelinfo(18),4,(/ 1,2,3,4 /),lvls(1:4,iget(865)),iget(865))
+     endif
 
      ! Loop over data types to process    
      sensordo: do isat=1,n_sensors
@@ -381,6 +387,7 @@ SUBROUTINE CALRAD_WCLOUD
              (isis=='ssmis_f20' .and. iget(846) > 0) .OR. &
              (isis=='imgr_mt2' .and. iget(860)>0) .OR. &
              (isis=='imgr_mt1r' .and. iget(864)>0) .OR. &
+             (isis=='imgr_insat3d' .and. iget(865)>0) .OR. &
              (isis=='imgr_g13' .and. iget(868)>0) .OR. &
              (isis=='imgr_g15' .and. iget(872)>0) .OR. &
              (isis=='seviri_m10' .and. iget(876)>0) )then
@@ -405,6 +412,7 @@ SUBROUTINE CALRAD_WCLOUD
            hsb        = obstype == 'hsb'
            goes_img   = obstype == 'goes_img'
            seviri     = obstype == 'seviri'
+           insat3d    = obstype == 'imgr_insat3d'
            avhrr      = obstype == 'avhrr'
            avhrr_navy = obstype == 'avhrr_navy'
            ssmi       = obstype == 'ssmi'
@@ -435,7 +443,7 @@ SUBROUTINE CALRAD_WCLOUD
            if (sensorindex == 0 ) then
               write(6,*)'SETUPRAD:  ***WARNING*** problem with sensorindex=',isis,&
                    ' --> CAN NOT PROCESS isis=',isis,'   TERMINATE PROGRAM EXECUTION'
-              stop
+              stop 19
            endif
 
 !          set Satellite IDs for F19 and F20 to valid values since CRTM will not
@@ -1023,6 +1031,7 @@ SUBROUTINE CALRAD_WCLOUD
                         (isis=='ssmis_f20' .and. iget(846) > 0) .OR. &
                         (isis=='imgr_mt2' .and. iget(860)>0) .OR. &
                         (isis=='imgr_mt1r' .and. iget(864)>0) .OR. &
+                        (isis=='imgr_insat3d' .and. iget(865)>0) .OR. &
                         (isis=='imgr_g13' .and. iget(868)>0) .OR. &
                         (isis=='imgr_g15' .and. iget(872)>0) .OR. &
                         (isis=='seviri_m10' .and. iget(876)>0) .OR. &
@@ -1058,6 +1067,9 @@ SUBROUTINE CALRAD_WCLOUD
                     else if(isis=='imgr_mt1r') then
                        sublat=0.0
                        sublon=140.0
+                    else if(isis=='imgr_insat3d') then
+                       sublat=0.0
+                       sublon=74.0
                     end if
 
 !                   use zenith angle = 53.1 for SSMI and SSMIS:
@@ -1697,6 +1709,32 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               endif
+
+              if_insat3d: if(isis=='imgr_insat3d') then ! writing MTSAT-1r to grib
+                 nc=0
+                 do ichan=1,4
+                    igot=iget(865) 
+                      if(lvls(ichan,igot).eq.1)then
+                       nc=nc+1
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,nc)
+                          enddo
+                       enddo
+                       id(1:25) = 0
+                       id(02) = 2
+                       id(08) = 118
+                       id(09) = 109
+                       if(grib=="grib1") then
+                          call gribit(igot,3000+ichan, grid1,im,jm)
+                       else if(grib=="grib2" )then
+                          cfld=cfld+1
+                          fld_info(cfld)%ifld=IAVBLFLD(igot)
+                          datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
+                       endif
+                    endif
+                 enddo
+              endif if_insat3d
 
               if (isis=='imgr_g11')then  ! writing goes 11 to grib
                  do ixchan=1,4

@@ -2086,6 +2086,12 @@
      &                      /1,'MTSAT1R NON-NADIR   ',118,109, & !table 130
      &                       'MTSAT1RCH1 NON NAD top_of_atmos'/
 
+!     LVLS-DRIVEN CHANNEL SELECTION (L(1)-L(4)> IR CH1-CH4)
+!     HWRF satellite additions: INSAT-3D imager
+      DATA IFILV(865),AVBL(865),IQ(865),IS(865),AVBLGRB2(865)  &
+     &                      /1,'INSAT 3D NON-NADIR  ',118,109, & !table 130
+     &                       'INSAT 3D NON NAD top_of_atmos'/
+
 !     2014-12-09 WM LEWIS ADDED GOES-13, GOES-15, MSG-10
 !     GOES-13 imager (L(1)-L(4) -> ID8: 237-240 -> CH2, CH3, CH4, CH5)
       DATA IFILV(868),AVBL(868),IQ(868),IS(868),AVBLGRB2(868)      &
