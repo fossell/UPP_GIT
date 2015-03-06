@@ -114,8 +114,8 @@
       REAL,ALLOCATABLE :: T7D(:,:,:),Q7D(:,:,:),U7D(:,:,:),V6D(:,:,:) &
           ,P7D(:,:,:),ICINGFD(:,:,:),AERFD(:,:,:,:)	  
       REAL HELI(IM,JM,2)
-      REAL EGRID1(IM,JM),EGRID2(IM,JM),EGRID3(IM,JM)
-      REAL EGRID4(IM,JM),EGRID5(IM,JM)
+      REAL EGRID1(IM,JM),EGRID2(IM,JM),EGRID3(IM,JM),dummy(IM,JM)
+      REAL EGRID4(IM,JM),EGRID5(IM,JM),EGRID6(IM,JM),EGRID7(IM,JM)
       REAL GRID1(IM,JM),GRID2(IM,JM)
       REAL P_THETAEMAX(IM,JM)
       REAL USHR1(IM,JM),VSHR1(IM,JM),USHR6(IM,JM),VSHR6(IM,JM)
@@ -1440,6 +1440,8 @@
            DO I=1,IM
              EGRID1(I,J) = -H99999
              EGRID2(I,J) = -H99999
+             EGRID6(I,J) = -H99999
+             EGRID7(I,J) = -H99999
            ENDDO
            ENDDO
 !
@@ -1461,7 +1463,7 @@
 !
            DPBND=0.
            CALL CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,LB2,EGRID1,   &
-      	           EGRID2,EGRID3,EGRID4,EGRID5) 
+      	           EGRID2,EGRID3,EGRID4,EGRID5,EGRID6,EGRID7)
 !
            IF (IGET(032).GT.0.or.IGET(566)>0) THEN
                DO J=JSTA,JEND
@@ -1517,8 +1519,51 @@
               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:iM,jsta:jend)
              endif
            ENDIF
-         ENDIF
 !
+! KRF: Add BMIN and PBMIN output options
+          IF ((IGET(915).GT.0)) THEN
+            IF( (LVLS(2,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(NBND)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(915),LVLS(1,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+          END IF
+
+          IF ((IGET(916).GT.0)) THEN
+            IF( (LVLS(2,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(NBND)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(916),LVLS(1,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+           END IF
+            ! END KRF
+          END IF ! end if field1/2 true
 
 !    PBL HEIGHT 
          IF(IGET(221).GT.0) THEN
@@ -2304,6 +2349,8 @@
            DO I=1,IM
              EGRID1(I,J) = -H99999
              EGRID2(I,J) = -H99999
+             EGRID7(I,J) = -H99999
+             EGRID6(I,J) = -H99999
            ENDDO
            ENDDO
             
@@ -2320,7 +2367,7 @@
 !
            DPBND=0.
            CALL CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,LB2,EGRID1,           &
-                EGRID2,EGRID3,EGRID4,EGRID5)
+                EGRID2,EGRID3,EGRID4,EGRID5,EGRID6,EGRID7)
  
            IF (IGET(032).GT.0.or.IGET(582)>0) THEN
                DO J=JSTA,JEND
@@ -2374,7 +2421,50 @@
                endif
 
            ENDIF
-         ENDIF
+! KRF: Add BMIN and PBMIN output options
+          IF ((IGET(915).GT.0)) THEN
+            IF( (LVLS(3,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(3)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(915),LVLS(3,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+          END IF
+
+           IF ((IGET(916).GT.0)) THEN
+            IF( (LVLS(3,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(3)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(916),LVLS(3,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+           END IF
+            ! END KRF
+          END IF !end if field1/2 true
               
 !        MIXED LAYER LIFTING CONDENSATION PRESSURE AND HEIGHT.
 !        EGRID1 IS LCL PRESSURE.  EGRID2 IS LCL HEIGHT.
@@ -2435,12 +2525,14 @@
            DO I=1,IM
              EGRID1(I,J) = -H99999
              EGRID2(I,J) = -H99999
+             EGRID6(I,J) = -H99999
+             EGRID7(I,J) = -H99999
            ENDDO
            ENDDO
               
            DPBND=300.E2
            CALL CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,LB2,EGRID1,     &
-                   EGRID2,EGRID3,EGRID4,EGRID5)
+                   EGRID2,EGRID3,EGRID4,EGRID5,EGRID6,EGRID7)
 !
            IF (IGET(032).GT.0.or.IGET(584)>0) THEN
 	       DO J=JSTA,JEND
@@ -2491,6 +2583,49 @@
                endif
 
             ENDIF
+! KRF: Add BMIN and PBMIN output options
+          IF ((IGET(915).GT.0)) THEN
+            IF( (LVLS(4,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10) = 255
+                  ID(11) = 0
+                  CALL GRIBIT(IGET(915),LVLS(4,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+          END IF
+
+          IF ((IGET(916).GT.0)) THEN
+            IF( (LVLS(4,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10) = 255
+                  ID(11) = 0
+                  CALL GRIBIT(IGET(916),LVLS(4,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+           END IF
+            ! END KRF
               
 !    EQUILLIBRIUM HEIGHT
            IF (IGET(443).GT.0) THEN

@@ -2093,6 +2093,12 @@
       DATA IFILV(908),AVBL(908),IQ(908),IS(908),AVBLGRB2(908)      &
      &                      /1,'AVE SW DOWN TOA RAD ',204,008,     &
      &                       'AVE SW DOWNWELL RAD top_of_atmos'/
+      DATA IFILV(915),AVBL(915),IQ(915),IS(915),AVBLGRB2(915)      &
+     &                      /1,'MINIMUM BUOYANCY    ',011,001,     &
+     &                       'MINIMUM BUOYANCY on surface'/
+      DATA IFILV(916),AVBL(916),IQ(916),IS(916),AVBLGRB2(916)      &
+     &                      /1,'PRESS AT MIN BUOYANC',001,001,     &
+     &                       'PRESS AT MIN BUOYANCY surface  '/
 !end initialization
 !
    end module RQSTFLD_mod

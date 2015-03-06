@@ -121,7 +121,7 @@
            IBOTSCu, IBOTGr, ITOPT,ITOPCu, ITOPDCu, ITOPSCu,       &
            ITOPGr, l1d
       REAL,dimension(im,jm) :: EGRID1, EGRID2, EGRID3, GRID1,     &
-           GRID2, CLDP, CLDZ, CLDT, CLDZCu  
+           GRID2, CLDP, CLDZ, CLDT, CLDZCu, EGRID6, EGRID7  
       REAL,dimension(lm) :: RHB, watericetotal, pabovesfc
       REAL :: watericemax, wimin, zcldbase, zcldtop, zpbltop,     &
            rhoice, coeffp, exponfp, const1, cloud_def_p,          &
@@ -231,8 +231,20 @@
 	  DPBND=10.E2
           dummy=0.
           idummy=0
+
+!KRF ZERO OUT
+           DO J=JSTA,JEND
+           DO I=1,IM
+             EGRID1(I,J) = -H99999
+             EGRID2(I,J) = -H99999
+             EGRID6(I,J) = -H99999
+             EGRID7(I,J) = -H99999
+           ENDDO
+           ENDDO
+!END KRF ZERO OUT
+
           CALL CALCAPE(ITYPE,DPBND,dummy,dummy,dummy,idummy,EGRID1,EGRID2, &
-                 EGRID3,dummy,dummy)
+                 EGRID3,dummy,dummy,EGRID6,EGRID7)
           DO J=JSTA,JEND
           DO I=1,IM
              GRID1(I,J) = EGRID1(I,J)
@@ -247,8 +259,10 @@
             fld_info(cfld)%ifld=IAVBLFLD(IGET(032))
             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
           endif		 
+
         END IF
-      END IF
+      END IF ! End 032, cape 
+
 !
 !           CONVECTIVE INHIBITION.     
       IF ((IGET(107).GT.0))THEN
@@ -266,8 +280,20 @@
 	   DPBND=10.E2
            dummy=0.
            idummy=0
+
+!KRF ZERO OUT
+           DO J=JSTA,JEND
+           DO I=1,IM
+             EGRID1(I,J) = -H99999
+             EGRID2(I,J) = -H99999
+             EGRID6(I,J) = -H99999
+             EGRID7(I,J) = -H99999
+           ENDDO
+           ENDDO
+!END KRF ZERO OUT
+
            CALL CALCAPE(ITYPE,DPBND,dummy,dummy,dummy,idummy,EGRID1,EGRID2, &
-                 EGRID3,dummy,dummy)
+                 EGRID3,dummy,dummy,EGRID6,EGRID7)
 	   DO J=JSTA,JEND
            DO I=1,IM
              GRID1(I,J) = -1.*EGRID2(I,J)
@@ -288,6 +314,45 @@
             fld_info(cfld)%ifld=IAVBLFLD(IGET(107))
             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
           endif
+
+! KRF: Add BMIN and PBMIN output options
+          IF ((IGET(915).GT.0)) THEN
+            IF( (LVLS(1,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  CALL GRIBIT(IGET(915),LVLS(1,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+          END IF
+
+          IF ((IGET(916).GT.0)) THEN
+            IF( (LVLS(1,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  CALL GRIBIT(IGET(916),LVLS(1,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+          END IF
+
+! END KRF 
 	END IF ! end for lvls(107)
       END IF ! end of iget(107)	 
       

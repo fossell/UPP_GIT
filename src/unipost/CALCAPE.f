@@ -1,5 +1,5 @@
       SUBROUTINE CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,L1D,CAPE,    &  
-                         CINS,PPARC,ZEQL,THUND)
+                         CINS,PPARC,ZEQL,THUND,BMIN,PBMIN)
 !$$$  SUBPROGRAM DOCUMENTATION BLOCK
 !                .      .    .     
 ! SUBPROGRAM:    CALCAPE     COMPUTES CAPE AND CINS
@@ -100,6 +100,9 @@
 !     CINS     - CONVECTIVE INHIBITION (J/KG)
 !     PPARC    - PRESSURE LEVEL OF PARCEL LIFTED WHEN ONE SEARCHES
 !                  OVER A PARTICULAR DEPTH TO COMPUTE CAPE/CIN
+!     BMIN     - MINIMUM BUOYANCY OF PARCEL BETWEEN LCL AND EL
+!                USE 50000 Pa IF EL DOESN'T EXIST (K).
+!     PBMIN    - PRESS AT BMIN (Pa)
 !     
 !   OUTPUT FILES:
 !     STDOUT  - RUN TIME STANDARD OUT.
@@ -129,7 +132,7 @@
       implicit none
 !     
 !     INCLUDE/SET PARAMETERS.  CONSTANTS ARE FROM BOLTON (MWR, 1980).
-      real,PARAMETER :: ISMTHP=2,ISMTHT=2,ISMTHQ=2
+      real,PARAMETER :: ISMTHP=2,ISMTHT=2,ISMTHQ=2,PBMIN_TOP=50000.
 !     
 !     DECLARE VARIABLES.
 !
@@ -138,6 +141,7 @@
       integer, dimension(IM,JM),intent(in) :: L1D
       real,dimension(IM,JM),intent(in) :: P1D,T1D
       real,dimension(IM,JM),intent(inout) :: Q1D,CAPE,CINS,PPARC,ZEQL
+      real,dimension(IM,JM),intent(inout) :: BMIN,PBMIN
            
 !     
       INTEGER IEQL(IM,JM),IPTB(IM,JM),ITHTB(IM,JM),PARCEL(IM,JM)      
@@ -153,7 +157,7 @@
            BQS00K,SQS00K,BQS10K,SQS10K,BQK,SQK,TQK,PRESK,DZKL,THETAP,  &
            THETAA,P00K,P10K,P01K,P11K,TTHESK,ESATP,QSATP,TVP
       real,external :: fpvsnew
-      integer I,J,L,KNUML,KNUMH,LBEG,LEND,IQ,IT,LMHK,                  &
+      integer I,J,L,KNUML,KNUMH,LEND,IQ,IT,LMHK,                  &
               KB,ITTBK
 !     
 !**************************************************************
@@ -193,8 +197,11 @@
 	PARCEL(I,J)=LM
         PPARC(I,J)=D00
         THUNDER(I,J) = .TRUE.
+        BMIN(I,J) = D00
+        PBMIN(I,J) = D00
       ENDDO
       ENDDO
+
 !
 !$omp  parallel do
       DO L=1,LM
@@ -406,26 +413,24 @@
 !-----------------------------------------------------------------------
  30   CONTINUE
 !------------COMPUTE CAPE AND CINS--------------------------------------
-      LBEG=1000
       LEND=0
 !
 !$omp  parallel do
-!$omp& private(lbeg,lend)
+!$omp& private(lend)
       DO J=JSTA,JEND
       DO I=1,IM
         IF(T(I,J,IEQL(I,J)).GT.255.65) THEN
           THUNDER(I,J)=.FALSE.
         ENDIF
-        LBEG=MIN(IEQL(I,J),LBEG)
         LEND=MAX(LCL(I,J),LEND)
       ENDDO
       ENDDO
 !
-      DO L=LBEG,LEND
+      DO L=1,LEND
         DO J=JSTA,JEND
         DO I=1,IM
           IDX(I,J)=0
-          IF(L.GE.IEQL(I,J).AND.L.LE.LCL(I,J))THEN
+          IF(L.LE.LCL(I,J))THEN
             IDX(I,J)=1
           ENDIF
         ENDDO
@@ -436,6 +441,7 @@
 !$omp& private(dzkl,presk,thetaa,thetap,esatp,qsatp,tvp)
         DO J=JSTA,JEND
         DO I=1,IM
+!         at or above LCL and at or below EQL
           IF(IDX(I,J).GT.0)THEN
             PRESK=PMID(I,J,L)
             DZKL=ZINT(I,J,L)-ZINT(I,J,L+1)
@@ -446,16 +452,22 @@
             TV=T(I,J,L)*(1+0.608*Q(I,J,L)) 
             THETAA=TV*(H10E5/PRESK)**CAPA
             IF(THETAP.LT.THETAA)THEN
-              CINS(I,J)=CINS(I,J)                                &   
-                         +G*(ALOG(THETAP)-ALOG(THETAA))*DZKL
-            ELSEIF(THETAP.GT.THETAA)THEN
-              CAPE(I,J)=CAPE(I,J)                                &
-                         +G*(ALOG(THETAP)-ALOG(THETAA))*DZKL
-              IF (THUNDER(I,J) .AND. T(I,J,L) .LT. 273.15        &
-                 .AND. T(I,J,L) .GT. 253.15) THEN                
-               CAPE20(I,J)=CAPE20(I,J)                           &
+              IF (L.GE.IEQL(I,J))THEN
+                 CINS(I,J)=CINS(I,J)                                &   
                            +G*(ALOG(THETAP)-ALOG(THETAA))*DZKL
               ENDIF
+              IF(PRESK.GT.PBMIN_TOP)THEN
+                   BMIN(I,J) = MIN(BMIN(I,J),THETAP-THETAA)
+                   PBMIN(I,J) = PRESK
+              ENDIF
+            ELSEIF(THETAP.GT.THETAA)THEN
+                CAPE(I,J)=CAPE(I,J)                                &
+                           +G*(ALOG(THETAP)-ALOG(THETAA))*DZKL
+                IF (THUNDER(I,J) .AND. T(I,J,L) .LT. 273.15        &
+                   .AND. T(I,J,L) .GT. 253.15) THEN                
+                 CAPE20(I,J)=CAPE20(I,J)                           &
+                             +G*(ALOG(THETAP)-ALOG(THETAA))*DZKL
+                ENDIF
             ENDIF
           ENDIF
         ENDDO
