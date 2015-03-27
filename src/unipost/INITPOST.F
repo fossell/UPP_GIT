@@ -47,7 +47,7 @@
 alpint,&
               qqr, qqs, qqi, qqg, qqni,qqnr, cwm, qqw, qqi, qqr, qqs,&
 extcof55,&
-              f_ice, f_rain, f_rimef, q2, zint, zmid, cfr
+              f_ice, f_rain, f_rimef, q2, zint, zmid, cfr, REF_10CM
       use vrbls2d, only: tmax, qrmax, htop, hbot, cuppt, fis, cfrach,&
  cfracl,&
               sr, cfrach, cfracm, wspd10max, w_up_max, w_dn_max,&
@@ -1418,6 +1418,19 @@ truelat2,&
             ECHOTOP ( i, j ) = dummy ( i, j )
         end do
        end do
+
+      VarName='REFL_10CM'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,&
+         IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+       do l=1,lm
+        do j = jsta_2l, jend_2u
+         do i = 1, im
+            REF_10CM ( i, j, l) = dum3d ( i, j, l )
+         end do
+        end do
+       end do
+
+
 ! CRA
 ! get 2-d variables
 

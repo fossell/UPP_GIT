@@ -168,6 +168,7 @@
       allocate(nca_refd(im,jsta_2l:jend_2u))
 ! SRD
 ! CRA
+      allocate(REF_10CM(im,jsta_2l:jend_2u,lm))
       allocate(VIL(im,jsta_2l:jend_2u))
       allocate(RADARVIL(im,jsta_2l:jend_2u))
       allocate(ECHOTOP(im,jsta_2l:jend_2u))

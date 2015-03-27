@@ -316,6 +316,7 @@
       deallocate(snownc)
       deallocate(graupelnc)
 ! SRD
+      deallocate(REF_10CM)
       deallocate(wspd10max)
       deallocate(w_up_max)
       deallocate(w_dn_max)

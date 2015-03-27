@@ -22,6 +22,7 @@
       ,MCVG(:,:,:),EXTCOF55(:,:,:),NLICE(:,:,:) &
 ! KRS Add HWRF fields     
       ,REFL_10CM(:,:,:)             &
+      ,REF_10CM(:,:,:)             &
 ! Add GFS fields     
       ,O3(:,:,:)             &
 ! Add GFS D3D fields
