@@ -73,7 +73,7 @@
               qqr, qqs, cfr, dbz, dbzr, dbzi, dbzc, qqw, nlice, qqg, zint, qqni,&
               qqnr, uh, vh, mcvg, omga, wh, q2, ttnd, rswtt, rlwtt, train, tcucn,&
               o3, rhomid, dpres, el_pbl, pint, icing_gfip, icing_gfis,&
-              REFL_10CM    
+              REFL_10CM,REF_10CM
       use vrbls2d, only: slp, hbot, htop, cnvcfr, cprate, cnvcfr, echotop, vil,&
               radarvil, sr, prec, vis, czen, pblh, u10, v10, avgprec, avgcprate,&
               REFD_MAX
@@ -2161,12 +2161,28 @@
          ENDDO
         ELSE
 !tgs - for Thompson or Milbrandt scheme
-         DO J=JSTA,JEND
-            DO I=1,IM
+
+          IF(IMP_PHYSICS.EQ.8) THEN
+!$omp parallel do private(i,j)
+!NMMB does not have composite radar ref in model output
+           IF(MODELNAME=='NCAR'.or.MODELNAME=='NMM' .and. gridtype=='B')THEN
+             DO J=JSTA,JEND
+              DO I=1,IM
+               GRID1(I,J)=DBZmin
+               DO L=1,NINT(LMH(I,J))
+                  GRID1(I,J)=MAX( GRID1(I,J), REF_10CM(I,J,L) )
+               ENDDO
+              ENDDO
+             ENDDO
+           ELSE
+             DO J=JSTA,JEND
+              DO I=1,IM
                GRID1(I,J)=refl(i,j)
-            ENDDO
-         ENDDO
-        ENDIF
+              ENDDO
+             ENDDO
+           ENDIF !modelname=nmm+b,arw,
+         ENDIF !mp=8
+        ENDIF !mp/=8
          ID(1:25) = 0
 	 ID(02)=129
          if(grib=="grib1") then
@@ -2176,7 +2192,7 @@
            fld_info(cfld)%ifld=IAVBLFLD(IGET(252))
            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
          endif
-      ENDIF
+      ENDIF !iget=252
 
 !KRS: HWRF composite radar for non-ferrier physics
 ! wrf-derived, simply passed through upp
