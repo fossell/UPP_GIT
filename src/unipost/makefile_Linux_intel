@@ -6,32 +6,34 @@ TARGET   = ncep_post
 #
 # CPP, Compiler, and Linker Options
 #
-FC       = mpfort -compiler ifort
+FC       = mpif90
+CC       = icc
 CPP      = /lib/cpp -P
-CPPFLAGS = -DLINUX 
-OPTS     = -O -fp-model strict
+CPPFLAGS =
+CFLAGS   = -DLINUX -Dfunder -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'
+OPTS     = -O3
 FREE     = -FR
 TRAPS    = 
-DEBUG    = -g
+DEBUG    = -g -traceback
 
-CFLAGS =  -DLINUX -Dfunder -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'
 #
 # Now the hard part. NCEPPOST needs 19 libraries, WOW!!!!!
 #
+NWPROD_LIB ?= ../../lib
 
-SFCIO_INC  = -I/nwprod/lib/incmod/sfcio_4
-SFCIO_LIB  = /nwprod/lib/libsfcio_4.a
+SFCIO_INC  = -I${NWPROD_LIB}/incmod/sfcio_4
+SFCIO_LIB  = ${NWPROD_LIB}/libsfcio_4.a
 
-NEMSIO_INC = -I/nwprod/lib/incmod/nemsio
-NEMSIO_LIB = -L/nwprod/lib -lnemsio
+NEMSIO_INC = -I${NWPROD_LIB}/incmod/nemsio
+NEMSIO_LIB = -L${NWPROD_LIB} -lnemsio
 
-BACIO_LIB  = -L/nwprod/lib -lbacio_4
+BACIO_LIB  = -L${NWPROD_LIB} -lbacio_4
 
-SIGIO_INC  = -I/nwprod/lib/incmod/sigio_v1.0.1_4
-SIGIO_LIB  = /nwprod/lib/libsigio_v1.0.1_4.a
+SIGIO_INC  = -I${NWPROD_LIB}/incmod/sigio_4
+SIGIO_LIB  = ${NWPROD_LIB}/libsigio_4.a
 
-WRFPATH    = /nwprod/sorc/wrf_shared.v1.1.0
-WRF_INC    = -I$(WRFPATH)/external/io_quilt -I$(WRFPATH)/frame
+WRFPATH    = ${NWPROD_LIB}/WRFV3
+WRF_INC    = -I$(WRFPATH)/frame
 WRF_LIB    = $(WRFPATH)/main/libwrflib.a  \
              $(WRFPATH)/frame/pack_utils.o  \
              $(WRFPATH)/frame/module_internal_header_util.o \
@@ -42,29 +44,27 @@ WRF_LIB    = $(WRFPATH)/main/libwrflib.a  \
              $(WRFPATH)/external/esmf_time_f90/libesmf_time.a \
              $(WRFPATH)/external/RSL_LITE/librsl_lite.a
 
-G2_INC     = -I/nwprod/lib/incmod/g2_4 -I/nwprod/lib/incmod/g2tmpl
-G2_LIB     = -L/nwprod/lib -lg2tmpl -lg2_4 -ljasper -lpng -lz
+G2_INC     = -I${NWPROD_LIB}/incmod/g2_4 -I${NWPROD_LIB}/incmod/g2tmpl
+G2_LIB     = -L${NWPROD_LIB} -lg2tmpl -lg2_4 -L${NWPROD_LIB}/jasper/lib -ljasper -L${NWPROD_LIB}/libpng/lib -lpng -L${NWPROD_LIB}/zlib/lib -lz
 
-XML_INC    = -I/nwprod/lib/incmod/xmlparse
-XML_LIB    = -L/nwprod/lib -lxmlparse
+XML_INC    = -I${NWPROD_LIB}/incmod/xmlparse
+XML_LIB    = -L${NWPROD_LIB} -lxmlparse
 
-GFSIO_INC  = -I/nwprod/lib/incmod/gfsio_v1.1.0_4
-GFSIO_LIB  = -L/nwprod/lib -lgfsio_v1.1.0_4 
-#GFSIO_INC  = -I/usrx/local/nceplibs/incmod/gfsio_v1.1.0_alpha
-#GFSIO_LIB  = /usrx/local/nceplibs/libgfsio_v1.1.0_alpha.a
+GFSIO_INC  = -I${NWPROD_LIB}/incmod/gfsio_4
+GFSIO_LIB  = ${NWPROD_LIB}/libgfsio_4.a
 
-IP_LIB     = -L/nwprod/lib -lip_4
+IP_LIB     = -L${NWPROD_LIB} -lip_4
 
-SP_LIB     = -L/nwprod/lib -lsp_4
+SP_LIB     = -L${NWPROD_LIB} -lsp_4
 
-W3_INC     = -I/nwprod/lib/incmod/w3emc_v2.0.3_4
-W3_LIB     = -L/nwprod/lib -lw3nco_v2.0.3_4 -lw3emc_v2.0.3_4
+W3_INC     = -I${NWPROD_LIB}/incmod/w3emc_4
+W3_LIB     = -L${NWPROD_LIB} -lw3nco_4 -lw3emc_4
 
-CRTM_INC   = -I/nwprod/lib/incmod/crtm_2.0.6
-CRTM_LIB   = -L/nwprod/lib -lcrtm_v2.0.6
+CRTM_INC   = -I${NWPROD_LIB}/incmod/crtm
+CRTM_LIB   = -L${NWPROD_LIB} -lCRTM
 
-NETCDFPATH = /usrx/local/NetCDF/3.6.3
-NETCDF_LIB = $(NETCDFPATH)/lib/libnetcdf.a
+NETCDFPATH = ${NWPROD_LIB}/netcdf
+NETCDF_LIB = $(NETCDFPATH)/lib/libnetcdff.a $(NETCDFPATH)/lib/libnetcdf.a
 NETCDF_INC = -I$(NETCDFPATH)/include
 
 #
@@ -99,7 +99,7 @@ LIBS     = $(WRF_LIB) \
 
 OBJS =  wrf_io_flags.o getVariable.o getIVariable.o getIVariableN.o \
         kinds_mod.o machine.o physcons.o \
-	native_endianness.o blockIO.o initialize_byte_swap_wrf_binary_file.o \
+        native_endianness.o blockIO.o initialize_byte_swap_wrf_binary_file.o \
         count_recs_wrf_binary_file.o inventory_wrf_binary_file.o \
         next_buf.o retrieve_index.o ZENSUN.o CLDFRAC_ZHAO.o \
         GFSPOST.o GETGBANDSCATTER.o post_t.o \
@@ -128,8 +128,7 @@ OBJS =  wrf_io_flags.o getVariable.o getIVariable.o getIVariableN.o \
         CALRAD_WCLOUD_newcrtm.o MDL2THANDPV.o CALPBLREGIME.o POLEAVG.o \
         INITPOST_NEMS.o GETNEMSNDSCATTER.o ICAOHEIGHT.o INITPOST_GFS_NEMS.o \
         INITPOST_BIN_MPIIO.o GEO_ZENITH_ANGLE.o GFIP3.o GRIDAVG.o CALUPDHEL.o INITPOST_GFS_SIGIO.o \
-        AllGETHERV_GSD.o MSFPS.o SELECT_CHANNELS.o ALLOCATE_ALL.o INITPOST_NEMS_MPIIO.o ASSIGNNEMSIOVAR.o 
-
+        AllGETHERV_GSD.o MSFPS.o SELECT_CHANNELS.o ALLOCATE_ALL.o INITPOST_NEMS_MPIIO.o ASSIGNNEMSIOVAR.o
 
 .SUFFIXES: .F .f .o .f90 .c
 
@@ -137,7 +136,7 @@ OBJS =  wrf_io_flags.o getVariable.o getIVariable.o getIVariableN.o \
 	$(CPP) $(CPPFLAGS) $< > $*.f
 
 $(TARGET): $(OBJS)
-	$(FC) -openmp -o $@ $(OBJST) $(OBJXML) $(OBJS) $(LIBS)
+	$(FC) -o $@ $(OBJST) $(OBJXML) $(OBJS) $(LIBS)
 
 .f.o:
 	$(FC) $(FFLAGS) -c $<
@@ -146,8 +145,7 @@ $(TARGET): $(OBJS)
 	$(FC) $(FFLAGS) -c $<
 
 .c.o :
-	${CC} ${CFLAGS} -c $<
-
+	$(CC) $(CFLAGS) -c $<
 
 clean:
 	/bin/rm -f  $(TARGET) *.lst *.o *.mod
