@@ -2099,6 +2099,13 @@
       DATA IFILV(916),AVBL(916),IQ(916),IS(916),AVBLGRB2(916)      &
      &                      /1,'PRESS AT MIN BUOYANC',001,001,     &
      &                       'PRESS AT MIN BUOYANCY surface  '/
+! Table 133
+      DATA IFILV(917),AVBL(917),IQ(917),IS(917),AVBLGRB2(917)      &
+     &                      /1,'THOMPSON HAIL MAXK1 ',250,001,     &
+     &                       'THOMP HAIL MAXK1 on surface'/
+      DATA IFILV(918),AVBL(918),IQ(918),IS(918),AVBLGRB2(918)      &
+     &                      /1,'THOMPSON HAIL MAX2D ',251,001,     &
+     &                       'THOMP HAIL MAX2D on surface  '/
 !end initialization
 !
    end module RQSTFLD_mod

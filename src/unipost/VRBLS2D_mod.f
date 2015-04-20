@@ -44,6 +44,9 @@
       ,SNOWNC(:,:),GRAUPELNC(:,:),TMAX(:,:),W_MEAN(:,:) &
       ,TSNOW(:,:),QVG(:,:),QV2m(:,:),VIL(:,:),RADARVIL(:,:) &
       ,ECHOTOP(:,:) &
+!G.Thompson hail
+      ,HAIL_MAXK1(:,:),HAIL_MAX2D(:,:) & 
+!End G.Thompson hail
 ! add new fields for GFS
       ,SFCUX(:,:),SFCVX(:,:),AVGALBEDO(:,:),AVGCPRATE(:,:) &
       ,AVGPREC(:,:),PTOP(:,:),PBOT(:,:),AVGCFRACH(:,:) &

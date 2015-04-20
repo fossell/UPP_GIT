@@ -69,7 +69,8 @@
               rainnc_bucket, snow_bucket, snownc, tmax, graupelnc, qrmax, sfclhx,&
               rainc_bucket, sfcshx, subshx, snopcx, sfcuvx, sfcvx, smcwlt, suntime, pd,&
               sfcux, sfcevp, z0, ustar, mdltaux, mdltauy, gtaux, gtauy, twbs, sfcexc,&
-              grnflx, islope, czmean, czen, rswin,akhsavg, akmsavg, u10h, v10h
+              grnflx, islope, czmean, czen, rswin,akhsavg, akmsavg, u10h, v10h, &
+              HAIL_MAXK1, HAIL_MAX2D
       use soil, only: stc, sllevel, sldpth, smc, sh2o
       use masks, only: lmh, sm, sice, htm, gdlat, gdlon
       use params_mod, only: p1000, capa, h1m12, pq0, a2,a3, a4, h1, d00, d01,&
@@ -3295,6 +3296,45 @@
            endif
 
         ENDIF
+
+!G.Thompson Hail
+      IF ( IGET(917).GT.0 ) THEN
+            GRID1=SPVAL
+            DO J=JSTA,JEND
+            DO I=1,IM
+             GRID1(I,J)=HAIL_MAXK1(I,J)
+            ENDDO
+            ENDDO
+         ID(1:25) = 0
+         ID(02)=133    ! Parameter Table 133
+         If(grib=='grib1') then
+          CALL GRIBIT(IGET(917),LVLS(1,IGET(917)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(917))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+      IF ( IGET(918).GT.0 ) THEN
+            GRID1=SPVAL
+            DO J=JSTA,JEND
+            DO I=1,IM
+             GRID1(I,J)=HAIL_MAX2D(I,J)
+            ENDDO
+            ENDDO
+         ID(1:25) = 0
+         ID(02)=133    ! Parameter Table 133
+         If(grib=='grib1') then
+          CALL GRIBIT(IGET(918),LVLS(1,IGET(918)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(918))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+!End G.Thomppson Hail
+
 !     
 !
 !

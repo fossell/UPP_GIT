@@ -336,6 +336,10 @@
       deallocate(nca_wq)
       deallocate(nci_refd)
       deallocate(nca_refd)     
+!G.thompson hail
+      deallocate(HAIL_MAXK1)
+      deallocate(HAIL_MAX2D)
+!End G.thompson hail
 !
 !     FROM MASKS
 !

@@ -77,7 +77,7 @@ alwtoa, aswtoa,&
 snopcx,&
               sfcuvx, potevp, ncfrcv, ncfrst, sno, si, pctsno, snonc,&
 tsnow,&
-              ivgtyp, isltyp, islope, pblh, f
+              ivgtyp, isltyp, islope, pblh, f, HAIL_MAXK1, HAIL_MAX2D
       use soil, only: smc, sh2o, stc, sldpth, sllevel
       use masks, only: lmv, lmh, vtm, sice, gdlat, gdlon, sm, dx, dy,&
 htm
@@ -1390,6 +1390,30 @@ truelat2,&
 !       print*,'NCA_REFD at ',ii,jj,' = ',NCA_REFD(ii,jj)
 ! 
 ! SRD
+
+!G.Thompson Hail diameter output
+      VarName='HAIL_MAXK1'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            HAIL_MAXK1 ( i, j ) = dummy ( i, j )
+        end do
+       end do
+!       print*,'HAIL_MAXK1 at ',ii,jj,' = ',HAIL_MAXK1(ii,jj)
+
+      VarName='HAIL_MAX2D'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            HAIL_MAX2D ( i, j ) = dummy ( i, j )
+        end do
+       end do
+!       print*,'HAIL_MAX2D at ',ii,jj,' = ',HAIL_MAX2D(ii,jj)
+!End G.Thompson Hail diameter output
+
+
 !
 ! CRA GET NCAR VARIABLES
       VarName='VIL'
