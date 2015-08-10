@@ -1520,9 +1520,12 @@
              endif
            ENDIF
 !
-! KRF: Add BMIN and PBMIN output options
-          IF ((IGET(915).GT.0)) THEN
-            IF( (LVLS(2,IGET(915)).GT.0) )THEN
+! KRF: Add BMIN and PBMIN output options - Best
+         IF( IGET(915).GT.0.AND.LVLS(2,IGET(915)).GT.0 & 
+             .OR. IGET(919).GT.0) THEN
+
+!         IF ((IGET(915).GT.0)) THEN
+!           IF( (LVLS(2,IGET(915)).GT.0) )THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = EGRID6(I,J)
@@ -1536,14 +1539,16 @@
                   CALL GRIBIT(IGET(915),LVLS(1,IGET(915)),GRID1,IM,JM)
                  else if(grib=="grib2" )then
                   cfld=cfld+1
-                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(919))
                   datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                  endif
-            END IF
           END IF
 
-          IF ((IGET(916).GT.0)) THEN
-            IF( (LVLS(2,IGET(916)).GT.0) )THEN
+         IF(IGET(916).GT.0.AND.LVLS(2,IGET(916)).GT.0 & 
+             .OR. IGET(920).GT.0) THEN
+
+!         IF ((IGET(916).GT.0)) THEN
+!           IF( (LVLS(2,IGET(916)).GT.0) )THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = EGRID7(I,J)
@@ -1557,11 +1562,10 @@
                   CALL GRIBIT(IGET(916),LVLS(1,IGET(916)),GRID1,IM,JM)
                  else if(grib=="grib2" )then
                   cfld=cfld+1
-                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(920))
                   datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                  endif
             END IF
-           END IF
             ! END KRF
           END IF ! end if field1/2 true
 
@@ -2421,9 +2425,13 @@
                endif
 
            ENDIF
-! KRF: Add BMIN and PBMIN output options
-          IF ((IGET(915).GT.0)) THEN
-            IF( (LVLS(3,IGET(915)).GT.0) )THEN
+! KRF: Add BMIN and PBMIN output options -- Mixed Layer
+
+         IF( IGET(915).GT.0 .AND. LVLS(3,IGET(915)).GT.0 & 
+             .OR. IGET(921).GT.0 ) THEN
+
+!         IF ((IGET(915).GT.0)) THEN
+!           IF( (LVLS(3,IGET(915)).GT.0) )THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = EGRID6(I,J)
@@ -2437,14 +2445,16 @@
                   CALL GRIBIT(IGET(915),LVLS(3,IGET(915)),GRID1,IM,JM)
                  else if(grib=="grib2" )then
                   cfld=cfld+1
-                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(921))
                   datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                  endif
-            END IF
           END IF
 
-           IF ((IGET(916).GT.0)) THEN
-            IF( (LVLS(3,IGET(916)).GT.0) )THEN
+         IF( IGET(916).GT.0 .AND. LVLS(3,IGET(916)).GT.0 & 
+             .OR. IGET(922).GT.0 ) THEN
+
+!          IF ((IGET(916).GT.0)) THEN
+!           IF( (LVLS(3,IGET(916)).GT.0) )THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = EGRID7(I,J)
@@ -2458,10 +2468,9 @@
                   CALL GRIBIT(IGET(916),LVLS(3,IGET(916)),GRID1,IM,JM)
                  else if(grib=="grib2" )then
                   cfld=cfld+1
-                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(922))
                   datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                  endif
-            END IF
            END IF
             ! END KRF
           END IF !end if field1/2 true
@@ -2583,9 +2592,13 @@
                endif
 
             ENDIF
-! KRF: Add BMIN and PBMIN output options
-          IF ((IGET(915).GT.0)) THEN
-            IF( (LVLS(4,IGET(915)).GT.0) )THEN
+! KRF: Add BMIN and PBMIN output options - Most Unstable
+
+         IF( IGET(915).GT.0 .AND. LVLS(4,IGET(915)).GT.0 & 
+             .OR. IGET(923).GT.0 ) THEN
+
+!         IF ((IGET(915).GT.0)) THEN
+!           IF( (LVLS(4,IGET(915)).GT.0) )THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = EGRID6(I,J)
@@ -2599,14 +2612,16 @@
                   CALL GRIBIT(IGET(915),LVLS(4,IGET(915)),GRID1,IM,JM)
                  else if(grib=="grib2" )then
                   cfld=cfld+1
-                  fld_info(cfld)%ifld=IAVBLFLD(IGET(915))
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(923))
                   datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                  endif
-            END IF
           END IF
 
-          IF ((IGET(916).GT.0)) THEN
-            IF( (LVLS(4,IGET(916)).GT.0) )THEN
+         IF( IGET(916).GT.0 .AND. LVLS(4,IGET(916)).GT.0 & 
+             .OR. IGET(924).GT.0) THEN
+
+!         IF ((IGET(916).GT.0)) THEN
+!           IF( (LVLS(4,IGET(916)).GT.0) )THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = EGRID7(I,J)
@@ -2620,12 +2635,12 @@
                   CALL GRIBIT(IGET(916),LVLS(4,IGET(916)),GRID1,IM,JM)
                  else if(grib=="grib2" )then
                   cfld=cfld+1
-                  fld_info(cfld)%ifld=IAVBLFLD(IGET(916))
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(924))
                   datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                  endif
-            END IF
            END IF
             ! END KRF
+         END IF ! end if field 1/2 true
               
 !    EQUILLIBRIUM HEIGHT
            IF (IGET(443).GT.0) THEN
@@ -2694,7 +2709,6 @@
                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
                endif
         ENDIF
-      ENDIF
 !    
 !
 ! RELATIVE HUMIDITY WITH RESPECT TO PRECIPITABLE WATER

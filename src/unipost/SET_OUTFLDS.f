@@ -114,7 +114,6 @@
          FOUND_FLD=.false.
          print *,'cntfile,i=',i,'fld shortname=',trim(pset%param(i)%shortname)
          doavbl:   DO 20 J = 1,size(post_avblflds%param)
-             
             if(trim(pset%param(i)%shortname)==trim(post_avblflds%param(j)%shortname)) then
 !
               IFLD=IFLD+1

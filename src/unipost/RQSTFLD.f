@@ -2098,14 +2098,33 @@
      &                       'MINIMUM BUOYANCY on surface'/
       DATA IFILV(916),AVBL(916),IQ(916),IS(916),AVBLGRB2(916)      &
      &                      /1,'PRESS AT MIN BUOYANC',001,001,     &
-     &                       'PRESS AT MIN BUOYANCY surface  '/
+     &                       'PRESS OF MIN BUOYANCY surface  '/
 ! Table 133
       DATA IFILV(917),AVBL(917),IQ(917),IS(917),AVBLGRB2(917)      &
      &                      /1,'THOMPSON HAIL MAXK1 ',250,001,     &
-     &                       'THOMP HAIL MAXK1 on surface'/
+     &                       'THOMP HAIL MAXK1 ON surface'/
       DATA IFILV(918),AVBL(918),IQ(918),IS(918),AVBLGRB2(918)      &
      &                      /1,'THOMPSON HAIL MAX2D ',251,001,     &
-     &                       'THOMP HAIL MAX2D on surface  '/
+     &                       'THOMP HAIL MAX2D ON surface  '/
+      DATA IFILV(919),AVBL(919),IQ(919),IS(919),AVBLGRB2(919)      &
+     &                      /1,'BEST MIN BUOYANCY    ',011,001,     &
+     &                       'BEST MIN BUOYANCY on spec_pres_above_grnd'/
+      DATA IFILV(920),AVBL(920),IQ(920),IS(920),AVBLGRB2(920)      &
+     &                      /1,'BEST PRES MIN BUOYANC',001,001,     &
+     &                       'BEST PRESS MIN BUOYANCY on spec_pres_above_grnd'/
+      DATA IFILV(921),AVBL(921),IQ(921),IS(921),AVBLGRB2(921)      &
+     &                      /1,'MIXD LAY MIN BUOYANCY',011,001,     &
+     &                       'MIXED LAYER MIN BUOYANCY on spec_pres_above_grnd'/
+      DATA IFILV(922),AVBL(922),IQ(922),IS(922),AVBLGRB2(922)      &
+     &                      /1,'MIXLAY PRES MIN BUOY',001,001,     &
+     &                       'MIXED LAYER PRESS MIN BUOYANCY on spec_pres_above_grnd'/
+      DATA IFILV(923),AVBL(923),IQ(923),IS(923),AVBLGRB2(923)      &
+     &                      /1,'UNSTABLE MIN BUOYANC',011,001,     &
+     &                       'UNSTABLE MIN BUOYANCY on spec_pres_above_grnd'/
+      DATA IFILV(924),AVBL(924),IQ(924),IS(924),AVBLGRB2(924)      &
+     &                      /1,'UNSTBL PRES MIN BUOY',001,001,     &
+     &                       'UNSTABLE PRESS MIN BUOYANCY on spec_pres_above_grnd'/
+
 !end initialization
 !
    end module RQSTFLD_mod
