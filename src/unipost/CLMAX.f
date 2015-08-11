@@ -36,11 +36,12 @@
 !
 !     PROPORTIONALITY CONSTANT BETWEEN ASYMPTOTIC MIXING LENGTH AND THE
 !     S.D. OF Q DISTRIBUTION, FOR LAND AND SEA AREAS, CORRESPONDINGLY:
-      use vrbls3d
-      use vrbls2d
-      use masks
+
+      use vrbls3d, only: zint, q2, pint
+!      use vrbls2d, only:
+      use masks, only: lmh, sm
       use params_mod, only: EPSQ2
-      use ctlblk_mod
+      use ctlblk_mod, only: jsta, jend, lm, im, jm
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
@@ -64,24 +65,22 @@
 !
 !$omp  parallel do
       DO J=JSTA,JEND
-      DO I=1,IM
-        SQZ(I,J)=0.0
-        SQ(I,J)=0.0
-        RQ2H(I,J)=0.0
-        HGT(I,J)=ZINT(I,J,NINT(LMH(I,J)))
-      ENDDO
+        DO I=1,IM
+          SQZ(I,J)  = 0.0
+          SQ(I,J)   = 0.0
+          RQ2H(I,J) = 0.0
+          HGT(I,J)  = ZINT(I,J,NINT(LMH(I,J)))
+        ENDDO
       ENDDO
 !
-      DO 220 L=1,LM
-!$omp  parallel do
-!$omp& private(dp,rq2m)
-      DO J=JSTA,JEND
-      DO I=1,IM
-        IF(Q2(I,J,L).LE.EPSQ2) THEN
-          RQ2L(I,J)=0.0
-        ELSE
-          RQ2L(I,J)=SQRT(Q2(I,J,L))
-        ENDIF
+      DO L=1,LM
+        DO J=JSTA,JEND
+          DO I=1,IM
+            IF(Q2(I,J,L) <= EPSQ2) THEN
+              RQ2L(I,J) = 0.0
+            ELSE
+              RQ2L(I,J) = SQRT(Q2(I,J,L))
+            ENDIF
 !
 !         -----------------------------------------------------------------
 !         THIS PART OF THE CODE IS LEFT FOR TESTING OTHER PARAMETERIZATION
@@ -96,25 +95,25 @@
 !         ENDIF
 !         -----------------------------------------------------------------
 !
-          DP=PINT(I,J,L+1)-PINT(I,J,L)
+            DP = PINT(I,J,L+1) - PINT(I,J,L)
 !***
 !***      SUM OF Q2 AT BOTH LOWER & UPPER SURFACES:
 !***
-          RQ2M=(RQ2H(I,J)+RQ2L(I,J))
+            RQ2M = RQ2H(I,J) + RQ2L(I,J)
 !***
 !***      INTEGRAL OF Q*Z OVER DP
 !***
-          SQZ(I,J)=((ZINT(I,J,L)+ZINT(I,J,L+1))*0.5-HGT(I,J))*RQ2M*DP    &
-     &              +SQZ(I,J)
+            SQZ(I,J) = ((ZINT(I,J,L)+ZINT(I,J,L+1))*0.5-HGT(I,J))*RQ2M*DP    &
+     &               +  SQZ(I,J)
 !***
 !***      INTEGRAL OF Q OVER DP:
 !***
-          SQ(I,J)=RQ2M*DP+SQ(I,J)
-          RQ2H(I,J)=RQ2L(I,J)
+            SQ(I,J)   = RQ2M*DP + SQ(I,J)
+            RQ2H(I,J) = RQ2L(I,J)
+          ENDDO
+        ENDDO
+!215    CONTINUE
       ENDDO
-      ENDDO
-!215  CONTINUE
- 220  CONTINUE
 !***
 !***    CLIPPING & APPLYING DIFFERENT VALUES OF THE PROPORTIONALITY 
 !***    CONSTANT ALPHA FOR THE LAND AND SEA AREA:

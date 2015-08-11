@@ -19,9 +19,11 @@
 !      DOWN TO THE ORIGINAL PRESSURE LEVEL (USING SUBROUTINE TTBLEX).     
 !
 !   
-      use lookup_mod
-      use ctlblk_mod
-      use cuparm_mod
+      use lookup_mod, only: thl, rdth, jtb, qs0, sqs, rdq, itb, ptbl, plq, ttbl,&
+              pl, rdp, the0, sthe, rdthe, ttblq, itbq, jtbq, rdpq, the0q, stheq,&
+              rdtheq
+      use ctlblk_mod, only: jsta, jend, im, jsta_2l, jend_2u, lm, jm
+      use cuparm_mod, only: h10e5, capa, epsq, d00, elocp
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
@@ -53,11 +55,11 @@
            P11K,PRESK
 !
 !--------------COMPUTE WET BULB TEMPERATURES----------------------------
-!$omp  parallel do
-!$omp& private(apebtk,apespk,bqk,bqs00k,bqs10k,iq,iqtbk,it,ittb1,ittbk,
-!$omp&         karr,khres,klres,knumh,knuml,p00k,p01k,p10k,p11k,ppk,
-!$omp&         presk,qbtk,qqk,sqk,sqs00k,sqs10k,tbtk,thesp,tpspk,
-!$omp&         tqk,tthbtk,tthk)
+!!$omp  parallel do
+!!$omp& private(apebtk,apespk,bqk,bqs00k,bqs10k,iq,iqtbk,it,ittb1,ittbk,
+!!$omp&         karr,khres,klres,knumh,knuml,p00k,p01k,p10k,p11k,ppk,
+!!$omp&         presk,qbtk,qqk,sqk,sqs00k,sqs10k,tbtk,thesp,tpspk,
+!!$omp&         tqk,tthbtk,tthk)
 !-----------------------------------------------------------------------
                              DO 300 L=1,LM
       DO 125 J=JSTA,JEND

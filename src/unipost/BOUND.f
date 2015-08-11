@@ -40,7 +40,7 @@
 !     MACHINE : CRAY C-90
 !$$$  
 !     
-     use ctlblk_mod
+     use ctlblk_mod, only: jsta, jend, spval, im, jm
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
      implicit none
 !     
@@ -56,12 +56,11 @@
 !     BOUND ARRAY.
 !$omp  parallel do
       DO J=JSTA,JEND
-      DO I=1,IM
-       if(fld(i,j)/=spval)then
-        FLD(I,J) = AMAX1(FMIN,FLD(I,J))
-        FLD(I,J) = AMIN1(FLD(I,J),FMAX)
-       end if	
-      ENDDO
+        DO I=1,IM
+          if(fld(i,j) /= spval)then
+            FLD(I,J) = min(FMAX, MAX(FMIN,FLD(I,J)))
+          end if
+        ENDDO
       ENDDO
 !     
 !     END OF ROUTINE.

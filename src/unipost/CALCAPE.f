@@ -117,11 +117,12 @@
 !     MACHINE : CRAY C-90
 !$$$  
 !
-      use vrbls3d
-      use masks
-      use params_mod
-      use lookup_mod
-      use ctlblk_mod
+      use vrbls3d, only: pmid, t, q, zint
+      use masks, only: lmh 
+      use params_mod, only: d00, h1m12, h99999, h10e5, capa, elocp, eps, oneps, g
+      use lookup_mod, only: thl, rdth, jtb, qs0, sqs, rdq, itb, ptbl, plq, ttbl, pl,&
+              rdp, the0, sthe, rdthe, ttblq, itbq, jtbq, rdpq, the0q, stheq, rdtheq
+      use ctlblk_mod, only: jsta_2l, jend_2u, lm, jsta, jend, im, jm
 
 !     
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -142,7 +143,8 @@
       INTEGER IEQL(IM,JM),IPTB(IM,JM),ITHTB(IM,JM),PARCEL(IM,JM)      
       INTEGER KLRES(IM,JM),KHRES(IM,JM),LCL(IM,JM)
 !     
-      REAL THESP(IM,JM),PSP(IM,JM),TV(IM,JM,LM),CAPE20(IM,JM)
+      REAL TV
+      REAL THESP(IM,JM),PSP(IM,JM),CAPE20(IM,JM)
       REAL, ALLOCATABLE :: TPAR(:,:,:)
       REAL QQ(IM,JM),PP(IM,JM),THUND(IM,JM)
       LOGICAL THUNDER(IM,JM), NEEDTHUN 
@@ -407,8 +409,8 @@
       LBEG=1000
       LEND=0
 !
-!$omp  parallel do
-!$omp& private(lbeg,lend)
+!!$omp  parallel do
+!!$omp& private(lbeg,lend)
       DO J=JSTA,JEND
       DO I=1,IM
         IF(T(I,J,IEQL(I,J)).GT.255.65) THEN
@@ -441,8 +443,8 @@
             QSATP=EPS*ESATP/(PRESK-ESATP*ONEPS)
             TVP=TPAR(I,J,L)*(1+0.608*QSATP)
             THETAP=TVP*(H10E5/PRESK)**CAPA
-            TV(I,J,L)=T(I,J,L)*(1+0.608*Q(I,J,L)) 
-            THETAA=TV(I,J,L)*(H10E5/PRESK)**CAPA
+            TV=T(I,J,L)*(1+0.608*Q(I,J,L)) 
+            THETAA=TV*(H10E5/PRESK)**CAPA
             IF(THETAP.LT.THETAA)THEN
               CINS(I,J)=CINS(I,J)                                &   
                          +G*(ALOG(THETAP)-ALOG(THETAA))*DZKL

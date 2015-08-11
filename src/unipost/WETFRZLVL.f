@@ -49,11 +49,11 @@
 !$$$  
 !     
 !     
-      use vrbls3d
-      use vrbls2d
-      use masks
-      use params_mod
-      use ctlblk_mod
+      use vrbls3d, only: pint, zint, t
+      use vrbls2d, only:  fis, thz0, ths
+      use masks, only: lmh, sm
+      use params_mod, only: gi, p1000, capa, tfrz, d0065, d50
+      use ctlblk_mod, only: jsta, jend, im, jsta_2l, jend_2u, lm, jm
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
@@ -69,9 +69,9 @@
 !
 !     LOOP OVER HORIZONTAL GRID.
 !     
-!$omp  parallel do
-!$omp& private(delt,delz,htsfc,l,llmh
-!$omp&         tsfc,zl,zu)
+!!$omp  parallel do
+!!$omp& private(delt,delz,htsfc,l,llmh
+!!$omp&         tsfc,zl,zu)
       DO 20 J=JSTA,JEND
       DO 20 I=1,IM
          HTSFC    = FIS(I,J)*GI

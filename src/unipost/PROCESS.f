@@ -23,6 +23,7 @@
 !   00-01-05  JIM TUCCILLO - MPI VERSION
 !   01-10-25  H CHUANG - MODIFIED TO PROCESS HYBRID MODEL OUTPUT
 !   02-06-19  MIKE BALDWIN - WRF VERSION
+!   11-02-04  Jun Wang - add grib2 option
 !     
 ! USAGE:    CALL PROCESS
 !   INPUT ARGUMENT LIST:
@@ -52,7 +53,8 @@
 !
 !----------------------------------------------------------------------------
 !     
-      use CTLBLK_mod
+      use CTLBLK_mod, only: cfld, etafld2_tim, eta2p_tim, mdl2sigma_tim, surfce2_tim,&
+                            cldrad_tim, miscln_tim, fixed_tim, ntlfld
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
@@ -61,23 +63,23 @@
       integer,intent(in) :: kth
       integer,intent(in) :: kpv
       integer,intent(in) :: iostatusD3D
-      real,intent(in) :: th(kth)
-      real,intent(in) :: pv(kpv)
-      real(kind=8) :: timef,btim
-      CHARACTER*6  DATSET,PROJ
-      LOGICAL NORTH
+      real,intent(in)    :: th(kth)
+      real,intent(in)    :: pv(kpv)
+      real(kind=8)       :: timef,btim
+      CHARACTER*6           DATSET,PROJ
+      LOGICAL               NORTH
 !
 !
 !****************************************************************************
 !     START SUBROUTINE PROCESS.
 !
+      cfld=0
 !     
 !     COMPUTE/POST FIELDS ON MDL SURFACES.
 !
       btim = timef()
       CALL MDLFLD
       ETAFLD2_tim = ETAFLD2_tim +(timef() - btim)
-      print*,'coming back from MDLFLD in PROCESS'
 !
 !     COMPUTE/POST FIELDS ON PRESSURE SURFACES.
       btim = timef()
@@ -116,13 +118,18 @@
 !
 !     COMPUTE/POST FIELDS ON SIGMA SURFACES.
       btim = timef()
+      print*,'CALL MDL2THANDPV'
       CALL MDL2THANDPV(kth,kpv,th,pv)
-!
+
 !     POST RADIANCE AND BRIGHTNESS FIELDS.
       btim = timef()
+      print*,'CALL CALRAD_WCLOUD'
       CALL CALRAD_WCLOUD
 !     
 !     END OF ROUTINE.
 !     
+      NTLFLD=cfld
+      print *,'NTLFLD=',NTLFLD
+!
       RETURN
       END

@@ -56,6 +56,15 @@
 !   05-07-07  BINBIN ZHOU - ADD RSM MODEL
 !   05-08-30  BINBIN ZHOU - ADD CEILING and FLIGHT CONDITION RESTRICTION
 !   10-09-09  GEOFF MANIKIN - REVISED CALL TO CALCAPE
+!   11-02-06  Jun Wang - ADD GRIB2 OPTION
+!   11-12-14  SARAH LU - ADD AEROSOL OPTICAL PROPERTIES
+!   11-12-16  SARAH LU - ADD AEROSOL 2D DIAG FIELDS
+!   11-12-23  SARAH LU - CONSOLIDATE ALL GOCART FIELDS TO BLOCK 4
+!   11-12-23  SARAH LU - ADD AOD AT ADDITIONAL CHANNELS
+!   12-04-03  Jun Wang - Add lftx and GFS convective cloud cover for grib2
+!   13-05-06  Shrinivas Moorthi - Add cloud condensate to total precip water
+!   13-12-23  LU/Wang  - READ AEROSOL OPTICAL PROPERTIES LUTS to compute dust aod,
+!                        non-dust aod, and use geos5 gocart LUTS
 !
 !     
 ! USAGE:    CALL CLDRAD
@@ -79,12 +88,33 @@
 !     MACHINE : IBM SP
 !$$$  
 !
-      use vrbls3d
-      use vrbls2d
-      use masks
-      use params_mod
-      use ctlblk_mod
-      use rqstfld_mod
+      use vrbls4d, only: DUST,SUSO, SALT, SOOT, WASO
+      use vrbls3d, only: QQW, QQR, T, ZINT, CFR, QQI, QQS, Q, EXT, ZMID, PMID,&
+                         PINT, DUEM, DUSD, DUDP, DUWT
+      use vrbls2d, only: CLDEFI, CFRACL, AVGCFRACL, CFRACM, AVGCFRACM, CFRACH,&
+                         AVGCFRACH, AVGTCDC, NCFRST, ACFRST, NCFRCV, ACFRCV,  &
+                         HBOT, HBOTD, HBOTS, HTOP, HTOPD, HTOPS,  FIS, PBLH,  &
+                         PBOT, PBOTL, PBOTM, PBOTH, CNVCFR, PTOP, PTOPL,      &
+                         PTOPM, PTOPH, TTOPL, TTOPM, TTOPH, PBLCFR, CLDWORK,  &
+                         ASWIN, AUVBIN, AUVBINC, ASWIN, ASWOUT,ALWOUT, ASWTOA,&
+                         RLWTOA, CZMEAN, CZEN, RSWIN, ALWIN, ALWTOA, RLWIN,   &
+                         SIGT4, RSWOUT, RADOT, RSWINC, ASWINC, ASWOUTC,       &
+                         ASWTOAC, ALWOUTC, ASWTOAC, AVISBEAMSWIN,             &
+                         AVISDIFFSWIN, ASWINTOA, ASWINC, ASWTOAC, AIRBEAMSWIN,&
+                         AIRDIFFSWIN, DUSMASS, DUSMASS25, DUCMASS, DUCMASS25, &
+                         ALWINC, ALWTOAC, RSWTOA, SWUPT, ACSWUPT,SWDNT,&
+                         ACSWDNT
+      use masks,    only: LMH, HTM
+      use params_mod, only: TFRZ, D00, H99999, QCLDMIN, SMALL, D608, H1, ROG, &
+                            GI, RD, QCONV, ABSCOEFI, ABSCOEF, STBOL, PQ0, A2, &
+                            A3, A4
+      use ctlblk_mod, only: JSTA, JEND, SPVAL, MODELNAME, GRIB, CFLD,DATAPD,  &
+                            FLD_INFO, AVRAIN, THEAT, IFHR, IFMIN, AVCNVC,     &
+                            TCLOD, ARDSW, TRDSW, ARDLW, NBIN_DU, TRDLW, IM,   &
+                            JM, LM, gocart_on
+      use rqstfld_mod, only: IGET, ID, LVLS, IAVBLFLD
+      use cmassi_mod,  only: TRAD_ice
+      use machine,     only: kind_phys
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !     
@@ -93,36 +123,73 @@
 !     
 !     DECLARE VARIABLES.
 !     
-      LOGICAL NEED(IM,JM)
-      INTEGER L1D(IM,JM) ,lcbot,lctop  !bsf
-      INTEGER IBOTT(IM,JM),IBOTCu(IM,JM),IBOTDCu(IM,JM)        &
-       ,IBOTSCu(IM,JM),IBOTGr(IM,JM), ITOPT(IM,JM)             &
-      ,ITOPCu(IM,JM),ITOPDCu(IM,JM),ITOPSCu(IM,JM)             &
-      ,ITOPGr(IM,JM)
-      REAL EGRID1(IM,JM),EGRID2(IM,JM),EGRID3(IM,JM)
-      REAL GRID1(IM,JM),GRID2(IM,JM),CLDP(IM,JM),              &
-              CLDZ(IM,JM),CLDT(IM,JM)                          &
-            , RHB(IM,JM,LM)                                    &
-            ,watericetotal(LM),watericemax,wimin               &
-            ,zcldbase,zcldtop,zpbltop
-        real rhoice, coeffp, exponfp, const1, cloud_def_p,     &
-             pcldbase, rhoair, vovermd, concfp, betav,         &
-             vertvis, tx, tv, pol, esx, es, e, zsf, zcld
-        real frac
-        real pabovesfc(LM)
-        integer nfog, nfogn(7),npblcld                         &
-           ,nlifr, k1, k2, ll
+      LOGICAL,dimension(im,jm) ::  NEED
+      INTEGER :: lcbot,lctop  !bsf
+      INTEGER,dimension(im,jm) :: IBOTT, IBOTCu, IBOTDCu, IBOTSCu, IBOTGr,   &
+                                  ITOPT, ITOPCu, ITOPDCu, ITOPSCu, ITOPGr
+      REAL,dimension(im,jm)    :: EGRID1, EGRID2, EGRID3, GRID1, GRID2,      &
+                                  CLDP, CLDZ, CLDT, CLDZCu
+      REAL,dimension(lm)       :: RHB, watericetotal, pabovesfc
+      REAL   :: watericemax, wimin, zcldbase, zcldtop, zpbltop,              &
+                rhoice, coeffp, exponfp, const1, cloud_def_p,                &
+                pcldbase, rhoair, vovermd, concfp, betav,                    &
+                vertvis, tx, tv, pol, esx, es, e, zsf, zcld, frac
+      integer   nfog, nfogn(7),npblcld,nlifr, k1, k2, ll
       
 !     B ZHOU: For aviation:
-      REAL  TCLD(IM,JM), CEILING(IM,JM), FLTCND(IM,JM)         &
-     &, CU_ir(LM), q_conv   !bsf
+      REAL  TCLD(IM,JM), CEILING(IM,JM), FLTCND(IM,JM)            &
+     &    , CU_ir(LM), q_conv   !bsf
 !jw
-      integer I,J,L,K,IBOT,ITCLOD,LBOT,LTOP,ITRDSW,ITRDLW,     &
+      integer I,J,L,K,IBOT,ITCLOD,LBOT,LTOP,ITRDSW,ITRDLW,        &
               LLMH,ITHEAT,IFINCR,ITYPE,ITOP,NUM_THICK
-      real DPBND,RRNUM,QCLD,RSUM,TLMH,FACTRS,FACTRL,DP,        &
-           OPDEPTH
-      real dummy(IM,JM)
+      real    DPBND,RRNUM,QCLD,RSUM,TLMH,FACTRS,FACTRL,DP,        &
+              OPDEPTH, TMP,QSAT,RHUM
+      real    dummy(IM,JM)
       integer idummy(IM,JM)
+!
+!     --- Revision added for GOCART ---
+
+!!    GOCART aerosol optical data from GSFC Mie code calculations,
+!!    mapped to 7 channels: 0.34, 0.44, 0.55, 0.66, 0.86, 1.63, 11.1 micron
+!!    data  wvnum1/0.338, 0.430, 0.545, 0.62, 0.841, 1.628, 11.0/
+!!    data  wvnum2/0.342, 0.450, 0.565, 0.67, 0.876, 1.652, 11.2/
+
+      integer            :: ii, ib, n
+      integer, parameter :: KRHLEV = 36 ! num of rh levels for rh-dep components
+      integer, parameter :: KCM1 = 5    ! num of rh independent aer species
+      integer, parameter :: KCM2 = 5    ! num of rh dependent aer species
+      integer, parameter :: NBDSW = 7   ! total num of sw bands
+      integer, parameter :: NOAER = 20  ! unit for LUTs file
+      integer, parameter :: nAero=KCM2  ! num of aer species in LUTs
+      CHARACTER          :: AerosolName(KCM2)*4, AerosolName_rd*4, aerosol_file*30
+
+!  --- aerosol optical properties mapped onto specified spectral bands
+!   - relative humidity independent aerosol optical properties: du
+      real (kind=kind_phys)  :: extrhi(KCM1,NBDSW)         ! extinction coefficient
+
+!   - relative humidity dependent aerosol optical properties: oc, bc, su, ss001-005
+      real (kind=kind_phys)  :: extrhd(KRHLEV,KCM2,NBDSW)  ! extinction coefficient
+!
+      REAL,dimension(im,jm)  :: P1D,T1D,Q1D,EGRID4
+      REAL, allocatable  :: RH3D(:,:,:)                     ! RELATIVE HUMIDITY
+      REAL               :: DRH0, DRH1, EXT01, EXT02, RDRH(IM,JM,LM)
+      INTEGER            :: IH1, IH2, IHH(IM,JM,LM)
+!
+      INTEGER            :: IOS
+      INTEGER            :: INDX, ISSAM, ISSCM, ISUSO, IWASO, ISOOT
+      REAL               :: CCDRY, CCWET, SSAM, SSCM
+      REAL,dimension(im,jm) :: AOD_DU, AOD_SS, AOD_SU, AOD_OC, AOD_BC, AOD
+!
+      real (kind=kind_phys), dimension(KRHLEV) :: rhlev
+      data  rhlev (:)/  .0, .05, .10, .15, .20, .25, .30, .35,               &
+     &                 .40, .45, .50, .55, .60, .65, .70, .75,               &
+     &                 .80, .81, .82, .83, .84, .85, .86, .87,               &
+     &                 .88, .89, .90, .91, .92, .93, .94, .95,               &
+     &                 .96, .97, .98, .99/
+!
+      data aerosol_file   /"AEROSOL_LUTS.dat"/
+      data AerosolName    /'WASO', 'SOOT', 'SUSO', 'SSAM', 'SSCM'/
+
 !     
 !
 !*************************************************************************
@@ -132,108 +199,189 @@
 !     
 !     ETA SURFACE TO 500MB LIFTED INDEX.  TO BE CONSISTENT WITH THE
 !     LFM AND NGM POSTING WE ADD 273.15 TO THE LIFTED INDEX
+! GSM     WILL NOT ADD 273 TO VALUE FOR RAPID REFRESH TO BE
+!           CONSISTENT WITH RUC
 !
 !     THE BEST (SIX LAYER) AND BOUNDARY LAYER LIFTED INDICES ARE
 !     COMPUTED AND POSTED IN SUBROUTINE MISCLN.
 !
-      IF (IGET(030).GT.0) THEN
-         DO J=JSTA,JEND
-         DO I=1,IM
-           EGRID1(I,J) = SPVAL
-         ENDDO
-         ENDDO
+      IF (IGET(030).GT.0.OR.IGET(572)>0) THEN
+        DO J=JSTA,JEND
+          DO I=1,IM
+            EGRID1(I,J) = SPVAL
+          ENDDO
+        ENDDO
 !
-         CALL OTLIFT(EGRID1)
+        CALL OTLIFT(EGRID1)
 !
-         DO J=JSTA,JEND
-         DO I=1,IM
-           IF(EGRID1(I,J).LT.SPVAL) GRID1(I,J)=EGRID1(I,J) +TFRZ 
-         ENDDO
-         ENDDO
+        DO J=JSTA,JEND
+          DO I=1,IM
+            IF(MODELNAME == 'RAPR') THEN
+              IF(EGRID1(I,J) < SPVAL) GRID1(I,J) = EGRID1(I,J) 
+            ELSE
+              IF(EGRID1(I,J) < SPVAL) GRID1(I,J) = EGRID1(I,J) + TFRZ
+            ENDIF
+          ENDDO
+        ENDDO
 !
-         ID(1:25)=0
-         ID(10)  =50
-         ID(11)  =100
-         CALL GRIBIT(IGET(030),LVLS(1,IGET(030)),GRID1,IM,JM)
+        if(IGET(030) > 0) then
+          if(grib == "grib1" )then
+            ID(1:25) = 0
+            ID(10)   = 50
+            ID(11)   = 100
+            CALL GRIBIT(IGET(030),LVLS(1,IGET(030)),GRID1,IM,JM)
+          else if(grib == "grib2" )then
+            cfld = cfld+1
+            fld_info(cfld)%ifld = IAVBLFLD(IGET(030))
+            datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+          endif
+        endif
+!for GFS
+        if(IGET(572) > 0) then
+          if(grib == "grib2" )then
+            cfld = cfld+1
+            fld_info(cfld)%ifld = IAVBLFLD(IGET(572))
+            where(GRID1 /= SPVAL) GRID1 = GRID1-TFRZ
+            datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+          endif
+        endif
+
       ENDIF
 !
 !     SOUNDING DERIVED AREA INTEGRATED ENERGIES - CAPE AND CIN.
 !       THIS IS THE SFC-BASED CAPE/CIN (lowest 70 mb searched)
-      IF ((IGET(032).GT.0).OR.(IGET(107).GT.0)) THEN
-         IF ( (LVLS(1,IGET(032)).GT.0) .OR.                         &
-              (LVLS(1,IGET(107)).GT.0) ) THEN
-            ITYPE = 1
-	    DPBND=10.E2
-            dummy=0.
-            idummy=0
-            CALL CALCAPE(ITYPE,DPBND,dummy,dummy,dummy,idummy,EGRID1,EGRID2, &
-                 EGRID3,dummy,dummy)
 !
 !           CONVECTIVE AVAILABLE POTENTIAL ENERGY.
-            IF (IGET(032).GT.0) THEN
-               DO J=JSTA,JEND
-               DO I=1,IM
-                 GRID1(I,J) = EGRID1(I,J)
-               ENDDO
-               ENDDO
-               CALL BOUND(GRID1,D00,H99999)
-               ID(1:25)=0
-               CALL GRIBIT(IGET(032),LVLS(1,IGET(032)),GRID1,IM,JM)
-            ENDIF
+      IF ((IGET(032).GT.0))THEN
+        IF ( (LVLS(1,IGET(032)).GT.0) )THEN
+          ITYPE  = 1
+          DPBND  = 10.E2
+          dummy  = 0.
+          idummy = 0
+          CALL CALCAPE(ITYPE,DPBND,dummy,dummy,dummy,idummy,EGRID1,EGRID2, &
+                 EGRID3,dummy,dummy)
+          DO J=JSTA,JEND
+            DO I=1,IM
+              GRID1(I,J) = EGRID1(I,J)
+            ENDDO
+          ENDDO
+          CALL BOUND(GRID1,D00,H99999)
+          if(grib == "grib1" )then
+           ID(1:25) = 0
+           CALL GRIBIT(IGET(032),LVLS(1,IGET(032)),GRID1,IM,JM)
+          else if(grib == "grib2" )then
+            cfld = cfld+1
+            fld_info(cfld)%ifld = IAVBLFLD(IGET(032))
+            datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+          endif	
+        END IF
+      END IF
 !
-!           CONVECTIVE INHIBITION.
-            IF (IGET(107).GT.0) THEN
-               DO J=JSTA,JEND
-               DO I=1,IM
-                 GRID1(I,J) = -1.*EGRID2(I,J)
-               ENDDO
-               ENDDO
-               CALL BOUND(GRID1,D00,H99999)
-               DO J=JSTA,JEND
-               DO I=1,IM
-                 GRID1(I,J) = -1.*GRID1(I,J)
-               ENDDO
-               ENDDO
-               ID(1:25)=0
-               CALL GRIBIT(IGET(107),LVLS(1,IGET(107)),GRID1,IM,JM)
-            ENDIF
-         ENDIF
-      ENDIF
+!           CONVECTIVE INHIBITION.     
+      IF ((IGET(107) > 0))THEN
+        IF ( (LVLS(1,IGET(107)) > 0) )THEN
+          IF ((IGET(032) > 0))THEN
+            IF ( (LVLS(1,IGET(032)) > 0) )THEN
+              DO J=JSTA,JEND
+                DO I=1,IM
+                  GRID1(I,J) = -1.*EGRID2(I,J)
+                ENDDO
+              ENDDO
+            END IF
+          ELSE
+            ITYPE  = 1
+            DPBND  = 10.E2
+            dummy  = 0.
+            idummy = 0
+            CALL CALCAPE(ITYPE,DPBND,dummy,dummy,dummy,idummy,EGRID1,EGRID2, &
+                         EGRID3,dummy,dummy)
+            DO J=JSTA,JEND
+              DO I=1,IM
+                GRID1(I,J) = -1.*EGRID2(I,J)
+              ENDDO
+            ENDDO
+          END IF   
+          CALL BOUND(GRID1,D00,H99999)
+          DO J=JSTA,JEND
+            DO I=1,IM
+              GRID1(I,J) = -1.*GRID1(I,J)
+            ENDDO
+          ENDDO
+          if(grib == "grib1" )then
+            ID(1:25) = 0
+            CALL GRIBIT(IGET(107),LVLS(1,IGET(107)),GRID1,IM,JM)
+          else if(grib == "grib2" )then
+            cfld = cfld+1
+            fld_info(cfld)%ifld = IAVBLFLD(IGET(107))
+            datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+          endif
+        END IF ! end for lvls(107)
+      END IF ! end of iget(107)	 
+      
+!!!=======================================================================
 !
 !     TOTAL COLUMN PRECIPITABLE WATER (SPECIFIC HUMIDITY).
-      IF (IGET(080).GT.0) THEN
+      IF (IGET(080) > 0) THEN
          CALL CALPW(GRID1,1)
-         ID(1:25)=0
+         ID(1:25) = 0
          CALL BOUND(GRID1,D00,H99999)
-         CALL GRIBIT(IGET(080),LVLS(1,IGET(080)),GRID1,IM,JM)
+        if(grib == "grib1" )then
+          CALL GRIBIT(IGET(080),LVLS(1,IGET(080)),GRID1,IM,JM)
+        else if(grib == "grib2" )then
+          cfld = cfld + 1
+          fld_info(cfld)%ifld = IAVBLFLD(IGET(080))
+          datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !     
 !     TOTAL COLUMN CLOUD WATER
-      IF (IGET(200).GT.0) THEN
-         CALL CALPW(GRID1,2)
-	 IF(MODELNAME == 'GFS')then
+      IF (IGET(200) > 0 .or. IGET(575) > 0) THEN
+        CALL CALPW(GRID1,2)
+        IF(MODELNAME == 'GFS')then
 ! GFS combines cloud water and cloud ice, hoping to seperate them next implementation	 
-	   CALL CALPW(GRID2,3)
-	   DO J=JSTA,JEND
-           DO I=1,IM
-     	     GRID1(I,J)=GRID1(I,J)+GRID2(I,J)
-           ENDDO
-           ENDDO
-	 END IF  
-	    
-         ID(1:25)=0
-         ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
-         CALL BOUND(GRID1,D00,H99999)
-         CALL GRIBIT(IGET(200),LVLS(1,IGET(200)),GRID1,IM,JM)
+          CALL CALPW(GRID2,3)
+          DO J=JSTA,JEND
+            DO I=1,IM
+              GRID1(I,J) = GRID1(I,J) + GRID2(I,J)
+            ENDDO
+          ENDDO
+        END IF  
+  
+        ID(1:25) = 0
+        ID(02)   = 129      !--- Parameter Table 129, PDS Octet 4 = 129)
+        CALL BOUND(GRID1,D00,H99999)
+        if(IGET(200) > 0) then
+          if(grib == "grib1" )then
+            CALL GRIBIT(IGET(200),LVLS(1,IGET(200)),GRID1,IM,JM)
+          else if(grib == "grib2" )then
+            cfld = cfld + 1
+            fld_info(cfld)%ifld = IAVBLFLD(IGET(200))
+            datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+          endif
+        endif
+        if(iget(575) > 0) then
+          if(grib == "grib2" )then
+            cfld = cfld + 1
+            fld_info(cfld)%ifld = IAVBLFLD(IGET(575))
+            datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+          endif
+
+        endif
       ENDIF
 !
 !     TOTAL COLUMN CLOUD ICE
       IF (IGET(201).GT.0) THEN
          CALL CALPW(GRID1,3)
-         ID(1:25)=0
-         ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
+         ID(1:25) = 0
+         ID(02)   = 129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib == "grib1" )then
          CALL GRIBIT(IGET(201),LVLS(1,IGET(201)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld = cfld + 1
+          fld_info(cfld)%ifld = IAVBLFLD(IGET(201))
+          datapd(1:im,1:jend-jsta+1,cfld) = GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN RAIN 
@@ -242,7 +390,13 @@
          ID(1:25)=0
          ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(202),LVLS(1,IGET(202)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(202))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN SNOW 
@@ -251,7 +405,13 @@
          ID(1:25)=0
          ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(203),LVLS(1,IGET(203)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(203))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 ! SRD
@@ -261,7 +421,13 @@
          ID(1:25)=0
 !         ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(428),LVLS(1,IGET(428)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(428))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 ! SRD
 
@@ -271,7 +437,13 @@
          ID(1:25)=0
          ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(204),LVLS(1,IGET(204)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(204))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN SUPERCOOLED (<0C) LIQUID WATER 
@@ -280,7 +452,13 @@
          ID(1:25)=0
          ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(285),LVLS(1,IGET(285)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(285))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN MELTING (>0C) ICE
@@ -289,21 +467,39 @@
          ID(1:25)=0
          ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(286),LVLS(1,IGET(286)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(286))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN SHORT WAVE T TENDENCY
       IF (IGET(290).GT.0) THEN
          CALL CALPW(GRID1,9)
+        if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(290),LVLS(1,IGET(290)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(290))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN LONG WAVE T TENDENCY
       IF (IGET(291).GT.0) THEN
          CALL CALPW(GRID1,10)
+        if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(291),LVLS(1,IGET(291)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(291))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF            
 !
 !     TOTAL COLUMN GRID SCALE LATENT HEATING (TIME AVE)
@@ -337,7 +533,19 @@
          ENDIF
          IF(IFMIN .GE. 1)ID(18)=ID(18)*60
          IF (ID(18).LT.0) ID(18) = 0
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(292),LVLS(1,IGET(292)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(292))
+            if(ITHEAT>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITHEAT
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITHEAT
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN CONVECTIVE LATENT HEATING (TIME AVE)
@@ -371,28 +579,59 @@
          ENDIF
          IF(IFMIN .GE. 1)ID(18)=ID(18)*60
          IF (ID(18).LT.0) ID(18) = 0
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(293),LVLS(1,IGET(293)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(293))
+            if(ITHEAT>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITHEAT
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITHEAT
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN moisture convergence
       IF (IGET(295).GT.0) THEN
          CALL CALPW(GRID1,13)
          ID(1:25)=0
+        if(grib=="grib1" )then
+         print *,'in cldrad,grid=',maxval(grid1(1:im,jsta:jend)),minval(grid1(1:im,jsta:jend))
          CALL GRIBIT(IGET(295),LVLS(1,IGET(295)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(295))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN RH
       IF (IGET(312).GT.0) THEN
          CALL CALPW(GRID1,14)
          ID(1:25)=0
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(312),LVLS(1,IGET(312)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(312))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TOTAL COLUMN OZONE
       IF (IGET(299).GT.0) THEN
          CALL CALPW(GRID1,15)
          ID(1:25)=0
+        if(grib=="grib1" )then
          CALL GRIBIT(IGET(299),LVLS(1,IGET(299)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(299))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     BOTTOM AND/OR TOP OF SUPERCOOLED (<0C) LIQUID WATER LAYER
@@ -429,8 +668,14 @@
             ENDDO       !--- End I loop
          ENDDO          !--- End J loop
          IF (IGET(287).GT.0) THEN
+           if(grib=="grib1" )then
             ID(1:25)=0
             CALL GRIBIT(IGET(287),LVLS(1,IGET(287)),GRID1,IM,JM)
+           else if(grib=="grib2" )then
+             cfld=cfld+1
+             fld_info(cfld)%ifld=IAVBLFLD(IGET(287))
+             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+           endif
          ENDIF
          IF (IGET(288).GT.0) THEN
             DO J=JSTA,JEND
@@ -438,8 +683,14 @@
                GRID1(I,J)=GRID2(I,J)
             ENDDO
             ENDDO
+           if(grib=="grib1" )then
             ID(1:25)=0
             CALL GRIBIT(IGET(288),LVLS(1,IGET(288)),GRID1,IM,JM)
+           else if(grib=="grib2" )then
+             cfld=cfld+1
+             fld_info(cfld)%ifld=IAVBLFLD(IGET(288))
+             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+           endif
          ENDIF
       ENDIF
 !
@@ -452,9 +703,15 @@
            GRID1(I,J) = CLDEFI(I,J)
          ENDDO
          ENDDO
+        if(grib=="grib1" )then
          ID(1:25)=0
          ID(02)=129      !--- Parameter Table 129, PDS Octet 4 = 129)
          CALL GRIBIT(IGET(197),LVLS(1,IGET(197)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(197))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !   
 !
@@ -469,8 +726,14 @@
 	  IF(CFRACL(I,J) < SPVAL) GRID1(I,J) = CFRACL(I,J)*100.
         ENDDO
         ENDDO
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(037),LVLS(1,IGET(037)),GRID1,IM,JM)
+       else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(037))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
       ENDIF
 !
 !     TIME AVERAGED LOW CLOUD FRACTION.
@@ -500,7 +763,19 @@
            ID(18)  = IFHR-IFINCR
            IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(300),LVLS(1,IGET(300)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(300))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
       ENDIF      
 !     
 !     MIDDLE CLOUD FRACTION.
@@ -511,8 +786,14 @@
 	   IF(CFRACM(I,J) < SPVAL)GRID1(I,J) = CFRACM(I,J)*100.
         ENDDO
         ENDDO
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(038),LVLS(1,IGET(038)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(038))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TIME AVERAGED MIDDLE CLOUD FRACTION.
@@ -544,7 +825,19 @@
            ID(18)  = IFHR-IFINCR
            IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(301),LVLS(1,IGET(301)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(301))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
       ENDIF   
 !     
 !     HIGH CLOUD FRACTION.
@@ -555,12 +848,19 @@
 	   IF(CFRACH(I,J) < SPVAL)GRID1(I,J) = CFRACH(I,J)*100.
         ENDDO
         ENDDO
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(039),LVLS(1,IGET(039)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(039))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
       ENDIF
 !
 !     TIME AVERAGED HIGH CLOUD FRACTION.
       IF (IGET(302).GT.0) THEN	  
+        GRID1=SPVAL
         DO J=JSTA,JEND
         DO I=1,IM
 	  IF(AVGCFRACH(I,J) < SPVAL)GRID1(I,J) = AVGCFRACH(I,J)*100.
@@ -584,24 +884,34 @@
            ID(18)  = IFHR-IFINCR
            IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(302),LVLS(1,IGET(302)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(302))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
       ENDIF   
 !     
 !     TOTAL CLOUD FRACTION (INSTANTANEOUS).
       IF ((IGET(161).GT.0) .OR. (IGET(260).GT.0)) THEN
+         GRID1=SPVAL
          IF(MODELNAME .EQ. 'GFS')THEN
           EGRID1=SPVAL
+          TCLD=SPVAL
          ELSE IF(MODELNAME .EQ. 'NCAR' .OR. MODELNAME == 'RAPR')THEN
           DO J=JSTA,JEND
           DO I=1,IM
-           frac = 1.
-            do L=1,LM
-             LL=LM-L+1
-              frac=frac*(1.-CFR(I,J,LL))
-            enddo
-!      if(frac.le. 1.) print *,'frac,i,j',frac,i,j
-
-           EGRID1(I,J) = 1. - frac
+               egrid1(i,j)=0.
+              do l = 1,LM
+               egrid1(i,j)=max(egrid1(i,j),cfr(i,j,l))
+              end do
           ENDDO
           ENDDO
 
@@ -624,13 +934,20 @@
          ENDDO
          ENDDO
          IF (IGET(161).GT.0) THEN
+          if(grib=="grib1" )then
             ID(1:25)=0
             CALL GRIBIT(IGET(161),LVLS(1,IGET(161)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(161))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
          ENDIF
       ENDIF
 !
 !     TIME AVERAGED TOTAL CLOUD FRACTION.
          IF (IGET(144).GT.0) THEN
+           GRID1=SPVAL
            IF(MODELNAME == 'GFS')THEN
 	    DO J=JSTA,JEND
             DO I=1,IM
@@ -639,9 +956,6 @@
             END DO
 	    END DO 
 	    
-           ELSE IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
-            GRID1=SPVAL
-
 	   ELSE IF(MODELNAME == 'NMM')THEN
             DO J=JSTA,JEND
             DO I=1,IM
@@ -656,18 +970,9 @@
                IF (NCFRST(I,J) .GT. 0) RSUM=ACFRST(I,J)/NCFRST(I,J)
                IF (NCFRCV(I,J) .GT. 0)                               &
      &            RSUM=MAX(RSUM, ACFRCV(I,J)/NCFRCV(I,J))
-               EGRID1(I,J) = RSUM
+               GRID1(I,J) = RSUM*100.
             ENDDO
             ENDDO
-!
-            DO J=JSTA,JEND
-            DO I=1,IM
-              IF(ABS(EGRID1(I,J)-SPVAL).GT.SMALL)                    &
-     &              GRID1(I,J) = EGRID1(I,J)*100.
-            ENDDO
-            ENDDO
-	   ELSE
-	    GRID1=SPVAL 
 	   END IF 
           IF(MODELNAME.EQ.'NMM' .OR. MODELNAME.EQ.'GFS')THEN
            ID(1:25)= 0
@@ -690,7 +995,19 @@
            ENDIF
            IF (ID(18).LT.0) ID(18) = 0
           ENDIF
+          if(grib=="grib1" )then
            CALL GRIBIT(IGET(144),LVLS(1,IGET(144)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(144))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
          ENDIF
 !
 !     TIME AVERAGED STRATIFORM CLOUD FRACTION.
@@ -701,17 +1018,10 @@
             DO J=JSTA,JEND
             DO I=1,IM
                IF (NCFRST(I,J).GT.0.0) THEN
-                  EGRID1(I,J) = ACFRST(I,J)/NCFRST(I,J)
+                  GRID1(I,J) = ACFRST(I,J)/NCFRST(I,J)*100.
                ELSE
-                  EGRID1(I,J) = D00
+                  GRID1(I,J) = D00
                ENDIF
-            ENDDO
-            ENDDO
-!
-            DO J=JSTA,JEND
-            DO I=1,IM
-              IF(ABS(EGRID1(I,J)-SPVAL).GT.SMALL)                        &
-     &             GRID1(I,J) = EGRID1(I,J)*100.
             ENDDO
             ENDDO
 	   END IF 
@@ -735,28 +1045,33 @@
            ENDIF
            IF (ID(18).LT.0) ID(18) = 0
           ENDIF
+          if(grib=="grib1" )then
            CALL GRIBIT(IGET(139),LVLS(1,IGET(139)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(139))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
          ENDIF
 !    
 !     TIME AVERAGED CONVECTIVE CLOUD FRACTION.
          IF (IGET(143).GT.0) THEN
            IF(MODELNAME /= 'NMM')THEN
-	    EGRID1=SPVAL
+	    GRID1=SPVAL
 	   ELSE  
             DO J=JSTA,JEND
             DO I=1,IM
                IF (NCFRCV(I,J).GT.0.0) THEN
-                  EGRID1(I,J) = ACFRCV(I,J)/NCFRCV(I,J)
+                  GRID1(I,J) = ACFRCV(I,J)/NCFRCV(I,J)*100.
                ELSE
-                  EGRID1(I,J) = D00
+                  GRID1(I,J) = D00
                ENDIF
-            ENDDO
-            ENDDO
-!
-            DO J=JSTA,JEND
-            DO I=1,IM
-               IF(ABS(EGRID1(I,J)-SPVAL).GT.SMALL)                &  
-     &               GRID1(I,J) = EGRID1(I,J)*100.
             ENDDO
             ENDDO
 	   END IF
@@ -780,50 +1095,75 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
           ENDIF
+          if(grib=="grib1" )then
            CALL GRIBIT(IGET(143),LVLS(1,IGET(143)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(143))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
          ENDIF
 !    
 !     CLOUD BASE AND TOP FIELDS 
       IF((IGET(148).GT.0) .OR. (IGET(149).GT.0) .OR.              &
           (IGET(168).GT.0) .OR. (IGET(178).GT.0) .OR.             &
           (IGET(179).GT.0) .OR. (IGET(194).GT.0) .OR.             &
-          (IGET(408).GT.0) .OR. (IGET(487).GT.0) .OR.             & 
+          (IGET(408).GT.0) .OR. (IGET(787).GT.0) .OR.             & 
           (IGET(409).GT.0) .OR. (IGET(406).GT.0) .OR.             &
           (IGET(195).GT.0) .OR. (IGET(260).GT.0) .OR.             &
           (IGET(275).GT.0))  THEN
-  !
-  !--- Calculate grid-scale cloud base & top arrays (Ferrier, Feb '02)
-  !
-  !--- Rain is not part of cloud, only cloud water + cloud ice + snow
-  !
+!
+!--- Calculate grid-scale cloud base & top arrays (Ferrier, Feb '02)
+!
+!--- Rain is not part of cloud, only cloud water + cloud ice + snow
+!
         DO J=JSTA,JEND
           DO I=1,IM
-    !
-    !--- Various convective cloud base & cloud top levels
-    !
-            IBOTCu(I,J)=NINT(HBOT(I,J))
-            IBOTDCu(I,J)=NINT(HBOTD(I,J))
-            IBOTSCu(I,J)=NINT(HBOTS(I,J))
-            ITOPCu(I,J)=NINT(HTOP(I,J))
-            ITOPDCu(I,J)=NINT(HTOPD(I,J))
-            ITOPSCu(I,J)=NINT(HTOPS(I,J))
+!
+!--- Various convective cloud base & cloud top levels
+!
+            IBOTCu(I,J)  = NINT(HBOT(I,J))
+            IBOTDCu(I,J) = NINT(HBOTD(I,J))
+            IBOTSCu(I,J) = NINT(HBOTS(I,J))
+            ITOPCu(I,J)  = NINT(HTOP(I,J))
+            ITOPDCu(I,J) = NINT(HTOPD(I,J))
+            ITOPSCu(I,J) = NINT(HTOPS(I,J))
             IF (IBOTCu(I,J)-ITOPCu(I,J) .LE. 1) THEN
-              IBOTCu(I,J)=0
-              ITOPCu(I,J)=100
+              IBOTCu(I,J) = 0
+              ITOPCu(I,J) = 100
             ENDIF
             IF (IBOTDCu(I,J)-ITOPDCu(I,J) .LE. 1) THEN
-              IBOTDCu(I,J)=0
-              ITOPDCu(I,J)=100
+              IBOTDCu(I,J) = 0
+              ITOPDCu(I,J) = 100
             ENDIF
             IF (IBOTSCu(I,J)-ITOPSCu(I,J) .LE. 1) THEN
-              IBOTSCu(I,J)=0
-              ITOPSCu(I,J)=100
+              IBOTSCu(I,J) = 0
+              ITOPSCu(I,J) = 100
             ENDIF
+! Convective cloud top height
+           ITOP = ITOPCu(I,J)
+           IF (ITOP > 0 .AND. ITOP < 100) THEN
+!             print *, 'aha ', ITOP
+           ENDIF
+           IF (ITOP > 0 .AND. ITOP <= NINT(LMH(I,J))) THEN
+             CLDZCu(I,J) = ZMID(I,J,ITOP)
+           else
+             CLDZCu(I,J) = -5000.
+           endif
+
     !
     !--- Grid-scale cloud base & cloud top levels 
     !
     !--- Grid-scale cloud occurs when the mixing ratio exceeds QCLDmin
+    !    or in the presence of snow when RH>=95% or at/above the PBL top.
     !
+        if(MODELNAME == 'RAPR') then
             IBOTGr(I,J)=0
             DO L=NINT(LMH(I,J)),1,-1
               QCLD=QQW(I,J,L)+QQI(I,J,L)+QQS(I,J,L)
@@ -840,20 +1180,72 @@
                 EXIT
               ENDIF
             ENDDO    !--- End L loop
+        else
+            IBOTGr(I,J)=0
+            ZPBLtop=PBLH(I,J)+ZINT(I,J,NINT(LMH(I,J))+1)
+            DO L=NINT(LMH(I,J)),1,-1
+              QCLD = QQW(I,J,L)+QQI(I,J,L)           !- no snow +QQS(I,J,L)
+              IF (QCLD >= QCLDmin) THEN
+                IBOTGr(I,J) = L
+                EXIT
+              ENDIF
+snow_check:   IF (QQS(I,J,L)>=QCLDmin) THEN
+                TMP=T(I,J,L)
+                IF (TMP>=C2K) THEN
+                  QSAT=PQ0/PMID(I,J,L)*EXP(A2*(TMP-A3)/(TMP-A4))
+                ELSE
+!-- Use Teten's formula for ice from Murray (1967).  More info at
+!   http://faculty.eas.ualberta.ca/jdwilson/EAS372_13/Vomel_CIRES_satvpformulae.html
+                  QSAT=PQ0/PMID(I,J,L)*EXP(21.8745584*(TMP-A3)/(TMP-7.66))
+                ENDIF
+                RHUM=Q(I,J,L)/QSAT
+                IF (RHUM>=0.98 .AND. ZMID(I,J,L)>=ZPBLtop) THEN
+                  IBOTGr(I,J)=L
+                  EXIT
+                ENDIF
+              ENDIF  snow_check
+            ENDDO    !--- End L loop
+            ITOPGr(I,J) = 100
+            DO L=1,NINT(LMH(I,J))
+              QCLD=QQW(I,J,L)+QQI(I,J,L)+QQS(I,J,L)
+              IF (QCLD >= QCLDmin) THEN
+                ITOPGr(I,J)=L
+                EXIT
+              ENDIF
+            ENDDO    !--- End L loop
+        endif
     !
     !--- Combined (convective & grid-scale) cloud base & cloud top levels 
             IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
-	     IBOTT(I,J)=IBOTGr(I,J)
-	     ITOPT(I,J)=ITOPGr(I,J)
+              IBOTT(I,J) = IBOTGr(I,J)
+              ITOPT(I,J) = ITOPGr(I,J)
 	    ELSE
-             IBOTT(I,J)=MAX(IBOTGr(I,J), IBOTCu(I,J))
-!	     if(i==200 .and. j==139)print*,'Debug cloud base 1: ',&
+              IBOTT(I,J) = MAX(IBOTGr(I,J), IBOTCu(I,J))
+!	      if(i==200 .and. j==139)print*,'Debug cloud base 1: ',&
 !             IBOTGr(I,J),IBOTCu(I,J),ibott(i,j)
-             ITOPT(I,J)=MIN(ITOPGr(I,J), ITOPCu(I,J))
+              ITOPT(I,J) = MIN(ITOPGr(I,J), ITOPCu(I,J))
 	    END IF 
           ENDDO      !--- End I loop
         ENDDO        !--- End J loop
       ENDIF          !--- End IF tests 
+!
+! CONVECTIVE CLOUD TOP HEIGHT
+      IF (IGET(758).GT.0) THEN
+
+          DO J=JSTA,JEND
+          DO I=1,IM
+              GRID1(I,J) = CLDZCu(I,J)
+          ENDDO
+          ENDDO
+          ID(1:25)=0
+          if(grib=="grib1" )then
+               CALL GRIBIT(IGET(758),LVLS(1,IGET(758)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+               cfld=cfld+1
+               fld_info(cfld)%ifld=IAVBLFLD(IGET(758))
+               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
+      ENDIF
 !
 !-------------------------------------------------
 !-----------  VARIOUS CLOUD BASE FIELDS ----------
@@ -861,14 +1253,18 @@
 !
 !--- "TOTAL" CLOUD BASE FIELDS (convective + grid-scale;  Ferrier, Feb '02)
 !
-      IF ((IGET(148).GT.0) .OR. (IGET(178).GT.0)                         &
-           .OR.(IGET(260).GT.0) ) THEN
+      IF ((IGET(148).GT.0) .OR. (IGET(178).GT.0) .OR.(IGET(260).GT.0) ) THEN
         DO J=JSTA,JEND
           DO I=1,IM
             IBOT=IBOTT(I,J)
             IF (IBOT .LE. 0) THEN
-              CLDP(I,J) = -50000.
-              CLDZ(I,J) = -5000.
+              IF(MODELNAME == 'RAPR') then
+                CLDP(I,J) = SPVAL
+                CLDZ(I,J) = SPVAL
+              ELSE
+                CLDP(I,J) = -50000.
+                CLDZ(I,J) = -5000.
+              ENDIF
             ELSE IF (IBOT .LE. NINT(LMH(I,J))) THEN
               CLDP(I,J) = PMID(I,J,IBOT)
 !	      if(i==200 .and. j==139)print*,'Debug cloud base 2: ',&
@@ -892,7 +1288,13 @@
                ENDDO
                ENDDO
                ID(1:25)=0
+             if(grib=="grib1" )then
                CALL GRIBIT(IGET(148),LVLS(1,IGET(148)),GRID1,IM,JM)
+             else if(grib=="grib2" )then
+               cfld=cfld+1
+               fld_info(cfld)%ifld=IAVBLFLD(IGET(148))
+               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+             endif
          ENDIF 
 !    CLOUD BOTTOM HEIGHT
          IF (IGET(178).GT.0) THEN
@@ -902,19 +1304,28 @@
                  GRID1(I,J) = CLDZ(I,J)
                ENDDO
                ENDDO
+             if(grib=="grib1" )then
                ID(1:25)=0
                CALL GRIBIT(IGET(178),LVLS(1,IGET(178)),GRID1,IM,JM)
+             else if(grib=="grib2" )then
+               cfld=cfld+1
+               fld_info(cfld)%ifld=IAVBLFLD(IGET(178))
+               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+             endif
          ENDIF
       ENDIF
 
-!    GSD CLOUD BOTTOM HEIGHT AND PRESSURE
-         IF (IGET(408).GT.0 .OR. IGET(487).GT.0) THEN
+!    GSD CLOUD BOTTOM HEIGHT
+      IF (IGET(408).GT.0 .OR. IGET(787).GT.0) THEN
 !- imported from RUC post
 !  -- constants for effect of snow on ceiling
 !      Also found in calvis.f
         rhoice = 970.
         coeffp = 10.36
-        exponfp = 0.7776
+! - new value from Roy Rasmussen - Dec 2003
+!        exponfp = 0.7776 
+! change consistent with CALVIS_GSD.f
+        exponfp = 1.
         const1 = 3.912
 
         nfog = 0
@@ -926,13 +1337,19 @@
         Cloud_def_p = 0.0000001
 
         DO J=JSTA,JEND
+  
           DO I=1,IM
     !
 !- imported from RUC post
-          CLDZ(I,J) = -5000.
-
-          pcldbase = -50000.
-          zcldbase = -5000.
+            IF(MODELNAME == 'RAPR') then
+              CLDZ(I,J) = SPVAL 
+              pcldbase = SPVAL
+              zcldbase = SPVAL 
+            ELSE
+              CLDZ(I,J) = -5000.
+              pcldbase = -50000.
+              zcldbase = -5000.
+            ENDIF
           watericemax = -99999.
           do k=1,lm
             LL=LM-k+1
@@ -984,18 +1401,25 @@
 
 3789     continue
 
-!       At surface?
-          if (watericetotal(1).gt.cloud_def_p) then
-            zcldbase = zmid(i,j,lm)
-            go to 3788
-          end if
-!       Aloft?
+!!       At surface?
+!commented out 16aug11
+!          if (watericetotal(1).gt.cloud_def_p) then
+!            zcldbase = zmid(i,j,lm)
+!            go to 3788
+!          end if
+!!       Aloft?
           do 371 k=2,lm
             k1 = k
             if (watericetotal(k).gt.cloud_def_p) go to 372
  371      continue
           go to 3701
  372      continue
+        if (k1.le.4) then
+! -- If within 4 levels of surface, just use lowest cloud level
+!     as ceiling WITHOUT vertical interpolation.
+           zcldbase = zmid(i,j,lm-k1+1)
+           pcldbase = pmid(i,j,lm-k1+1)
+        else   
 ! -- Use vertical interpolation to obtain cloud level
         zcldbase = zmid(i,j,lm-k1+1) + (cloud_def_p-watericetotal(k1))    &
                  * (zmid(i,j,lm-k1+2)-zmid(i,j,lm-k1+1))                  &
@@ -1003,14 +1427,8 @@
         pcldbase = pmid(i,j,lm-k1+1) + (cloud_def_p-watericetotal(k1))    &
                  * (pmid(i,j,lm-k1+2)-pmid(i,j,lm-k1+1))                  &
                  / (watericetotal(k1-1) - watericetotal(k1))
-
-! -- If within 4 levels of surface, just use lowest cloud level
-!     as ceiling WITHOUT vertical interpolation.
-
-          if (k1.le.4) then
-           zcldbase = zmid(i,j,lm-k1+1)
-           pcldbase = pmid(i,j,lm-k1+1)
-          end if
+        end if
+        zcldbase  = max(zcldbase,FIS(I,J)*GI+5.)
 
  3788   continue
 
@@ -1040,6 +1458,7 @@
 
  3701  continue
 
+!new 15 aug 2011
               CLDZ(I,J) = zcldbase
               CLDP(I,J) = pcldbase
 
@@ -1063,7 +1482,7 @@
 
           ES = esx
           E = PMID(I,J,LL)/100.*Q(I,J,LL)/(0.62197+Q(I,J,LL)*0.37803)
-          RHB(I,J,k) = 100.*AMIN1(1.,E/ES)
+          RHB(k) = 100.*MIN(1.,E/ES)
 !
 !     COMPUTE VIRTUAL POTENTIAL TEMPERATURE.
 !
@@ -1074,9 +1493,9 @@
             ZSF=ZINT(I,J,NINT(LMH(I,J))+1)
             zpbltop = PBLH(I,J)+ZSF
 
-!            PBLH(I,J)= zpbltop - FIS(I,J)*GI        
+!            PBLH(I,J)= zpbltop - FIS(I,J)*GI
 !         print *,'I,J,k1,zmid(i,j,lm-k1+1),zmid(i,j,lm-k1),PBLH(I,J)',
-!     1   I,J,k1,zmid(i,j,lm-k1+1),zmid(i,j,lm-k1),PBLH(I,J),RHB(i,j,k1)
+!     1   I,J,k1,zmid(i,j,lm-k1+1),zmid(i,j,lm-k1),PBLH(I,J),RHB(k1)
 
          do k2=3,20
            if (zpbltop.lt.ZMID(i,j,LM-k2+1)) go to 744
@@ -1084,21 +1503,21 @@
          go to 745     ! No extra considerations for PBL-top cloud
 
   744    continue
-!       print*,'check RH at PBL top, RH,i,j,k2',RHB(i,j,k2-1),i,j,k2-1
-         if (rhb(i,j,k2-1).gt.95. ) then
+!       print*,'check RH at PBL top, RH,i,j,k2',RHB(k2-1),i,j,k2-1
+         if (rhb(k2-1).gt.95. ) then
            zcldbase = ZMID(i,j,LM-k2+2)
 !       print*,' PBL cloud ceiling',zcldbase,i,j
            if (CLDZ(i,j).lt.-100.) then
 !       print*,'add PBL cloud ceiling',zcldbase,i,j,k2
-!     1         ,RHB(i,j,k2-1)
+!     1         ,RHB(k2-1)
              npblcld = npblcld+1
-             CLDZ(i,j) = zcldbase 
+             CLDZ(i,j) = zcldbase
              CLDP(I,J) = PMID(i,j,LM-k2+2)
-             go to 745 
+             go to 745
            end if
            if ( zcldbase.lt.CLDZ(I,J)) then
 !       print*,' change to PBL cloud ceiling',zcldbase,CLDZ(I,J),i,j,k2
-!     1         ,RHB(i,j,k2-1)
+!     1         ,RHB(k2-1)
 !cc             npblcld = npblcld+1
              CLDZ(I,J) = zcldbase
            end if
@@ -1119,7 +1538,7 @@
 !     1              ZMID(I,J,IBOT),IBOT,i,j'
 !     1        ,IBOT,CLDZ(I,J),ZMID(I,J,IBOT),IBOT,i,j
             CLDZ(I,J)=ZMID(I,J,IBOT)
-         endif 
+         endif
        endif
 
  746     continue
@@ -1141,7 +1560,7 @@
       end do
       end do
       write(6,*)'No. pts w/ LIFR ceiling =',nlifr
-      
+
 ! GSD CLOUD BOTTOM HEIGHTS
           IF (IGET(408).GT.0) THEN
                DO J=JSTA,JEND
@@ -1149,33 +1568,51 @@
                  GRID1(I,J) = CLDZ(I,J)
                ENDDO
                ENDDO
+               if(grib=="grib1" )then
                ID(1:25)=0
                CALL GRIBIT(IGET(408),LVLS(1,IGET(408)),GRID1,IM,JM)
+               else if(grib=="grib2" )then
+                 cfld=cfld+1
+                 fld_info(cfld)%ifld=IAVBLFLD(IGET(408))
+                 datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+               endif
           ENDIF
 !   GSD CLOUD BOTTOM PRESSURE
-          IF (IGET(487).GT.0) THEN
+          IF (IGET(787).GT.0) THEN
                DO J=JSTA,JEND
                DO I=1,IM
                  GRID1(I,J) = CLDP(I,J)
                ENDDO
                ENDDO
+               if(grib=="grib1" )then
                ID(1:25)=0
-               CALL GRIBIT(IGET(487),LVLS(1,IGET(487)),GRID1,IM,JM) 
+               CALL GRIBIT(IGET(787),LVLS(1,IGET(787)),GRID1,IM,JM) 
+               else if(grib=="grib2" )then
+                 cfld=cfld+1
+                 fld_info(cfld)%ifld=IAVBLFLD(IGET(787))
+                 datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+               endif
           ENDIF
       ENDIF   !End of GSD algorithm
-
+ 
 !    B. ZHOU: CEILING
-        IF (IGET(260).GT.0) THEN
-            CALL CALCEILING(CLDZ,TCLD,CEILING)
+        IF (IGET(260).GT.0) THEN                                                                                                          
+            CALL CALCEILING(CLDZ,TCLD,CEILING)                                                                                   
             DO J=JSTA,JEND
              DO I=1,IM
                GRID1(I,J) = CEILING(I,J)
              ENDDO
             ENDDO
+           if(grib=="grib1" )then
             ID(1:25)=0
             CALL GRIBIT(IGET(260),LVLS(1,IGET(260)),GRID1,IM,JM)
+           else if(grib=="grib2" )then
+               cfld=cfld+1
+               fld_info(cfld)%ifld=IAVBLFLD(IGET(260))
+               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+           endif
          ENDIF
-
+                                                                                                          
 !    B. ZHOU: FLIGHT CONDITION RESTRICTION
         IF (IGET(261).GT.0) THEN
             CALL CALFLTCND(CEILING,FLTCND)
@@ -1184,8 +1621,14 @@
                GRID1(I,J) = FLTCND(I,J)
              ENDDO
             ENDDO
+           if(grib=="grib1" )then
             ID(1:25)=0
             CALL GRIBIT(IGET(261),LVLS(1,IGET(261)),GRID1,IM,JM)
+           else if(grib=="grib2" )then
+               cfld=cfld+1
+               fld_info(cfld)%ifld=IAVBLFLD(IGET(261))
+               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+           endif
          ENDIF
 !
 !---  Convective cloud base pressures (deep & shallow; Ferrier, Feb '02)
@@ -1209,8 +1652,14 @@
           ENDDO
         ENDDO
        END IF	
+      if(grib=="grib1" )then
        ID(1:25)=0
        CALL GRIBIT(IGET(188),LVLS(1,IGET(188)),GRID1,IM,JM)
+      else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(188))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
       ENDIF
 !
 !---  Deep convective cloud base pressures  (Ferrier, Feb '02)
@@ -1226,8 +1675,14 @@
             ENDIF
           ENDDO
         ENDDO
+      if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(192),LVLS(1,IGET(192)),GRID1,IM,JM)
+      else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(192))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF 
 !---  Shallow convective cloud base pressures   (Ferrier, Feb '02)
 !
@@ -1242,8 +1697,14 @@
             ENDIF
           ENDDO
         ENDDO
+      if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(190),LVLS(1,IGET(190)),GRID1,IM,JM)
+      else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(190))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
   !---  Base of grid-scale cloudiness   (Ferrier, Feb '02)
   !
@@ -1258,8 +1719,14 @@
             ENDIF
           ENDDO
         ENDDO
+      if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(194),LVLS(1,IGET(194)),GRID1,IM,JM)
+      else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(194))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
        
   !---  Base of low cloud 
@@ -1292,7 +1759,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+      if(grib=="grib1" )then
         CALL GRIBIT(IGET(303),LVLS(1,IGET(303)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(303))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
   !---  Base of middle cloud  
   !
@@ -1324,7 +1803,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+      if(grib=="grib1" )then
         CALL GRIBIT(IGET(306),LVLS(1,IGET(306)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(306))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+      endif
        ENDIF
   !---  Base of high cloud   
   !
@@ -1356,7 +1847,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(309),LVLS(1,IGET(309)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(309))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
 !
 !------------------------------------------------
@@ -1382,8 +1885,13 @@
                           +ZINT(I,J,ITOP+1)
               ENDIF    !--- End IF (ITOP .EQ. LM) ...
             ELSE
-              CLDP(I,J) = -50000.
-              CLDZ(I,J) = -5000.
+              IF(MODELNAME == 'RAPR') then
+                CLDP(I,J) = SPVAL
+                CLDZ(I,J) = SPVAL
+              ELSE
+                CLDP(I,J) = -50000.
+                CLDZ(I,J) = -5000.
+              ENDIF
               CLDT(I,J) = -500.
             ENDIF      !--- End IF (ITOP.GT.0 .AND. ITOP.LE.LMH(I,J)) ...
           ENDDO        !--- End DO I loop
@@ -1397,8 +1905,14 @@
                  GRID1(I,J) = CLDP(I,J)
                ENDDO
                ENDDO
+              if(grib=="grib1" )then
                ID(1:25)=0
                CALL GRIBIT(IGET(149),LVLS(1,IGET(149)),GRID1,IM,JM)
+              else if(grib=="grib2" )then
+                cfld=cfld+1
+                fld_info(cfld)%ifld=IAVBLFLD(IGET(149))
+                datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+              endif
          ENDIF
 !   CLOUD TOP HEIGHT
 !
@@ -1408,8 +1922,14 @@
                  GRID1(I,J) = CLDZ(I,J)
                ENDDO
                ENDDO
+              if(grib=="grib1" )then
                ID(1:25)=0
                CALL GRIBIT(IGET(179),LVLS(1,IGET(179)),GRID1,IM,JM)
+              else if(grib=="grib2" )then
+                cfld=cfld+1
+                fld_info(cfld)%ifld=IAVBLFLD(IGET(179))
+                datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+              endif
          ENDIF
       ENDIF
 
@@ -1422,7 +1942,8 @@
           DO I=1,IM
 ! imported from RUC post
 !  Cloud top
-          zcldtop = -5000.
+          zcldtop = -5000. 
+          IF(MODELNAME == 'RAPR') zcldtop = SPVAL
           do k=1,lm
             LL=LM-k+1
             watericetotal(k) = QQW(i,j,ll) + QQI(i,j,ll)
@@ -1433,12 +1954,12 @@
             go to 3799
           end if
 ! in RUC          do 373 k=LM,2,-1
-          do 373 k=LM-1,1,-1
+          do 373 k=LM-1,2,-1
             if (watericetotal(k).gt.cloud_def_p) go to 374
  373      continue
           go to 3799
- 374      zcldtop = zmid(i,j,lm-k+1) + (cloud_def_p-watericetotal(k))   &
-                 * (zmid(i,j,lm-k+2)-zmid(i,j,lm-k+1))                &
+ 374    zcldtop = zmid(i,j,lm-k+1) + (cloud_def_p-watericetotal(k))   &
+                 * (zmid(i,j,lm-k)-zmid(i,j,lm-k+1))                &
                  / (watericetotal(k+1) - watericetotal(k))
  3799     continue
 
@@ -1448,6 +1969,7 @@
               CLDT(I,J) = T(I,J,ITOP)
             ELSE
               CLDP(I,J) = -50000.
+              IF(MODELNAME == 'RAPR') CLDP(I,J) = SPVAL
 !              CLDZ(I,J) = -5000.
               CLDT(I,J) = -500.
             ENDIF      !--- End IF (ITOP.GT.0 .AND. ITOP.LE.LMH(I,J)) ...
@@ -1468,7 +1990,7 @@
          endif
        endif
 
-! check consistency of cloud bas and cloud top
+! check consistency of cloud base and cloud top
             if(CLDZ(I,J).gt.-100. .and. zcldtop.lt.-100.) then
               zcldtop = CLDZ(I,J) + 200.
             endif
@@ -1487,7 +2009,13 @@
                ENDDO
                ENDDO
                ID(1:25)=0
+              if(grib=="grib1" )then
                CALL GRIBIT(IGET(406),LVLS(1,IGET(406)),GRID1,IM,JM)
+              else if(grib=="grib2" )then
+                cfld=cfld+1
+                fld_info(cfld)%ifld=IAVBLFLD(IGET(406))
+                datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+              endif
          ENDIF
 !   GSD CLOUD TOP HEIGHT
 !
@@ -1497,22 +2025,34 @@
                  GRID1(I,J) = CLDZ(I,J)
                ENDDO
                ENDDO
+              if(grib=="grib1" )then
                ID(1:25)=0
                CALL GRIBIT(IGET(409),LVLS(1,IGET(409)),GRID1,IM,JM)
+              else if(grib=="grib2" )then
+                cfld=cfld+1
+                fld_info(cfld)%ifld=IAVBLFLD(IGET(409))
+                datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+              endif
          ENDIF
        ENDIF   ! end of GSD algorithm
 !
 !   CLOUD TOP TEMPS
 !
-          IF (IGET(168).GT.0) THEN
+          IF (IGET(168).GT.0) THEN 
               DO J=JSTA,JEND
               DO I=1,IM
                  GRID1(I,J) = CLDT(I,J)
                ENDDO
                ENDDO
+              if(grib=="grib1" )then
                ID(1:25)=0
                CALL GRIBIT(IGET(168),LVLS(1,IGET(168)),GRID1,IM,JM)
-         ENDIF
+              else if(grib=="grib2" )then
+                cfld=cfld+1
+                fld_info(cfld)%ifld=IAVBLFLD(IGET(168))
+                datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+              endif
+         ENDIF 
 !
 !huang  CLOUD TOP BRIGHTNESS TEMPERATURE
           IF (IGET(275).GT.0) THEN
@@ -1555,7 +2095,7 @@
                enddo
                if (opdepth > 1.) num_thick=num_thick+1   ! for debug
                k=min(k,llmh)
-               GRID1(I,J)=T(i,j,k)
+	       GRID1(I,J)=T(i,j,k)
              ENDDO
              ENDDO
       print *,'num_points, num_thick = ',(jend-jsta+1)*im,num_thick
@@ -1605,9 +2145,15 @@
 !!!   40       continue 
 !!             END DO
 !!	     END DO 
+           if(grib=="grib1" )then
             ID(1:25)=0
 !	    ID(02)=129    ! Parameter Table 129
             CALL GRIBIT(IGET(275),LVLS(1,IGET(275)),GRID1,IM,JM)
+           else if(grib=="grib2" )then
+             cfld=cfld+1
+             fld_info(cfld)%ifld=IAVBLFLD(IGET(275))
+             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+           endif
          ENDIF
 
 !
@@ -1632,8 +2178,14 @@
           ENDDO
         ENDDO
        END IF	
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(189),LVLS(1,IGET(189)),GRID1,IM,JM)
+       else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(189))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+      endif
       END IF
 !
 !---  Deep convective cloud top pressures   (Ferrier, Feb '02)
@@ -1649,8 +2201,14 @@
             ENDIF
           ENDDO
         ENDDO
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(193),LVLS(1,IGET(193)),GRID1,IM,JM) 
+       else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(193))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+      endif
       END IF
 !---  Shallow convective cloud top pressures  (Ferrier, Feb '02)
 !
@@ -1665,8 +2223,14 @@
             ENDIF
           ENDDO
         ENDDO
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(191),LVLS(1,IGET(191)),GRID1,IM,JM)
+       else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(191))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+      endif
       END IF
 !
 !---  Top of grid-scale cloudiness  (Ferrier, Feb '02)
@@ -1682,8 +2246,14 @@
             ENDIF
           ENDDO
         ENDDO
+       if(grib=="grib1" )then
         ID(1:25)=0
         CALL GRIBIT(IGET(195),LVLS(1,IGET(195)),GRID1,IM,JM)
+       else if(grib=="grib2" )then
+        cfld=cfld+1
+        fld_info(cfld)%ifld=IAVBLFLD(IGET(195))
+        datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+      endif
       END IF
       
   !---  top of low cloud 
@@ -1716,7 +2286,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(304),LVLS(1,IGET(304)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(304))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
   !---  top of middle cloud  
   !
@@ -1744,7 +2326,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(307),LVLS(1,IGET(307)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(307))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
   !---  top of high cloud   
   !
@@ -1772,7 +2366,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(310),LVLS(1,IGET(310)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(310))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
 
   !---  T of low cloud top
@@ -1801,7 +2407,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(305),LVLS(1,IGET(305)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(305))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
   !---  Base of middle cloud  
   !
@@ -1829,7 +2447,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(308),LVLS(1,IGET(308)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(308))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
   !---  Base of high cloud   
   !
@@ -1857,20 +2487,46 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
         ENDIF
         IF (ID(18).LT.0) ID(18) = 0
+       if(grib=="grib1" )then
         CALL GRIBIT(IGET(311),LVLS(1,IGET(311)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(311))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+       endif
        ENDIF
 !
 !--- Convective cloud fractions from modified Slingo (1987)
 !
-      IF (IGET(196) .GT. 0) THEN
+      IF (IGET(196) .GT. 0.or.IGET(570)>0) THEN
           GRID1=SPVAL
           DO J=JSTA,JEND
           DO I=1,IM
             if(CNVCFR(I,J)/=SPVAL)GRID1(I,J)=100.*CNVCFR(I,J)   !-- convert to percent
           ENDDO
           ENDDO
-          ID(1:25)=0
-           CALL GRIBIT(IGET(196),LVLS(1,IGET(196)),GRID1,IM,JM)
+          if(IGET(196)>0) then
+            if(grib=="grib1" )then
+             ID(1:25)=0
+             CALL GRIBIT(IGET(196),LVLS(1,IGET(196)),GRID1,IM,JM)
+            else if(grib=="grib2" )then
+             cfld=cfld+1
+             fld_info(cfld)%ifld=IAVBLFLD(IGET(196))
+             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+            endif
+          elseif(IGET(570)>0) then
+            if(grib=="grib2" )then
+             cfld=cfld+1
+             fld_info(cfld)%ifld=IAVBLFLD(IGET(570))
+             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+            endif
+          endif
       END IF
 !
 !--- Boundary layer cloud fractions 
@@ -1900,7 +2556,19 @@
 	    IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
           ENDIF
           IF (ID(18).LT.0) ID(18) = 0
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(342),LVLS(1,IGET(342)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(342))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       END IF
 !
 !--- Cloud work function 
@@ -1929,14 +2597,27 @@
 	    IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
           ENDIF
           IF (ID(18).LT.0) ID(18) = 0
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(313),LVLS(1,IGET(313)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(313))
+            if(ITCLOD>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITCLOD
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITCLOD
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       END IF      
+!
 !***  BLOCK 3.  RADIATION FIELDS.
 !     
 !
 !     TIME AVERAGED SURFACE SHORT WAVE INCOMING RADIATION.
          IF (IGET(126).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE  
@@ -1974,12 +2655,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF 
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(126),LVLS(1,IGET(126)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(126))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED SURFACE UV-B INCOMING RADIATION.
          IF (IGET(298).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE  
@@ -2018,12 +2711,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF 
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(298),LVLS(1,IGET(298)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(298))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED SURFACE UV-B CLEAR SKY INCOMING RADIATION.
          IF (IGET(297).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE  
@@ -2062,12 +2767,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF 
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(297),LVLS(1,IGET(297)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(297))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED SURFACE LONG WAVE INCOMING RADIATION.
          IF (IGET(127).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE
@@ -2104,12 +2821,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF  
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(127),LVLS(1,IGET(127)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(127))
+            if(ITRDLW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDlW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDLW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED SURFACE SHORT WAVE OUTGOING RADIATION.
          IF (IGET(128).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE
@@ -2146,12 +2875,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF  
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(128),LVLS(1,IGET(128)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(128))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED SURFACE LONG WAVE OUTGOING RADIATION.
          IF (IGET(129).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE
@@ -2188,12 +2929,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF  
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(129),LVLS(1,IGET(129)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(129))
+            if(ITRDLW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDLW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDLW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED TOP OF THE ATMOSPHERE SHORT WAVE RADIATION.
          IF (IGET(130).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE
@@ -2230,12 +2983,24 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF  
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(130),LVLS(1,IGET(130)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(130))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     TIME AVERAGED TOP OF THE ATMOSPHERE LONG WAVE RADIATION.
          IF (IGET(131).GT.0) THEN
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	    GRID1=SPVAL
 	    ID(1:25)=0
 	  ELSE
@@ -2272,7 +3037,19 @@
             ENDIF
             IF (ID(18).LT.0) ID(18) = 0
 	  END IF  
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(131),LVLS(1,IGET(131)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(131))
+            if(ITRDLW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDLW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDLW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !
 !     CURRENT TOP OF THE ATMOSPHERE LONG WAVE RADIATION.
@@ -2288,13 +3065,178 @@
            ENDDO
            ID(1:25)=0
 	  END IF  
+         if(grib=="grib1" )then
           CALL GRIBIT(IGET(274),LVLS(1,IGET(274)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(274))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
          ENDIF
 !
+!     CURRENT TOP OF THE ATMOSPHERE SHORT WAVE RADIATION.
+         IF (IGET(902).GT.0) THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
+           GRID1=SPVAL
+           ID(1:25)=0
+          ELSE
+           DO J=JSTA,JEND
+           DO I=1,IM
+             GRID1(I,J) = RSWTOA(I,J)
+           ENDDO
+           ENDDO
+           ID(1:25)=0
+          END IF
+         if(grib=="grib1" )then
+          CALL GRIBIT(IGET(902),LVLS(1,IGET(902)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(902))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+         ENDIF
+
+!
+!     HWRF Addition from RRTGM output
+!     INSTANTANEOUS UPWELLING SW FLUX AT TOA
+         IF (IGET(905).GT.0) THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
+           GRID1=SPVAL
+           ID(1:25)=0
+          ELSE
+           DO J=JSTA,JEND
+           DO I=1,IM
+             GRID1(I,J) = SWUPT(I,J)
+           ENDDO
+           ENDDO
+           ID(1:25)=0
+          END IF
+         if(grib=="grib1" )then
+          CALL GRIBIT(IGET(905),LVLS(1,IGET(905)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(905))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+         ENDIF
+!     HWRF Addition from RRTGM output
+!     ACCUM. INSTANTANEOUS UPWELLING SW FLUX AT TOA
+         IF (IGET(906).GT.0) THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
+           GRID1=SPVAL
+           ID(1:25)=0
+          ELSE
+           DO J=JSTA,JEND
+           DO I=1,IM
+             GRID1(I,J) = ACSWUPT(I,J)
+           ENDDO
+           ENDDO
+           ID(1:25)=0
+            ITRDSW     = INT(TRDSW)
+            IF(ITRDSW .ne. 0) then
+             IFINCR     = MOD(IFHR,ITRDSW)
+             IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
+            ELSE
+             IFINCR     = 0
+            endif
+            ID(19)  = IFHR
+            IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+            ID(20)  = 3
+            IF (IFINCR.EQ.0) THEN
+               ID(18)  = IFHR-ITRDSW
+            ELSE
+               ID(18)  = IFHR-IFINCR
+               IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+            ENDIF
+            IF (ID(18).LT.0) ID(18) = 0
+          END IF
+         if(grib=="grib1" )then
+          CALL GRIBIT(IGET(906),LVLS(1,IGET(906)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(906))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+         ENDIF!   CLOUD TOP BRIGHTNESS TEMPERATURE FROM TOA OUTGOING LW
+!     HWRF Addition from RRTGM output
+!     INSTANTANEOUS DOWNWELLING SW FLUX AT TOA
+         IF (IGET(907).GT.0) THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
+           GRID1=SPVAL
+           ID(1:25)=0
+          ELSE
+           DO J=JSTA,JEND
+           DO I=1,IM
+             GRID1(I,J) = SWDNT(I,J)
+           ENDDO
+           ENDDO
+           ID(1:25)=0
+          END IF
+         if(grib=="grib1" )then
+          CALL GRIBIT(IGET(907),LVLS(1,IGET(907)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(907))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+         ENDIF
+!     HWRF Addition from RRTGM output
+!     ACCUM. INSTANTANEOUS DOWNWELLING SW FLUX AT TOA
+         IF (IGET(908).GT.0) THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM')THEN
+           GRID1=SPVAL
+           ID(1:25)=0
+          ELSE
+           DO J=JSTA,JEND
+           DO I=1,IM
+             GRID1(I,J) = ACSWDNT(I,J)
+           ENDDO
+           ENDDO
+           ID(1:25)=0
+            ITRDSW     = INT(TRDSW)
+            IF(ITRDSW .ne. 0) then
+             IFINCR     = MOD(IFHR,ITRDSW)
+             IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
+            ELSE
+             IFINCR     = 0
+            endif
+            ID(19)  = IFHR
+            IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+            ID(20)  = 3
+            IF (IFINCR.EQ.0) THEN
+               ID(18)  = IFHR-ITRDSW
+            ELSE
+               ID(18)  = IFHR-IFINCR
+               IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+            ENDIF
+            IF (ID(18).LT.0) ID(18) = 0
+          END IF
+         if(grib=="grib1" )then
+          CALL GRIBIT(IGET(908),LVLS(1,IGET(908)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(908))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+         ENDIF
+
+
 !     CLOUD TOP BRIGHTNESS TEMPERATURE FROM TOA OUTGOING LW.
          IF (IGET(265).GT.0) THEN
 	  GRID1=SPVAL
-	  IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
+          IF(MODELNAME .EQ. 'NCAR'.OR.MODELNAME.EQ.'RSM' .OR. MODELNAME == 'RAPR')THEN
 	   GRID1=SPVAL
 	  ELSE
            DO J=JSTA,JEND
@@ -2304,9 +3246,15 @@
            ENDDO
            ENDDO
 	  END IF  
+         if(grib=="grib1" )then
 	  ID(1:25)=0
 	  ID(02)=129    ! Parameter Table 129
           CALL GRIBIT(IGET(265),LVLS(1,IGET(265)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(265))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
          ENDIF
 !     
 !     CURRENT INCOMING SW RADIATION AT THE SURFACE.
@@ -2322,8 +3270,14 @@
          ENDDO
          ENDDO
 !
+         if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(156),LVLS(1,IGET(156)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(156))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     CURRENT INCOMING LW RADIATION AT THE SURFACE.
@@ -2345,8 +3299,14 @@
          ENDDO
          ENDDO
 !
+         if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(157),LVLS(1,IGET(157)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(157))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     CURRENT OUTGOING SW RADIATION AT THE SURFACE.
@@ -2362,8 +3322,14 @@
          ENDDO
          ENDDO
 !
+         if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(141),LVLS(1,IGET(141)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(141))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     CURRENT OUTGOING LW RADIATION AT THE SURFACE.
@@ -2373,8 +3339,14 @@
                  GRID1(I,J) = RADOT(I,J)
                ENDDO
                ENDDO
+         if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(142),LVLS(1,IGET(142)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(142))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     CURRENT (instantaneous) INCOMING CLEARSKY SW RADIATION AT THE SURFACE.
@@ -2389,8 +3361,14 @@
            GRID1(I,J) = RSWINC(I,J)*FACTRS
          ENDDO
 	 ENDDO
+         if(grib=="grib1" )then
          ID(1:25)=0
          CALL GRIBIT(IGET(262),LVLS(1,IGET(262)),GRID1,IM,JM)
+         else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(262))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED INCOMING CLEARSKY SW RADIATION AT THE SURFACE.
@@ -2418,7 +3396,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-         CALL GRIBIT(IGET(383),LVLS(1,IGET(383)),GRID1,IM,JM)
+         if(grib=="grib1" )then
+           CALL GRIBIT(IGET(383),LVLS(1,IGET(383)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(383))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED OUTGOING CLEARSKY SW RADIATION AT THE SURFACE.
@@ -2446,7 +3436,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
+         if(grib=="grib1" )then
          CALL GRIBIT(IGET(386),LVLS(1,IGET(386)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(386))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED OUTGOING CLEARSKY SW RADIATION AT THE MODEL TOP
@@ -2474,7 +3476,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-         CALL GRIBIT(IGET(387),LVLS(1,IGET(387)),GRID1,IM,JM)
+         if(grib=="grib1" )then
+           CALL GRIBIT(IGET(387),LVLS(1,IGET(387)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(387))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED INCOMING SW RADIATION AT THE MODEL TOP
@@ -2502,7 +3516,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-         CALL GRIBIT(IGET(388),LVLS(1,IGET(388)),GRID1,IM,JM)
+         if(grib=="grib1" )then
+           CALL GRIBIT(IGET(388),LVLS(1,IGET(388)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(388))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED INCOMING CLEARSKY LW RADIATION AT THE SURFACE
@@ -2530,7 +3556,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-         CALL GRIBIT(IGET(382),LVLS(1,IGET(382)),GRID1,IM,JM)
+         if(grib=="grib1" )then
+           CALL GRIBIT(IGET(382),LVLS(1,IGET(382)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(382))
+            if(ITRDLW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDLW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDLW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED OUTGOING CLEARSKY LW RADIATION AT THE SURFACE
@@ -2558,7 +3596,19 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-         CALL GRIBIT(IGET(384),LVLS(1,IGET(384)),GRID1,IM,JM)
+         if(grib=="grib1" )then
+           CALL GRIBIT(IGET(384),LVLS(1,IGET(384)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(384))
+            if(ITRDLW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDLW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDLW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
 !     
 !     TIME AVERAGED OUTGOING CLEARSKY LW RADIATION AT THE MODEL TOP
@@ -2586,125 +3636,682 @@
 	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-         CALL GRIBIT(IGET(385),LVLS(1,IGET(385)),GRID1,IM,JM)
+         if(grib=="grib1" )then
+           CALL GRIBIT(IGET(385),LVLS(1,IGET(385)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(385))
+            if(ITRDLW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDLW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDLW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
-!     
+!
 !     TIME AVERAGED SURFACE VISIBLE BEAM DOWNWARD SOLAR FLUX
       IF (IGET(401).GT.0) THEN
          DO J=JSTA,JEND
          DO I=1,IM
            GRID1(I,J) = AVISBEAMSWIN(I,J)
          ENDDO
-	 ENDDO
-	 ID(1:25)=0
+         ENDDO
+         ID(1:25)=0
          ITRDSW     = INT(TRDSW)
-	 IF(ITRDSW .ne. 0) then
+         IF(ITRDSW .ne. 0) then
            IFINCR     = MOD(IFHR,ITRDSW)
-	   IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
-	 ELSE
-	   IFINCR     = 0
+           IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
+         ELSE
+           IFINCR     = 0
          endif
          ID(19)  = IFHR
-	 IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+         IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
          ID(20)  = 3
          IF (IFINCR.EQ.0) THEN
            ID(18)  = IFHR-ITRDSW
          ELSE
            ID(18)  = IFHR-IFINCR
-	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+           IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-! CFS labels time ave fields as inst in long range forecast	 
-	 IF(ITRDSW < 0)ID(1:25)=0  
+! CFS labels time ave fields as inst in long range forecast
+         IF(ITRDSW < 0)ID(1:25)=0
+         if(grib=="grib1" )then
          CALL GRIBIT(IGET(401),LVLS(1,IGET(401)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(401))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
-!     
+!
 !     TIME AVERAGED SURFACE VISIBLE DIFFUSE DOWNWARD SOLAR FLUX
       IF (IGET(402).GT.0) THEN
          DO J=JSTA,JEND
          DO I=1,IM
            GRID1(I,J) = AVISDIFFSWIN(I,J)
          ENDDO
-	 ENDDO
-	 ID(1:25)=0
+         ENDDO
+         ID(1:25)=0
          ITRDSW     = INT(TRDSW)
-	 IF(ITRDSW .ne. 0) then
+         IF(ITRDSW .ne. 0) then
            IFINCR     = MOD(IFHR,ITRDSW)
-	   IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
-	 ELSE
-	   IFINCR     = 0
+           IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
+         ELSE
+           IFINCR     = 0
          endif
          ID(19)  = IFHR
-	 IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+         IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
          ID(20)  = 3
          IF (IFINCR.EQ.0) THEN
            ID(18)  = IFHR-ITRDSW
          ELSE
            ID(18)  = IFHR-IFINCR
-	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+           IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-	 IF(ITRDSW < 0)ID(1:25)=0
+         IF(ITRDSW < 0)ID(1:25)=0
+         if(grib=="grib1" )then
          CALL GRIBIT(IGET(402),LVLS(1,IGET(402)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(402))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
-!     
+!
 !     TIME AVERAGED SURFACE VISIBLE BEAM DOWNWARD SOLAR FLUX
       IF (IGET(403).GT.0) THEN
          DO J=JSTA,JEND
          DO I=1,IM
            GRID1(I,J) = AIRBEAMSWIN(I,J)
          ENDDO
-	 ENDDO
-	 ID(1:25)=0
+         ENDDO
+         ID(1:25)=0
          ITRDSW     = INT(TRDSW)
-	 IF(ITRDSW .ne. 0) then
+         IF(ITRDSW .ne. 0) then
            IFINCR     = MOD(IFHR,ITRDSW)
-	   IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
-	 ELSE
-	   IFINCR     = 0
+           IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
+         ELSE
+           IFINCR     = 0
          endif
          ID(19)  = IFHR
-	 IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+         IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
          ID(20)  = 3
          IF (IFINCR.EQ.0) THEN
            ID(18)  = IFHR-ITRDSW
          ELSE
            ID(18)  = IFHR-IFINCR
-	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+           IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-	 IF(ITRDSW < 0)ID(1:25)=0
+         IF(ITRDSW < 0)ID(1:25)=0
+         if(grib=="grib1" )then
          CALL GRIBIT(IGET(403),LVLS(1,IGET(403)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(403))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
-!     
+!
 !     TIME AVERAGED SURFACE VISIBLE DIFFUSE DOWNWARD SOLAR FLUX
       IF (IGET(404).GT.0) THEN
          DO J=JSTA,JEND
          DO I=1,IM
            GRID1(I,J) = AIRDIFFSWIN(I,J)
          ENDDO
-	 ENDDO
-	 ID(1:25)=0
+         ENDDO
+         ID(1:25)=0
          ITRDSW     = INT(TRDSW)
-	 IF(ITRDSW .ne. 0) then
+         IF(ITRDSW .ne. 0) then
            IFINCR     = MOD(IFHR,ITRDSW)
-	   IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
-	 ELSE
-	   IFINCR     = 0
+           IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITRDSW*60)
+         ELSE
+           IFINCR     = 0
          endif
          ID(19)  = IFHR
-	 IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+         IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
          ID(20)  = 3
          IF (IFINCR.EQ.0) THEN
            ID(18)  = IFHR-ITRDSW
          ELSE
            ID(18)  = IFHR-IFINCR
-	   IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+           IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
          ENDIF
          IF (ID(18).LT.0) ID(18) = 0
-	 IF(ITRDSW < 0)ID(1:25)=0
+         IF(ITRDSW < 0)ID(1:25)=0
+         if(grib=="grib1" )then
          CALL GRIBIT(IGET(404),LVLS(1,IGET(404)),GRID1,IM,JM)
+        elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(404))
+            if(ITRDSW>0) then
+               fld_info(cfld)%ntrange=(IFHR-ID(18))/ITRDSW
+            else
+               fld_info(cfld)%ntrange=0
+            endif
+            fld_info(cfld)%tinvstat=ITRDSW
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
       ENDIF
+!
+      if (gocart_on) then
+!
+!***  BLOCK 4. GOCART AEROSOL FIELDS
+!
+!
+!!! ADD AOD AT 550 NM AND OTHER CHANNELS
+
+!! Aerosol Optical Depth (AOD)
+!! CALPW(dust mixing ratio in kg/kg) => column density (kg/m2)
+!! CALPW(dust mixing ratio in kg/kg * Qext [aerosol extinction efficiency
+!! in m2/g] * 1000. [convert m2/g to m2/kg]) =>  AOD (no unit)
+!!
+!! The sub-micron dust bin contains 4 sub-bins with fixed partition (FD)
+
+      IF ( IGET(609).GT.0 .OR. IGET(610).GT.0 .OR. IGET(611).GT.0     &
+     &   .OR. IGET(612).GT.0 .OR. IGET(613).GT.0 .OR. IGET(614).GT.0  &
+     &   .OR. IGET(623).GT.0 .OR. IGET(624).GT.0 .OR. IGET(625).GT.0  &
+     &   .OR. IGET(626).GT.0 .or. IGET(627).GT.0 .OR. IGET(628).GT.0 ) THEN
+
+!!! READ AEROSOL LUTS
+        open(unit=NOAER, file=aerosol_file, status='OLD', iostat=ios)
+        IF (IOS .GT. 0) THEN
+          print *, ' ERROR! Non-zero iostat for reading LUTS '
+          stop
+        ENDIF
+
+        read(NOAER,'(2x,a4)')  AerosolName_rd
+        print *, 'AerosolName = ', AerosolName_rd
+
+        do ib = 1,NBDSW
+          read(NOAER,'(8f10.5)') (extrhi(ii, ib), ii=1, KCM1)
+        enddo
+
+        DO i = 1, KCM2
+          read(NOAER,'(2x,a4)')  AerosolName_rd
+          print *, 'AerosolName = ', AerosolName_rd
+          IF (AerosolName_rd .ne. AerosolName(i)) THEN
+            print *, ' ERROR! incorrect aerosol species ', AerosolName_rd
+            stop
+          ENDIF
+          do ib = 1, NBDSW
+            read(NOAER,*) (extrhd(ii,i,ib), ii=1, KRHLEV)
+          enddo
+
+          if ( AerosolName_rd .EQ. 'SOOT') ISOOT = i
+          if ( AerosolName_rd .EQ. 'SUSO') ISUSO = i
+          if ( AerosolName_rd .EQ. 'WASO') IWASO = i
+          if ( AerosolName_rd .EQ. 'SSAM') ISSAM = i
+          if ( AerosolName_rd .EQ. 'SSCM') ISSCM = i
+
+        ENDDO
+
+        CLOSE(UNIT=NOAER)
+
+!!! COMPUTES RELATIVE HUMIDITY AND RDRH
+        allocate (RH3D(im,jm,lm))
+        DO L=1,LM                     ! L FROM TOA TO SFC
+           LL=LM-L+1                  ! LL FROM SFC TO TOA
+           DO J=JSTA,JEND
+           DO I=1,IM
+              P1D(I,J)=PMID(I,J,LL)
+              T1D(I,J)=T(I,J,LL)
+              Q1D(I,J)=Q(I,J,LL)
+           ENDDO
+           ENDDO
+           CALL CALRH_GFS(P1D,T1D,Q1D,EGRID4)
+           DO J=JSTA,JEND
+           DO I=1,IM
+             RH3D(I,J,LL)=EGRID4(I,J)
+!   DETERMINE RDRH (wgt for IH2) and IHH (index for IH2)
+             IF ( RH3D(I,J,LL) > RHLEV(KRHLEV) ) THEN
+               IH2 = KRHLEV
+               IH1 = IH2 - 1
+               RDRH(I,J,LL) = 1.
+             ELSEIF ( RH3D(I,J,LL) < RHLEV(1)) THEN
+               IH2 = 1
+               IH1 = 1
+               RDRH(I,J,LL) = 0.
+             ELSE
+               IH2 = 1
+               DO WHILE ( RH3D(I,J,LL) > RHLEV(IH2))
+               IH2 = IH2 + 1
+               IF ( IH2 > KRHLEV ) EXIT
+               ENDDO
+               IH2 = MIN( KRHLEV, IH2 )
+               IH1 = MAX( 1, IH2-1 )
+               DRH0 = RHLEV(IH2) - RHLEV(IH1)
+               DRH1 = RH3D(I,J,LL) - RHLEV(IH1)
+               RDRH(I,J,LL) = DRH1 / DRH0
+             ENDIF
+             IHH(I,J,LL) = IH1
+
+!
+           ENDDO
+           ENDDO
+        ENDDO
+
+!!!
+!!! COMPUTE AOD FOR SPECIFIED WAVELENGTHS
+        DO IB = 1, NBDSW
+
+! AOD AT 340 NM
+        IF (IB .EQ. 1 )  INDX = 623
+! AOD AT 440 NM
+        IF (IB .EQ. 2 )  INDX = 624
+! AOD AT 550 NM
+        IF (IB .EQ. 3 )  INDX = 609
+! AOD AT 660 NM
+        IF (IB .EQ. 4 )  INDX = 625
+! AOD AT 860 NM
+        IF (IB .EQ. 5 )  INDX = 626
+! AOD AT 1630 NM
+        IF (IB .EQ. 6 )  INDX = 627
+! AOD AT 11100 NM
+        IF (IB .EQ. 7 )  INDX = 628
+
+! SKIP IF POST PRODUCT IS NOT REQUESTED
+         IF (IGET(INDX).GT.0 .OR. IB.EQ. 3) THEN
+
+! COMPUTE DUST AOD
+         AOD_DU=SPVAL
+         EXT=SPVAL
+         DO  J=JSTA,JEND
+         DO  I=1,IM
+           DO  L=1,LM
+             EXT(I,J,L) = DUST(I,J,L,1) * EXTRHI(1,IB)
+             DO N=2, KCM1
+             EXT(I,J,L) = EXT(I,J,L) + DUST(I,J,L,N)*EXTRHI(N,IB)
+             ENDDO
+             EXT(I,J,L) = EXT(I,J,L) * 1000.
+           ENDDO  ! L-loop
+         ENDDO   ! I-loop
+         ENDDO   ! J-loop
+         CALL CALPW(AOD_DU,17)
+
+! COMPUTE SULFATE AOD
+         AOD_SU=SPVAL
+         EXT=SPVAL
+         DO  J=JSTA,JEND
+         DO  I=1,IM
+           DO  L=1,LM
+             ih1 = ihh(I,J,L)
+             ih2 = ih1 + 1
+             ext01 = extrhd(ih1,ISUSO,ib)                               &
+     &        + rdrh(I,J,L)*(extrhd(ih2,ISUSO,ib)-extrhd(ih1,ISUSO,ib))
+             EXT(I,J,L) = SUSO(I,J,L,1) * ext01 * 1000.
+           ENDDO  ! L-loop
+         ENDDO   ! I-loop
+         ENDDO   ! J-loop
+         CALL CALPW(AOD_SU,17)
+
+
+! COMPUTE SEA SALT AOD
+         AOD_SS=SPVAL
+         EXT=SPVAL
+         DO  J=JSTA,JEND
+         DO  I=1,IM
+           DO  L=1,LM
+             ih1 = ihh (I,J,L)
+             ih2 = ih1 + 1
+! lump bin1-2 to SSAM, bin3-5 to SSCM
+             SSAM = SALT(I,J,L,1)+SALT(I,J,L,2)
+             SSCM = SALT(I,J,L,3)+SALT(I,J,L,4)+SALT(I,J,L,5)
+             ext01 = extrhd(ih1,ISSAM,ib)                                  &
+     &        + rdrh(I,J,L)*(extrhd(ih2,ISSAM,ib)-extrhd(ih1,ISSAM,ib))
+              ext02 = extrhd(ih1,ISSCM,ib)                                  &
+     &        + rdrh(I,J,L)*(extrhd(ih2,ISSCM,ib)-extrhd(ih1,ISSCM,ib))
+             EXT(I,J,L) = SSAM * ext01 + SSCM * ext02
+             EXT(I,J,L) = EXT(I,J,L) * 1000.
+           ENDDO  ! L-loop
+         ENDDO   ! I-loop
+         ENDDO   ! J-loop
+         CALL CALPW(AOD_SS,17)
+
+
+! COMPUTE BLACK CARBON AOD
+         AOD_BC=SPVAL
+         EXT=SPVAL
+         DO  J=JSTA,JEND
+         DO  I=1,IM
+           DO  L=1,LM
+             CCDRY = SOOT(I,J,L,1)
+             CCWET = SOOT(I,J,L,2)
+             ih1 = ihh (I,J,L)
+             ih2 = ih1 + 1
+             ext01 = extrhd(1,ISOOT,ib)
+             ext02 = extrhd(ih1,ISOOT,ib)                                  &
+     &        + rdrh(I,J,L)*(extrhd(ih2,ISOOT,ib)-extrhd(ih1,ISOOT,ib))
+             EXT(I,J,L) = CCDRY * ext01 + CCWET * ext02
+             EXT(I,J,L) = EXT(I,J,L) * 1000.
+           ENDDO  ! L-loop
+         ENDDO   ! I-loop
+         ENDDO   ! J-loop
+         CALL CALPW(AOD_BC,17)
+
+! COMPUTE ORGANIC CARBON AOD
+         AOD_OC=SPVAL
+         EXT=SPVAL
+         DO  J=JSTA,JEND
+         DO  I=1,IM
+           DO  L=1,LM
+             CCDRY = WASO(I,J,L,1)
+             CCWET = WASO(I,J,L,2)
+             ih1 = ihh (I,J,L)
+             ih2 = ih1 + 1
+             ext01 = extrhd(1,IWASO,ib)
+             ext02 = extrhd(ih1,IWASO,ib)                                  &
+     &        + rdrh(I,J,L)*(extrhd(ih2,IWASO,ib)-extrhd(ih1,IWASO,ib))
+             EXT(I,J,L) = CCDRY * ext01 + CCWET * ext02
+             EXT(I,J,L) = EXT(I,J,L) * 1000.
+           ENDDO  ! L-loop
+         ENDDO   ! I-loop
+         ENDDO   ! J-loop
+         CALL CALPW(AOD_OC,17)
+
+! COMPUTE TOTAL AOD
+         AOD=SPVAL
+         DO  J=JSTA,JEND
+         DO  I=1,IM
+            AOD_DU(I,J) = MAX (AOD_DU(I,J), 0.0)
+            AOD_BC(I,J) = MAX (AOD_BC(I,J), 0.0)
+            AOD_OC(I,J) = MAX (AOD_OC(I,J), 0.0)
+            AOD_SU(I,J) = MAX (AOD_SU(I,J), 0.0)
+            AOD_SS(I,J) = MAX (AOD_SS(I,J), 0.0)
+            AOD(I,J) = AOD_DU(I,J) + AOD_BC(I,J) + AOD_OC(I,J) +      &
+     &                 AOD_SU(I,J) + AOD_SS(I,J)
+         ENDDO   ! I-loop
+         ENDDO   ! J-loop
+
+
+! WRITE OUT TOTAL AOD
+        IF ( IGET(INDX) .GT. 0)  THEN
+        ID(1:25)=0
+        ID(02)=141
+        GRID1=AOD
+        CALL BOUND(GRID1,D00,H99999)
+        if(grib=="grib1" )then
+            CALL GRIBIT(IGET(INDX),LVLS(1,IGET(INDX)),GRID1,IM,JM)
+        else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(INDX))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+        ENDIF
+
+
+! WRITE OUT AOD FOR DU, SU, SS, OC, BC
+        IF ( IB .EQ. 3 ) THEN                 !!! FOR 550NM ONLY
+
+        IF ( IGET(610) .GT. 0)  THEN      ! DUST AOD
+          GRID1 = AOD_DU
+          ID(1:25)=0
+          ID(02)=141
+          CALL BOUND(GRID1,D00,H99999)
+          if(grib=="grib1" )then
+            CALL GRIBIT(IGET(610),LVLS(1,IGET(610)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(610))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
+        ENDIF
+
+        IF ( IGET(611) .GT. 0)  THEN      ! SEA-SALT AOD
+          GRID1 = AOD_SS
+          ID(1:25)=0
+          ID(02)=141
+          CALL BOUND(GRID1,D00,H99999)
+          if(grib=="grib1" )then
+            CALL GRIBIT(IGET(611),LVLS(1,IGET(611)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(611))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
+        ENDIF
+
+        IF ( IGET(612) .GT. 0)  THEN      ! SULFATE AOD
+          GRID1 = AOD_SU
+          ID(1:25)=0
+          ID(02)=141
+          CALL BOUND(GRID1,D00,H99999)
+          if(grib=="grib1" )then
+            CALL GRIBIT(IGET(612),LVLS(1,IGET(612)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(612))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
+        ENDIF
+
+        IF ( IGET(613) .GT. 0)  THEN      ! ORGANIC CARBON AOD
+          GRID1 = AOD_OC
+          ID(1:25)=0
+          ID(02)=141
+          CALL BOUND(GRID1,D00,H99999)
+          if(grib=="grib1" )then
+            CALL GRIBIT(IGET(613),LVLS(1,IGET(613)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(613))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
+        ENDIF
+
+        IF ( IGET(614) .GT. 0)  THEN      ! BLACK CARBON AOD
+          GRID1 = AOD_BC
+          ID(1:25)=0
+          ID(02)=141
+          CALL BOUND(GRID1,D00,H99999)
+          if(grib=="grib1" )then
+            CALL GRIBIT(IGET(614),LVLS(1,IGET(614)),GRID1,IM,JM)
+          else if(grib=="grib2" )then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(614))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+          endif
+        ENDIF
+
+        ENDIF       ! OUTPUT 550 NM AOD FOR EACH SPECIES
+
+        ENDIF       ! IGET(INDX) .GT. 0
+        ENDDO       ! LOOP THROUGH NBDSW CHANNELS
+
+
+      ENDIF         !! .................................... AOD
+
+!! ADD DUST EMISSION FLUXES (kg/m2/sec)
+!! The AER file uses 1.E6 to scale all 2d diagnosis fields
+!! Multiply by 1.E-6 to revert these fields back
+      IF (IGET(615).GT.0) THEN
+         GRID1=SPVAL
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUEM(I,J,1)*1.E-6
+               DO K=2,NBIN_DU
+                GRID1(I,J) = GRID1(I,J) + DUEM(I,J,K)*1.E-6
+               END DO
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=141
+         if(grib=='grib1') then
+          CALL GRIBIT(IGET(615),LVLS(1,IGET(615)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(615))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+!! ADD DUST SEDIMENTATION FLUXES (kg/m2/sec)
+      IF (IGET(616).GT.0) THEN
+         GRID1=SPVAL
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUSD(I,J,1)*1.E-6
+               DO K=2,NBIN_DU
+                GRID1(I,J) = GRID1(I,J)+ DUSD(I,J,K)*1.E-6
+               END DO
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=141
+         if(grib=='grib1') then
+          CALL GRIBIT(IGET(616),LVLS(1,IGET(616)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(616))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+!! ADD DUST DRY DEPOSITION FLUXES (kg/m2/sec)
+      IF (IGET(617).GT.0) THEN
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUDP(I,J,1)*1.E-6
+               DO K=2,NBIN_DU
+                GRID1(I,J) = GRID1(I,J)+ DUDP(I,J,K)*1.E-6
+               END DO
+            END DO
+         END DO
+         if(ifhr==3) then
+         print *,'DUST_DRY_DEPOSITION_FLUX=',maxval(grid1(1:im,jsta:jend)), &
+           minval(grid1(1:im,jsta:jend)),'DUDP1=',maxval(dudp(1:im,jsta:jend,1)), &
+           minval(dudp(1:im,jsta:jend,1)),'dudp2=',maxval(dudp(1:im,jsta:jend,2)), &
+           minval(dudp(1:im,jsta:jend,2)),'dudp3=',maxval(dudp(1:im,jsta:jend,3)), &
+           minval(dudp(1:im,jsta:jend,3)),'dudp4=',maxval(dudp(1:im,jsta:jend,4)), &
+           minval(dudp(1:im,jsta:jend,4)),'dudp5=',maxval(dudp(1:im,jsta:jend,5)), &
+           minval(dudp(1:im,jsta:jend,5))
+         endif
+         ID(1:25) = 0
+         ID(02)=141
+         if(grib=='grib1') then
+          CALL GRIBIT(IGET(617),LVLS(1,IGET(617)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(617))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+!! ADD DUST WET DEPOSITION FLUXES (kg/m2/sec)
+      IF (IGET(618).GT.0) THEN
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUWT(I,J,1)*1.E-6
+               DO K=2,NBIN_DU
+                GRID1(I,J) = GRID1(I,J)+ DUWT(I,J,K)*1.E-6
+               END DO
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=141
+         if(grib=='grib1') then
+          CALL GRIBIT(IGET(618),LVLS(1,IGET(618)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(618))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+!! ADD AEROSOL SURFACE PM10 MASS CONCENTRATION (kg/m3)
+      IF (IGET(619).GT.0 ) THEN
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUSMASS(I,J) * 1.E-6
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=129
+         if(grib=='grib1') then
+           CALL GRIBIT(IGET(619),LVLS(1,IGET(619)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+           cfld=cfld+1
+           fld_info(cfld)%ifld=IAVBLFLD(IGET(619))
+           datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+!! ADD AEROSOL SURFACE PM2.5 MASS CONCENTRATION (kg/m3)
+      IF (IGET(620).GT.0 ) THEN
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUSMASS25(I,J) * 1.E-6
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=129
+         if(grib=='grib1') then
+           CALL GRIBIT(IGET(620),LVLS(1,IGET(620)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+           cfld=cfld+1
+           fld_info(cfld)%ifld=IAVBLFLD(IGET(620))
+           datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+!! ADD TOTAL AEROSOL PM10 COLUMN DENSITY (kg/m2)
+      IF (IGET(621).GT.0 ) THEN
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUCMASS(I,J) * 1.E-6
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=141
+         if(grib=='grib1') then
+           CALL GRIBIT(IGET(621),LVLS(1,IGET(621)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+           cfld=cfld+1
+           fld_info(cfld)%ifld=IAVBLFLD(IGET(621))
+           datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+!! ADD TOTAL AEROSOL PM2.5 COLUMN DENSITY (kg/m2)
+      IF (IGET(622).GT.0 ) THEN
+         DO J = JSTA,JEND
+            DO I = 1,IM
+               GRID1(I,J) = DUCMASS25(I,J) * 1.E-6
+            END DO
+         END DO
+         ID(1:25) = 0
+         ID(02)=141
+         if(grib=='grib1') then
+           CALL GRIBIT(IGET(622),LVLS(1,IGET(622)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+           cfld=cfld+1
+           fld_info(cfld)%ifld=IAVBLFLD(IGET(622))
+           datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+      endif          ! if gocart_on
 !
 !     END OF ROUTINE.
 !

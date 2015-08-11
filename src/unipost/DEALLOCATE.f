@@ -33,6 +33,7 @@
 !     MACHINE : IBM RS/6000 SP
 !$$$
 !
+      use vrbls4d
       use vrbls3d
       use vrbls2d
       use soil
@@ -77,7 +78,7 @@
       deallocate(exch_h) 
       deallocate(train)
       deallocate(tcucn)
-      deallocate(el_pbl)
+      deallocate(EL_PBL)
 !     MP FIELD   
       deallocate(cwm)
       deallocate(F_ice)
@@ -88,6 +89,8 @@
       deallocate(QQR)
       deallocate(QQS)
       deallocate(QQG)
+      deallocate(QQNI)
+      deallocate(QQNR)
       deallocate(EXTCOF55)
       deallocate(CFR)
       deallocate(DBZ)
@@ -96,32 +99,42 @@
       deallocate(DBZC)
       deallocate(mcvg)
       deallocate(NLICE)
+!     Wm Lewis: added
+      deallocate(NRAIN)
+! KRS: HWRF addition for thompson reflectivity
+! or non-ferrier physics. wrf-derived
+      deallocate(REFL_10CM)
 !GFS FIELD
       deallocate(o3)
-! Add GFS d3d fields
-      deallocate(vdifftt)
+      deallocate(o)
+      deallocate(o2)
       deallocate(tcucns)
-      deallocate(vdiffmois)
-      deallocate(dconvmois)
-      deallocate(sconvmois)
-      deallocate(nradtt)
-      deallocate(o3vdiff)
-      deallocate(o3prod)
-      deallocate(o3tndy)
-      deallocate(mwpv)
-      deallocate(unknown)
-      deallocate(vdiffzacce)
-      deallocate(zgdrag)
-      deallocate(cnvctummixing)
-      deallocate(vdiffmacce)
-      deallocate(mgdrag)
-      deallocate(cnvctvmmixing)
-      deallocate(ncnvctcfrac)
-      deallocate(cnvctumflx)
-      deallocate(cnvctdmflx)
-      deallocate(cnvctdetmflx)
-      deallocate(cnvctzgdrag)
-      deallocate(cnvctmgdrag)      
+! Add GFS d3d fields
+      if (d3d_on) then
+        deallocate(vdifftt)
+!       deallocate(tcucns)
+        deallocate(vdiffmois)
+        deallocate(dconvmois)
+        deallocate(sconvmois)
+        deallocate(nradtt)
+        deallocate(o3vdiff)
+        deallocate(o3prod)
+        deallocate(o3tndy)
+        deallocate(mwpv)
+        deallocate(unknown)
+        deallocate(vdiffzacce)
+        deallocate(zgdrag)
+        deallocate(cnvctummixing)
+        deallocate(vdiffmacce)
+        deallocate(mgdrag)
+        deallocate(cnvctvmmixing)
+        deallocate(ncnvctcfrac)
+        deallocate(cnvctumflx)
+        deallocate(cnvctdmflx)
+        deallocate(cnvctdetmflx)
+        deallocate(cnvctzgdrag)
+        deallocate(cnvctmgdrag)      
+      endif
 !
 !     FROM SOIL
 !
@@ -163,15 +176,21 @@
       deallocate(akmsavg)
       deallocate(u10max)
       deallocate(v10max)
+      deallocate(u10h)
+      deallocate(v10h)
       deallocate(akms)
       deallocate(akhs)
       deallocate(cuprec)
       deallocate(acprec)
       deallocate(ancprc)
       deallocate(cuppt)
+      deallocate(tsnow)
+      deallocate(qvg)
+      deallocate(qv2m)
       deallocate(rswin)
       deallocate(rlwin)
       deallocate(rlwtoa)
+      deallocate(rswtoa)
       deallocate(tg)
       deallocate(sfcshx)
       deallocate(sfclhx)
@@ -310,7 +329,34 @@
       deallocate(w_mean)
       deallocate(refd_max)
       deallocate(up_heli_max)
-      deallocate(grpl_max)      
+      deallocate(up_heli_max16)
+      deallocate(grpl_max)
+      deallocate(up_heli)
+      deallocate(up_heli16)
+      deallocate(ltg1_max)
+      deallocate(ltg2_max)
+      deallocate(ltg3_max)
+      deallocate(nci_ltg)
+      deallocate(nca_ltg)
+      deallocate(nci_wq)
+      deallocate(nca_wq)
+      deallocate(nci_refd)
+      deallocate(nca_refd)
+
+! CRA
+      deallocate(REF_10CM)
+      deallocate(REFC_10CM)
+      deallocate(REF1KM_10CM)
+      deallocate(REF4KM_10CM)
+! CRA
+      deallocate(U10mean)
+      deallocate(V10mean)
+      deallocate(SPDUV10mean)
+      deallocate(SWRADmean)
+      deallocate(SWNORMmean)
+      deallocate(SNFDEN)
+      deallocate(SNDEPAC)
+
 !
 !     FROM MASKS
 !
@@ -325,5 +371,73 @@
       deallocate(dy)
       deallocate(htm)
       deallocate(vtm)
+
+! add GFIP ICING
+      deallocate(icing_gfip)
+      deallocate(icing_gfis)
+
 !
+      if (gocart_on) then
+! Deallocate GOCART fields
+! vrbls4d
+        deallocate(dust)
+        deallocate(salt)
+        deallocate(soot)
+        deallocate(waso)
+        deallocate(suso)
+! vrbls3d
+        deallocate(ext)
+        deallocate(asy)
+        deallocate(ssa)
+        deallocate(duem)
+        deallocate(dusd)
+        deallocate(dudp)
+        deallocate(duwt)
+        deallocate(suem)
+        deallocate(susd)
+        deallocate(sudp)
+        deallocate(suwt)
+        deallocate(ocem)
+        deallocate(ocsd)
+        deallocate(ocdp)
+        deallocate(ocwt)
+        deallocate(bcem)
+        deallocate(bcsd)
+        deallocate(bcdp)
+        deallocate(bcwt)
+        deallocate(ssem)
+        deallocate(sssd)
+        deallocate(ssdp)
+        deallocate(sswt)
+        deallocate(dpres)
+        deallocate(rhomid)
+! vrbls2d
+        deallocate(dusmass)
+        deallocate(ducmass)
+        deallocate(dusmass25)
+        deallocate(ducmass25)
+        deallocate(susmass)
+        deallocate(sucmass)
+        deallocate(susmass25)
+        deallocate(sucmass25)
+        deallocate(ocsmass)
+        deallocate(occmass)
+        deallocate(ocsmass25)
+        deallocate(occmass25)
+        deallocate(bcsmass)
+        deallocate(bccmass)
+        deallocate(bcsmass25)
+        deallocate(bccmass25)
+        deallocate(sssmass)
+        deallocate(sscmass)
+        deallocate(sssmass25)
+        deallocate(sscmass25)
+      endif
+!
+! HWRF RRTMG output 
+      deallocate(swupt)
+      deallocate(acswupt)
+      deallocate(swdnt)
+      deallocate(acswdnt)
+      
       end
