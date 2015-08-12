@@ -51,7 +51,7 @@ f_rimef, q,&
 pmid,&
               omga, pmidv, zmid, rlwtt, rswtt, ttnd, tcucn, train,&
 exch_h,&
-              el_pbl, cfr, zint, REFL_10CM, qqni, qqnr
+              el_pbl, cfr, zint, REFL_10CM, qqni, qqnr, qrimef
       use vrbls2d, only: fis, cfrach, cfracl, cfracm, u10h, u10, v10h,&
 v10,th10,&
               q10, tshltr, qshltr, pshltr, smstav, smstot, acfrcv,&
@@ -687,6 +687,7 @@ truelat2,&
 
        if(advected_ferrier) then
          ! Compute f_* arrays from q* arrays
+          print *,'Convert from Q arrays to F arrays for advected Ferrier.'
          call etamp_q2f(qrimef)
        endif
 

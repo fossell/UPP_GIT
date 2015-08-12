@@ -3,7 +3,7 @@
       ! scheme" to calculate the F_ICE, F_RIMEF and F_RAIN arrays from
       ! the QQW, QQR, QQI and the input array QRIMEF.
         use CTLBLK_mod, only: lm,im,jsta,jend,jsta_2l,jend_2u
-        use VRBLS3D, only: QQW,QQR,QQI, f_rain,f_ice,f_rimef, T
+        use VRBLS3D, only: QQW,QQR,QQI,CWM, f_rain,f_ice,f_rimef, T
 
         implicit none
 
@@ -20,6 +20,7 @@
          bigj: do j=jsta,jend
             bigi: do i=1,im
                QT=QQW(I,J,L)+QQR(I,J,L)+QQI(I,J,L)
+               CWM(i,j,l)=QT
                if(QQI(i,j,l)<=EPSQ) then
                   f_ice(i,j,l)=0.
                   f_rimef(i,j,l)=0.
