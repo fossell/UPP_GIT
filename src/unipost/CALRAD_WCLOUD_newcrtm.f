@@ -775,7 +775,7 @@ SUBROUTINE CALRAD_WCLOUD
                           else if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
                              atmosphere(1)%cloud(1)%effective_radius(k) = 10.
                              atmosphere(1)%cloud(1)%water_content(k) = max(0.,qqw(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(2)%effective_radius(k) = 25.
+                             atmosphere(1)%cloud(2)%effective_radius(k) = 75.
                              atmosphere(1)%cloud(2)%water_content(k) = max(0.,qqi(i,j,k)*dpovg)
                              RHOX=1000.
                              RHO=pmid(i,j,k)/(RD*T(I,J,K)*(1.+D608*Q(I,J,K)))
@@ -1331,7 +1331,7 @@ SUBROUTINE CALRAD_WCLOUD
                           else if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
                              atmosphere(1)%cloud(1)%effective_radius(k) = 10.
                              atmosphere(1)%cloud(1)%water_content(k) = max(0.,qqw(i,j,k)*dpovg)
-                             atmosphere(1)%cloud(2)%effective_radius(k) = 25.
+                             atmosphere(1)%cloud(2)%effective_radius(k) = 75.
                              atmosphere(1)%cloud(2)%water_content(k) = max(0.,qqi(i,j,k)*dpovg)
                              RHOX=1000.
                              RHO=pmid(i,j,k)/(RD*T(I,J,K)*(1.+D608*Q(I,J,K)))
