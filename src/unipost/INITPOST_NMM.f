@@ -685,12 +685,6 @@ truelat2,&
       end if
 ! KRS: End add concentrations for HWRF
 
-       if(advected_ferrier) then
-         ! Compute f_* arrays from q* arrays
-          print *,'Convert from Q arrays to F arrays for advected Ferrier.'
-         call etamp_q2f(qrimef)
-       endif
-
       end if read_f_cwm ! end of retrieving hydrometeo for different MP options      
       
 
@@ -2315,6 +2309,14 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
       call getIVariableN(fileName,DateStr,DataHandle,VarName,NHEAT,      &
         1,1,1,1,1,1,1,1)
       print*,'NHEAT= ',NHEAT 
+
+
+      ! Compute f_* arrays from q* arrays
+       if(advected_ferrier) then
+          print *,'Convert from Q arrays to F arrays for advected Ferrier.'
+         call etamp_q2f(QRIMEF,QQI,QQR,QQW,CWM,F_RAIN,F_ICE,F_RIMEF,T)
+       endif
+
 
 !
 !        ncdump -h

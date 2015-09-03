@@ -1,13 +1,16 @@
-      SUBROUTINE ETAMP_Q2F(QRIMEF)
+      SUBROUTINE ETAMP_Q2F(QRIMEF,QQI,QQR,QQW,CWM,F_RAIN,F_ICE,F_RIMEF,T)
       ! This subroutine is to be used with the WRF "advected Ferrier
       ! scheme" to calculate the F_ICE, F_RIMEF and F_RAIN arrays from
       ! the QQW, QQR, QQI and the input array QRIMEF.
         use CTLBLK_mod, only: lm,im,jsta,jend,jsta_2l,jend_2u
-        use VRBLS3D, only: QQW,QQR,QQI,CWM, f_rain,f_ice,f_rimef, T
-
         implicit none
 
-        real, intent(in) :: QRIMEF(im,jsta_2l:jend_2u,lm)
+        real, intent(in),dimension(im,jsta_2l:jend_2u,lm) :: &
+             QRIMEF,QQW,QQR,QQI, T
+
+        real, intent(out),dimension(im,jsta_2l:jend_2u,lm) :: &
+             f_rain,f_ice,f_rimef,CWM
+
         integer :: i,j,l
         real :: qt
 
