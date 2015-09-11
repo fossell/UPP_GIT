@@ -1668,8 +1668,16 @@
  	 if(grib=='grib1') then
            CALL GRIBIT(IGET(422),LVLS(1,IGET(422)),GRID1,IM,JM)
          elseif(grib=='grib2') then
-           cfld=cfld+1
-           fld_info(cfld)%ifld=IAVBLFLD(IGET(422))
+              cfld=cfld+1
+              fld_info(cfld)%ifld=IAVBLFLD(IGET(422))
+             !if(ITPREC>0) then
+               !fld_info(cfld)%ntrange=(IFHR-ID(18))/ITPREC
+                fld_info(cfld)%ntrange=1
+             !else
+             !  fld_info(cfld)%ntrange=0
+             !endif
+             !fld_info(cfld)%tinvstat=ITPREC
+              fld_info(cfld)%tinvstat=1
            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
          endif
        ENDIF
@@ -2392,11 +2400,13 @@
               cfld=cfld+1
               fld_info(cfld)%ifld=IAVBLFLD(IGET(434))
               if(ITPREC>0) then
-                fld_info(cfld)%ntrange=(IFHR-ID(18))/ITPREC
+               !fld_info(cfld)%ntrange=(IFHR-ID(18))/ITPREC
+                fld_info(cfld)%ntrange=1
               else
                 fld_info(cfld)%ntrange=0
               endif
-              fld_info(cfld)%tinvstat=ITPREC
+             !fld_info(cfld)%tinvstat=ITPREC
+              fld_info(cfld)%tinvstat=IFINCR
               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
             endif
          ENDIF
@@ -2539,11 +2549,13 @@
               cfld=cfld+1
               fld_info(cfld)%ifld=IAVBLFLD(IGET(437))
               if(ITPREC>0) then
-                fld_info(cfld)%ntrange=(IFHR-ID(18))/ITPREC
+               !fld_info(cfld)%ntrange=(IFHR-ID(18))/ITPREC
+                fld_info(cfld)%ntrange=1
               else
                 fld_info(cfld)%ntrange=0
               endif
-              fld_info(cfld)%tinvstat=ITPREC
+             !fld_info(cfld)%tinvstat=ITPREC
+              fld_info(cfld)%tinvstat=IFINCR
               datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
             endif
          ENDIF
