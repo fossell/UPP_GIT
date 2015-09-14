@@ -15,7 +15,7 @@
       ,T_ADJ(:,:,:)                                                  &
       ,F_ice(:,:,:),F_rain(:,:,:),F_RimeF(:,:,:)                     &
       ,QQW(:,:,:), QQI(:,:,:), QQR(:,:,:), QQS(:,:,:), QQG(:,:,:)    &
-      ,QQNI(:,:,:),QQNR(:,:,:)                                       &
+      ,QQNI(:,:,:),QQNR(:,:,:), QRIMEF(:,:,:)                        &
       ,CFR(:,:,:), DBZ(:,:,:), DBZR(:,:,:), DBZI(:,:,:), DBZC(:,:,:) &
       ,TTND(:,:,:),RSWTT(:,:,:),RLWTT(:,:,:), REF_10CM(:,:,:)        &
       ,EXCH_H(:,:,:),TRAIN(:,:,:),TCUCN(:,:,:),EL_PBL(:,:,:)         &

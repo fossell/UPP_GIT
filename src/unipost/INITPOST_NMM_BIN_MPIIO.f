@@ -100,6 +100,7 @@
       type(r_info), pointer         :: r(:) => NULL()
       integer(kind=mpi_offset_kind) :: pos
       integer                       :: n
+      LOGICAL advected_ferrier, ferrier
 
 !
       DATA BLANK/'    '/
@@ -235,8 +236,12 @@
       endif
 
       ! Initializes constants for Ferrier microphysics
-      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
-        CALL MICROINIT(imp_physics)
+      advected_ferrier = (imp_physics==15)
+      ferrier=(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95 &
+           .or. imp_physics==15)
+      if(advected_ferrier) imp_physics=5
+      if(ferrier)then
+       CALL MICROINIT(imp_physics)
       end if
 
       print*,'MP_PHYSICS= ',imp_physics

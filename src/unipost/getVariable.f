@@ -77,14 +77,14 @@ subroutine getVariable(fileName,DateStr,dh,VarName,VarBuff,IM,JSTA_2L,JEND_2U,LM
    end_index = 1
 !   print*,'SPVAL in getVariable = ',SPVAL
    call ext_ncd_get_var_info(dh,TRIM(VarName),ndim,ordering,Stagger,start_index,end_index,WrfType,ierr)
-   allocate(data (end_index(1), end_index(2), end_index(3), 1))
    IF ( ierr /= 0 ) THEN
-     write(*,*)'Error: ',ierr,TRIM(VarName),' not found in ',fileName
-!CHUANG make sure data=0 when not found in wrf output
-     data=0.
-   VarBuff=0.  
-     go to 27
+10    format('Error: ',I0,' var ',A,' not found in ',A)
+      write(*,10) ierr,trim(VarName),trim(filename)
+!CHUANG make sure output is 0 when not found in wrf output
+     VarBuff=0.  
+     go to 28
    ENDIF
+   allocate(data (end_index(1), end_index(2), end_index(3), 1))
    if( WrfType /= WRF_REAL .AND. WrfType /= WRF_REAL8 ) then !Ignore if not a real variable
      write(*,*) 'Error: Not a real variable',WrfType
      return
@@ -129,8 +129,9 @@ subroutine getVariable(fileName,DateStr,dh,VarName,VarBuff,IM,JSTA_2L,JEND_2U,LM
      enddo
 !     write(*,*) Varname,' L ',l,': = ',data(1,1,ll,1)
     enddo
- 27 continue
+ 27 continue ! Jump here on read failure
    deallocate(data)
+ 28 continue ! Jump here if variable does not exist
    return
 
 end subroutine getVariable

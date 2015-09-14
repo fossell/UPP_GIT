@@ -51,7 +51,7 @@ f_rimef, q,&
 pmid,&
               omga, pmidv, zmid, rlwtt, rswtt, ttnd, tcucn, train,&
 exch_h,&
-              el_pbl, cfr, zint, REFL_10CM, qqni, qqnr
+              el_pbl, cfr, zint, REFL_10CM, qqni, qqnr, qrimef
       use vrbls2d, only: fis, cfrach, cfracl, cfracm, u10h, u10, v10h,&
 v10,th10,&
               q10, tshltr, qshltr, pshltr, smstav, smstot, acfrcv,&
@@ -149,6 +149,7 @@ truelat2,&
       INTEGER IE, IW
 !code from R.Rozumalski
       INTEGER latnm, latsm, lonem, lonwm, idxave, dlat, dlon, nlat, nlon
+      LOGICAL advected_ferrier, ferrier
 
 !***********************************************************************
 !     START INIT HERE.
@@ -399,7 +400,11 @@ truelat2,&
       print*,'MP_PHYSICS= ',imp_physics      
 
 ! Initializes constants for Ferrier microphysics       
-      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
+      advected_ferrier = (imp_physics==15)
+      ferrier=(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95 &
+           .or. imp_physics==15)
+      if(advected_ferrier) imp_physics=5
+      if(ferrier)then
        CALL MICROINIT(imp_physics)
       end if
 
@@ -446,8 +451,9 @@ truelat2,&
 
 ! END KRS
 
-      if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
-
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      ! Read Q (ferrier) or QVAPOR (other mp)
+      read_q: if(ferrier) then
        VarName='Q'
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -461,7 +467,28 @@ truelat2,&
        end do
        print*,'finish reading specific humidity'
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample Q= ',Q(ii,jj,ll)
+      else
+       VarName='QVAPOR'
+       call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
+        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+       do l = 1, lm
+        do j = jsta_2l, jend_2u
+         do i = 1, im
+!            q ( i, j, l ) = dum3d ( i, j, l )
+!            if(l.eq.1)print*,'Debug: I,J,Q= ',i,j,q( i, j, l )
+!CHC CONVERT MIXING RATIO TO SPECIFIC HUMIDITY
+            if (dum3d(i,j,l) .lt. 10E-12) dum3d(i,j,l) = 10E-12 
+            q ( i, j, l ) = dum3d ( i, j, l )/(1.0+dum3d ( i, j, l ))
+         end do
+        end do
+       end do
+       print*,'finish reading specific humidity'
+       if(jj.ge. jsta .and. jj.le.jend)print*,'sample Q= ',Q(ii,jj,ll)
+      endif read_q
 
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      ! Read F and CWM (non-advected ferrier) or Q* (other mp)
+      read_f_cwm: if(ferrier .and. .not. advected_ferrier) then
        VarName='CWM'  !?????
        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -510,23 +537,7 @@ truelat2,&
       else  ! retrieve hydrometeo fields directly for non-Ferrier
         cwm=spval      !make sure set
         F_RimeF=spval  !make sure set
-
-       VarName='QVAPOR'
-       call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
-        IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
-       do l = 1, lm
-        do j = jsta_2l, jend_2u
-         do i = 1, im
-!            q ( i, j, l ) = dum3d ( i, j, l )
-!            if(l.eq.1)print*,'Debug: I,J,Q= ',i,j,q( i, j, l )
-!CHC CONVERT MIXING RATIO TO SPECIFIC HUMIDITY
-            if (dum3d(i,j,l) .lt. 10E-12) dum3d(i,j,l) = 10E-12 
-            q ( i, j, l ) = dum3d ( i, j, l )/(1.0+dum3d ( i, j, l ))
-         end do
-        end do
-       end do
-       print*,'finish reading specific humidity'
-       if(jj.ge. jsta .and. jj.le.jend)print*,'sample Q= ',Q(ii,jj,ll)
+        
       
        if(imp_physics/=0)then
         VarName='QCLOUD'
@@ -570,6 +581,21 @@ truelat2,&
        if(jj.ge. jsta .and. jj.le.jend)print*,'sample qqi= '  &
       ,Qqi(ii,jj,ll)
       
+
+       if(advected_ferrier) then
+        VarName='QRIMEF'
+        call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
+         IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
+        do l = 1, lm
+         do j = jsta_2l, jend_2u
+          do i = 1, im
+            qrimef ( i, j, l ) = dum3d ( i, j, l )
+          end do
+         end do
+        end do
+       end if
+       if(jj.ge. jsta .and. jj.le.jend)print*,'sample qrimef= '  &
+      ,Qrimef(ii,jj,ll)
 
        if(imp_physics.ne.0)then
         VarName='QRAIN'
@@ -659,7 +685,7 @@ truelat2,&
       end if
 ! KRS: End add concentrations for HWRF
 
-      end if ! end of retrieving hydrometeo for different MP options      
+      end if read_f_cwm ! end of retrieving hydrometeo for different MP options      
       
 
 !      call getVariable(fileName,DateStr,DataHandle,'TKE_PBL',DUM3D,
@@ -2283,6 +2309,14 @@ print *, 'lon dummy(icen+1,jcen) = ', dummy(icen+1,jcen)
       call getIVariableN(fileName,DateStr,DataHandle,VarName,NHEAT,      &
         1,1,1,1,1,1,1,1)
       print*,'NHEAT= ',NHEAT 
+
+
+      ! Compute f_* arrays from q* arrays
+       if(advected_ferrier) then
+          print *,'Convert from Q arrays to F arrays for advected Ferrier.'
+         call etamp_q2f(QRIMEF,QQI,QQR,QQW,CWM,F_RAIN,F_ICE,F_RIMEF,T)
+       endif
+
 
 !
 !        ncdump -h
