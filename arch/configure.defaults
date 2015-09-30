@@ -236,16 +236,16 @@ COPT    = -O3
 
 CPP_FLAGS = -C -P $(FPPDEFINE)
 INC_FLAGS =
-LDFLAGS   = -Wl,-noinhibit-exec 
-FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian \
+LDFLAGS   = -Wl,-noinhibit-exec ${ARCHINTELOPT}
+FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian ${ARCHINTELOPT} \
             -heap-arrays $(SIZE) $(FPPDEFINE) CONFIGURE_FFLAGS
-CFLAGS    = $(PPDEFINE) CONFIGURE_CFLAGS
+CFLAGS    = ${ARCHINTELOPT} $(PPDEFINE) CONFIGURE_CFLAGS
 ARFLAGS   =
 
-FFLAGS_CRTM  = -c -fp-model precise -ftz  -assume byterecl -convert big_endian \
+FFLAGS_CRTM  = -c -fp-model precise -ftz  -assume byterecl -convert big_endian ${ARCHINTELOPT} \
                $(SIZE) CONFIGURE_FFLAGS_CRTM
 #FFLAGS_CRTM = -c -checkbound -convert big_endian -e03 -free -assume byterecl -fp-stack-check -mieee-fp
-FL_CRTM     = 
+FL_CRTM     = ${ARCHINTELOPT}
 
 ###########################################################
 #ARCH	Linux x86_64, Intel compiler, SGI MPT	# serial dmpar
