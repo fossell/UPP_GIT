@@ -46,6 +46,8 @@
       ,ECHOTOP(:,:) &
 !G.Thompson hail
       ,HAIL_MAXK1(:,:),HAIL_MAX2D(:,:) & 
+! afwa hourly snow
+      ,AFWA_SNOWFALL_HRLY(:,:) &
 !End G.Thompson hail
 ! add new fields for GFS
       ,SFCUX(:,:),SFCVX(:,:),AVGALBEDO(:,:),AVGCPRATE(:,:) &

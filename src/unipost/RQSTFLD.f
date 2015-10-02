@@ -2124,6 +2124,9 @@
       DATA IFILV(924),AVBL(924),IQ(924),IS(924),AVBLGRB2(924)      &
      &                      /1,'UNSTBL PRES MIN BUOY',001,001,     &
      &                       'UNSTABLE PRESS MIN BUOYANCY on spec_pres_above_grnd'/
+      DATA IFILV(925),AVBL(925),IQ(925),IS(925),AVBLGRB2(925)      &
+     &                      /1,'AFWA SNOWFALL HRLY  ',079,001,     &
+     &                       'AFWA SNOWFALL HRLY on surface'/
 
 !end initialization
 !
