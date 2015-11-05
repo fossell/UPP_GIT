@@ -14,7 +14,7 @@ include ../../configure.upp
 
 #
 # Shared resources
-LIBS       = -L$(LIBDIR) -lg2 -lw3nco -lbacio -ljasper -lpng -lz
+LIBS       = -L$(LIBDIR) -lg2 -lw3nco -lbacio $(GRIB2SUPT_LIB)
 FFLAGS += -I../lib/g2  # for g2/*.mod files
 
 #
