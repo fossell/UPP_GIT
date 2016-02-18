@@ -2144,6 +2144,13 @@
       DATA IFILV(908),AVBL(908),IQ(908),IS(908),AVBLGRB2(908)      &
      &                      /1,'AVE SW DOWN TOA RAD ',204,008,     &
      &                       'AVE SW DOWNWELL RAD top_of_atmos'/
+
+!     LVLS-DRIVEN CHANNEL SELECTION (L(1)-L(10)> CRTM CH1-CH10 > AHI CH7-16)
+!     HWRF satellite additions: Himawari-8, replacement for MTSAT-2
+      DATA IFILV(910),AVBL(910),IQ(910),IS(910),AVBLGRB2(910)  &
+     &                      /1,'HIMIWARI-8 AHI NNADR',118,109, & !table 130
+     &                       'HIMAWARI-8 AHI NON-NADIR BRTEMP'/
+
 !end initialization
 !
    end module RQSTFLD_mod
