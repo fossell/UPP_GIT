@@ -97,8 +97,9 @@ SUBROUTINE CALRAD_WCLOUD
   !      integer,parameter::  n_clouds = 4 
   integer,parameter::  n_aerosols = 0
   ! Add your sensors here
-  integer(i_kind),parameter:: n_sensors=19
-  character(len=21),parameter,dimension(1:n_sensors):: sensorlist= &
+  integer(i_kind),parameter:: actual_n_sensors=19
+  integer :: n_sensors
+  character(len=21),parameter,dimension(1:actual_n_sensors):: sensorlist= &
       (/'imgr_g15            ', &
         'imgr_g13            ', &
         'imgr_g12            ', &
@@ -118,7 +119,7 @@ SUBROUTINE CALRAD_WCLOUD
         'imgr_mt1r           ', &
         'imgr_insat3d        ', &
         'ahi_himawari8       '/)
-  character(len=13),parameter,dimension(1:n_sensors):: obslist=  &
+  character(len=13),parameter,dimension(1:actual_n_sensors):: obslist=  &
       (/'goes_img     ', &
         'goes_img     ', &
         'goes_img     ', &
@@ -192,6 +193,17 @@ SUBROUTINE CALRAD_WCLOUD
   !
 
   print*,'in calrad'
+
+  if(iget(910)<=0) then
+     ! We do not need himawari-8 ahi, so tell CRTM not to read that
+     ! fix file.  This allows backward compatibility- scripts do not
+     ! need to be updated to link the himawari fix files unless they
+     ! actually need that synthetic satellite output.
+     N_sensors=actual_N_sensors-1
+  else
+     ! Himawari-8 AHI is requested.
+     N_sensors=actual_N_sensors
+  endif
 
   !*****************************************************************************
   ! Mapping land surface type of NMM to CRTM
@@ -299,7 +311,7 @@ SUBROUTINE CALRAD_WCLOUD
      print*,'success in CALRAD= ',success
      allocate( channelinfo(n_sensors))
 
-     error_status = crtm_init(sensorlist,channelinfo,   &
+     error_status = crtm_init(sensorlist(1:n_sensors),channelinfo(1:n_sensors),   &
           Process_ID=0,Output_Process_ID=0 )
      print*, 'channelinfo after init= ',channelinfo(1)%sensor_id, &
               channelinfo(2)%sensor_id
