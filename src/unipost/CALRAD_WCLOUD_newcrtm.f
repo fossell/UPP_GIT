@@ -97,8 +97,9 @@ SUBROUTINE CALRAD_WCLOUD
   !      integer,parameter::  n_clouds = 4 
   integer,parameter::  n_aerosols = 0
   ! Add your sensors here
-  integer(i_kind),parameter:: n_sensors=18
-  character(len=20),parameter,dimension(1:n_sensors):: sensorlist= &
+  integer(i_kind),parameter:: actual_n_sensors=19
+  integer :: n_sensors
+  character(len=21),parameter,dimension(1:actual_n_sensors):: sensorlist= &
       (/'imgr_g15            ', &
         'imgr_g13            ', &
         'imgr_g12            ', &
@@ -116,26 +117,28 @@ SUBROUTINE CALRAD_WCLOUD
         'seviri_m10          ', &
         'imgr_mt2            ', &
         'imgr_mt1r           ', &
-        'imgr_insat3d        '/)
-  character(len=12),parameter,dimension(1:n_sensors):: obslist=  &
-      (/'goes_img    ', &
-        'goes_img    ', &
-        'goes_img    ', &
-        'goes_img    ', &
-        'amsre       ', &
-        'tmi         ', &
-        'ssmi        ', &
-        'ssmi        ', &
-        'ssmi        ', &
-        'ssmis       ', &
-        'ssmis       ', &
-        'ssmis       ', &
-        'ssmis       ', &
-        'ssmis       ', &
-        'seviri      ', &
-        'imgr_mt2    ', &
-        'imgr_mt1r   ', &
-        'imgr_insat3d'/)
+        'imgr_insat3d        ', &
+        'ahi_himawari8       '/)
+  character(len=13),parameter,dimension(1:actual_n_sensors):: obslist=  &
+      (/'goes_img     ', &
+        'goes_img     ', &
+        'goes_img     ', &
+        'goes_img     ', &
+        'amsre        ', &
+        'tmi          ', &
+        'ssmi         ', &
+        'ssmi         ', &
+        'ssmi         ', &
+        'ssmis        ', &
+        'ssmis        ', &
+        'ssmis        ', &
+        'ssmis        ', &
+        'ssmis        ', &
+        'seviri       ', &
+        'imgr_mt2     ', &
+        'imgr_mt1r    ', &
+        'imgr_insat3d ', &
+        'ahi_himawari8'/)
 !
   integer(i_kind) sensorindex
   integer(i_kind) lunin,nobs,nchanl,nreal
@@ -165,7 +168,7 @@ SUBROUTINE CALRAD_WCLOUD
   real,parameter:: constoz = 604229.0_r_kind 
   real sublat,sublon
   real RHO,RHOX
-  character(12)::obstype
+  character(13)::obstype
   character(20)::isis
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb  &
@@ -190,6 +193,17 @@ SUBROUTINE CALRAD_WCLOUD
   !
 
   print*,'in calrad'
+
+  if(iget(910)<=0) then
+     ! We do not need himawari-8 ahi, so tell CRTM not to read that
+     ! fix file.  This allows backward compatibility- scripts do not
+     ! need to be updated to link the himawari fix files unless they
+     ! actually need that synthetic satellite output.
+     N_sensors=actual_N_sensors-1
+  else
+     ! Himawari-8 AHI is requested.
+     N_sensors=actual_N_sensors
+  endif
 
   !*****************************************************************************
   ! Mapping land surface type of NMM to CRTM
@@ -257,7 +271,8 @@ SUBROUTINE CALRAD_WCLOUD
        .or. iget(871) > 0 .or. iget(872) > 0 .or. iget(873) > 0  &
        .or. iget(874) > 0 .or. iget(875) > 0 .or. iget(876) > 0  & 
        .or. iget(877) > 0 .or. iget(878) > 0 .or. iget(879) > 0  &
-       .or. iget(880) > 0 .or. iget(881) > 0 .or. iget(882) > 0 ) then
+       .or. iget(880) > 0 .or. iget(881) > 0 .or. iget(882) > 0  &
+       .or. iget(910) > 0 ) then
 
      ! specify numbers of cloud species    
      ! Thompson==8, Ferrier==5,95, WSM6==6, Lin==2
@@ -296,7 +311,7 @@ SUBROUTINE CALRAD_WCLOUD
      print*,'success in CALRAD= ',success
      allocate( channelinfo(n_sensors))
 
-     error_status = crtm_init(sensorlist,channelinfo,   &
+     error_status = crtm_init(sensorlist(1:n_sensors),channelinfo(1:n_sensors),   &
           Process_ID=0,Output_Process_ID=0 )
      print*, 'channelinfo after init= ',channelinfo(1)%sensor_id, &
               channelinfo(2)%sensor_id
@@ -357,6 +372,10 @@ SUBROUTINE CALRAD_WCLOUD
      if(iget(864)>0)then
      call select_channels_L(channelinfo(18),4,(/ 1,2,3,4 /),lvls(1:4,iget(865)),iget(865))
      endif
+     ! Himiwari-8 AHI infrared
+     if(iget(860)>0)then
+     call select_channels_L(channelinfo(19),10,(/ 1,2,3,4,5,6,7,8,9,10 /),lvls(1:10,iget(910)),iget(910))
+     endif
 
      ! Loop over data types to process    
      sensordo: do isat=1,n_sensors
@@ -386,6 +405,7 @@ SUBROUTINE CALRAD_WCLOUD
              (isis=='ssmis_f19' .and. iget(839) > 0) .OR. &
              (isis=='ssmis_f20' .and. iget(846) > 0) .OR. &
              (isis=='imgr_mt2' .and. iget(860)>0) .OR. &
+             (isis=='ahi_himawari8' .and. iget(910) > 0 ) .OR. &
              (isis=='imgr_mt1r' .and. iget(864)>0) .OR. &
              (isis=='imgr_insat3d' .and. iget(865)>0) .OR. &
              (isis=='imgr_g13' .and. iget(868)>0) .OR. &
@@ -1024,6 +1044,7 @@ SUBROUTINE CALRAD_WCLOUD
            nonnadir: if((isis=='ssmi_f13' .and. iget(800) > 0 ) .OR. &
                         (isis=='ssmi_f14' .and. iget(806) > 0 ) .OR. &
                         (isis=='ssmi_f15' .and. iget(812) > 0 ) .OR. &
+                        (isis=='ahi_himawari8' .and. iget(910) > 0 ) .OR. &
                         (isis=='ssmis_f16' .and. iget(818) > 0) .OR. &
                         (isis=='ssmis_f17' .and. iget(825) > 0) .OR. &
                         (isis=='ssmis_f18' .and. iget(832) > 0) .OR. &
@@ -1064,6 +1085,9 @@ SUBROUTINE CALRAD_WCLOUD
                     else if(isis=='imgr_mt2') then
                        sublat=0.0
                        sublon=145.0
+                    else if(isis=='ahi_himawari8') then
+                       sublat=0.0
+                       sublon=140.7
                     else if(isis=='imgr_mt1r') then
                        sublat=0.0
                        sublon=140.0
@@ -1675,6 +1699,32 @@ SUBROUTINE CALRAD_WCLOUD
                        id(09) = 109
                        if(grib=="grib1") then
                           call gribit(igot,20000+ichan, grid1,im,jm)
+                       else if(grib=="grib2" )then
+                          cfld=cfld+1
+                          fld_info(cfld)%ifld=IAVBLFLD(igot)
+                          datapd(1:im,1:jend-jsta+1,cfld)=grid1(1:im,jsta:jend)
+                       endif
+                    endif
+                 enddo
+              endif
+
+              if(isis=='ahi_himawari8') then ! writing Himawari-8 AHI to grib
+                 nc=0
+                 do ichan=1,10
+                    igot=iget(910)
+                      if(lvls(ichan,igot).eq.1)then
+                       nc=nc+1
+                       do j=jsta,jend
+                          do i=1,im
+                             grid1(i,j)=tb(i,j,nc)
+                          enddo
+                       enddo
+                       id(1:25) = 0
+                       id(02) = 2
+                       id(08) = 118
+                       id(09) = 109
+                       if(grib=="grib1") then
+                          call gribit(igot,28000+ichan, grid1,im,jm)
                        else if(grib=="grib2" )then
                           cfld=cfld+1
                           fld_info(cfld)%ifld=IAVBLFLD(igot)
