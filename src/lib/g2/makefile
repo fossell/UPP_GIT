@@ -1,9 +1,12 @@
 SHELL=/bin/sh
-LIB=libg2.a
 
-#
-# configuration file contains architecture and compile information
+#  Make sure one of the following options appears in your CFLAGS
+#  variable to indicate which system you are on.  Used to call
+#  "C" routines from Fortran.
+#  -DLINUX, -DLINUXG95, -DSGI, -DHP, -DCRAY90, -DAIX, -DLINUXF90, -DVPP5000
+
 include ../../../configure.upp
+LIB=../../../libg2.a
 
 #  If you want to enable support for PNG or JPEG2000 encoding/decoding,
 #  you must specify -DUSE_PNG and/or -DUSE_JPEG2000 in the FDEFS variable
@@ -77,10 +80,10 @@ $(LIB):	$(LIB)(gridtemplates.o) \
 	$(LIB)(pngunpack.o) \
 	$(LIB)(enc_png.o) \
 	$(LIB)(dec_png.o) \
-        $(LIB)(mova2i.o) \
 	$(LIB)(gbytesc.o) \
 	$(LIB)(skgb.o) \
 	$(LIB)(ixgb2.o) \
+	$(LIB)(getidx.o) \
 	$(LIB)(getg2i.o) \
 	$(LIB)(getg2ir.o) \
 	$(LIB)(getgb2s.o) \
@@ -91,10 +94,9 @@ $(LIB):	$(LIB)(gridtemplates.o) \
 	$(LIB)(getgb2rp.o) \
 	$(LIB)(putgb2.o) \
 	$(LIB)(g2grids.o) \
+	$(LIB)(gdt2gds.o) \
 	$(LIB)(params.o) \
-        $(LIB)(params_ecmwf.o) \
-	$(LIB)(getidx.o) \
-	$(LIB)(gdt2gds.o)
+	$(LIB)(params_ecmwf.o)
 
 clean :
 	@for f in `ls *.mod` ; do \
