@@ -71,7 +71,7 @@ qwbs,&
               sfclhx, grnflx, subshx, potevp, sno, si, pctsno, ivgtyp,&
 isltyp,&
               islope, albedo, albase, mxsnal, epsr, f, REFD_MAX, &
-              RSWTOA, SWUPT, ACSWUPT, SWDNT, ACSWDNT
+              RSWTOA, SWUPT, ACSWUPT, SWDNT, ACSWDNT, CD10, CH10
       use soil, only: smc, sh2o, stc, sldpth, sllevel
       use masks, only: lmv, lmh, htm, vtm, hbm2, sm, sice, gdlat,&
 gdlon,&
@@ -1251,6 +1251,26 @@ truelat2,&
         end do
        end do
 !       print*,'SFCEVP at ',ii,jj,' = ',SFCEVP(ii,jj)
+
+      VarName='CD10'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            CD10( i, j ) = dummy ( i, j )
+        end do
+       end do
+!       print*,'CD10 at ',ii,jj,' = ',CD10(ii,jj)
+
+      VarName='CH10'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            CH10( i, j ) = dummy ( i, j )
+        end do
+       end do
+!       print*,'CD10 at ',ii,jj,' = ',CD10(ii,jj)
 
       VarName='SFCEXC'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &

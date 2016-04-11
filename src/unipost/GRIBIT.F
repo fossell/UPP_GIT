@@ -200,7 +200,7 @@
          AGMT0      = IHRST
          ID(01)     = 28
          IF ( (ID(2).NE.129) .AND. (ID(2).NE.130) .AND.         &
-	      (ID(2).NE.133) .AND.  (ID(2).NE.141) ) THEN
+	      (ID(2).NE.133) .AND.  (ID(2).NE.141) .and. id(2)/=128 ) THEN
              ID(2)     = 2
          END IF 
 

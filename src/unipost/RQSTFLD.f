@@ -2151,6 +2151,14 @@
      &                      /1,'HIMIWARI-8 AHI NNADR',118,109, & !table 130
      &                       'HIMAWARI-8 AHI NON-NADIR BRTEMP'/
 
+!  CD and CH exchange coefficients
+      DATA IFILV(911),AVBL(911),IQ(911),IS(911),AVBLGRB2(911)  &
+     &                      /1,'10M DRAG EXCH COEF  ',252,105, & !table 2
+     &                       '10M SFC DRAG EXCH COEF CD      '/
+      DATA IFILV(912),AVBL(912),IQ(912),IS(912),AVBLGRB2(912)  &
+     &                      /1,'10M HEAT EXCH COEF  ',144,105, & !table 128
+     &                       '10M SFC HEAT EXCH COEF CH      '/
+
 !end initialization
 !
    end module RQSTFLD_mod

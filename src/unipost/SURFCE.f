@@ -78,7 +78,7 @@
                          ustar, mdltaux, mdltauy, gtaux, gtauy, twbs,        &
                          sfcexc, grnflx, islope, czmean, czen, rswin,akhsavg,&
                          akmsavg, u10h, v10h,snfden,sndepac,qvl1,            &
-                         spduv10mean,swradmean,swnormmean
+                         spduv10mean,swradmean,swnormmean,ch10,cd10
       use soil,    only: stc, sllevel, sldpth, smc, sh2o
       use masks,   only: lmh, sm, sice, htm, gdlat, gdlon
       use params_mod, only: p1000, capa, h1m12, pq0, a2,a3, a4, h1, d00, d01,&
@@ -4425,6 +4425,41 @@
             datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
            endif
       ENDIF
+
+      write_cd: IF(IGET(911)>0) THEN
+         DO J=JSTA,JEND
+            DO I=1,IM
+               GRID1(I,J)=CD10(I,J)
+            ENDDO
+         ENDDO
+         if(grib=='grib1') then
+            ID(1:25) = 0
+            ID(2)=2
+            ID(11)=10
+            CALL GRIBIT(IGET(911),LVLS(1,IGET(911)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(911))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF write_cd
+      write_ch: IF(IGET(912)>0) THEN
+         DO J=JSTA,JEND
+            DO I=1,IM
+               GRID1(I,J)=CH10(I,J)
+            ENDDO
+         ENDDO
+         if(grib=='grib1') then
+            ID(1:25) = 0
+            ID(11)=10
+            ID(2)=128
+            CALL GRIBIT(IGET(912),LVLS(1,IGET(912)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+            cfld=cfld+1
+            fld_info(cfld)%ifld=IAVBLFLD(IGET(912))
+            datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF write_ch
 !
 !     MODEL OUTPUT SURFACE U AND/OR V COMPONENT WIND STRESS
       IF ( (IGET(900).GT.0) .OR. (IGET(901).GT.0) ) THEN
