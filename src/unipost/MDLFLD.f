@@ -127,6 +127,9 @@
 !                               T700,   TH700   
 !
       REAL, ALLOCATABLE :: EL(:,:,:),RICHNO(:,:,:) ,PBLRI(:,:),  PBLREGIME(:,:)
+! SRD
+      REAL, ALLOCATABLE :: ZM10C(:,:)
+! SRD
 !
       integer I,J,L,Lctop,LLMH,IICE,LL,II,JJ,IFINCR,ITHEAT,NC,NMOD
       real RDTPHS,CFRdum,PMOD,CC1,CC2,P1,P2,CUPRATE,FACR,RRNUM,         &
@@ -177,6 +180,9 @@
       ALLOCATE(EL     (IM,JSTA_2L:JEND_2U,LM))     
       ALLOCATE(RICHNO (IM,JSTA_2L:JEND_2U,LM))
       ALLOCATE(PBLRI  (IM,JSTA_2L:JEND_2U))    
+! SRD
+      ALLOCATE(ZM10C  (IM,JSTA_2L:JEND_2U))    
+! SRD
 !     
 !     SECOND, STANDARD NGM SEA LEVEL PRESSURE.
       IF (IGET(105) > 0) THEN
@@ -2576,7 +2582,8 @@
            IF(IMP_PHYSICS.EQ.8) THEN
 !$omp parallel do private(i,j)
 !NMMB does not have composite radar ref in model output
-            IF(MODELNAME=='NMM' .and. gridtype=='B')THEN
+!KRF add NCAR into block to that for ncar ensf 3d refl field is used
+            IF(MODELNAME=='NCAR'.or.MODELNAME=='NMM' .and. gridtype=='B')THEN
              DO J=JSTA,JEND
               DO I=1,IM
                GRID1(I,J)=DBZmin
@@ -2619,6 +2626,39 @@
            enddo
          endif
       ENDIF
+! SRD
+! RADAR REFLECTIVITY AT -10C LEVEL
+      IF (IGET(912).GT.0) THEN
+        DO J=JSTA,JEND
+        DO I=1,IM
+          Zm10c(I,J)=ZMID(I,J,NINT(LMH(I,J)))
+          DO L=NINT(LMH(I,J)),1,-1
+            IF (T(I,J,L) .LE. 263.15) THEN
+              Zm10c(I,J)= L        !-- Find lowest level where T<-10C
+              EXIT
+            ENDIF
+          ENDDO
+        ENDDO
+        ENDDO
+
+! REFD at -10 C level
+        DO J=JSTA,JEND
+        DO I=1,IM
+          GRID1(I,J)=DBZ(I,J,Zm10c(I,J))
+        ENDDO
+        ENDDO
+
+        if(grib=="grib1" )then
+          ID(1:25) = 0
+          CALL GRIBIT(IGET(912),L,GRID1,IM,JM)
+        else if(grib=="grib2" )then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(912))
+          fld_info(cfld)%lvl=LVLSXML(L,IGET(912))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+        endif
+      ENDIF
+! SRD
 !
 !     COMPUTE VIL (radar derived vertically integrated liquid water in each column)
 !     Per Mei Xu, VIL is radar derived vertically integrated liquid water based

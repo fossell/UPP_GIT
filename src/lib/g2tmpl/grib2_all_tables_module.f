@@ -2032,7 +2032,10 @@ contains
      ipdstmpl8(13) = value
 !
      ipdstmpl8(14) = scale_fac2
-     ipdstmpl8(15) = scaled_val1
+! SRD -- corrected per Kate Fossell personal email 
+!     ipdstmpl8(15) = scaled_val1
+     ipdstmpl8(15) = scaled_val2
+! SRD
      ipdstmpl8(16) = year_intvl
      ipdstmpl8(17) = mon_intvl
      ipdstmpl8(18) = day_intvl

@@ -78,7 +78,9 @@
                          ustar, mdltaux, mdltauy, gtaux, gtauy, twbs,        &
                          sfcexc, grnflx, islope, czmean, czen, rswin,akhsavg,&
                          akmsavg, u10h, v10h,snfden,sndepac,qvl1,            &
-                         spduv10mean,swradmean,swnormmean
+                         spduv10mean,swradmean,swnormmean,HAIL_MAXK1,        &
+                         HAIL_MAX2D,AFWA_SNOWFALL_HRLY,                      &
+                         HAILCAST_DIAM_MEAN, HAILCAST_DIAM_STD
       use soil,    only: stc, sllevel, sldpth, smc, sh2o
       use masks,   only: lmh, sm, sice, htm, gdlat, gdlon
       use params_mod, only: p1000, capa, h1m12, pq0, a2,a3, a4, h1, d00, d01,&
@@ -2060,7 +2062,7 @@
 !        ANEMOMETER LEVEL (10 M) MAX WIND SPEED.
 !
       IF (IGET(422).GT.0) THEN
-         print *,' SRD ***** outputting WSPD10MAX '
+!         print *,' SRD ***** outputting WSPD10MAX '
          ID(1:25) = 0
          ISVALUE = 10
          ID(10) = MOD(ISVALUE/256,256)
@@ -3101,6 +3103,60 @@
             endif
          ENDIF
 
+
+! KRF: Add AFWA_SNOWFALL_HRLY from ncar ensemble wrf output.
+        IF (IGET(925).GT.0.) THEN
+            DO J=JSTA,JEND
+            DO I=1,IM
+              IF (IFHR .EQ. 0) THEN
+                GRID1(I,J)=0.0
+              ELSE
+                 GRID1(I,J)=AFWA_SNOWFALL_HRLY(I,J)
+             ENDIF
+            ENDDO
+            ENDDO
+            ID(1:25) = 0
+            ITPREC     = NINT(TPREC)
+!mp
+            if (ITPREC .ne. 0) then
+             IFINCR     = MOD(IFHR,ITPREC)
+             IF(IFMIN .GE. 1)IFINCR= MOD(IFHR*60+IFMIN,ITPREC*60)
+            else
+             IFINCR     = 0
+            endif
+!mp
+           if(MODELNAME.EQ.'NCAR' .OR. MODELNAME.EQ.'RAPR') IFINCR = NINT(PREC_ACC_DT)/60
+            ID(18)     = 0
+            ID(19)     = IFHR
+            IF(IFMIN .GE. 1)ID(19)=IFHR*60+IFMIN
+            ID(20)     = 4
+            IF (IFINCR.EQ.0) THEN
+             ID(18) = IFHR-ITPREC
+            ELSE
+             ID(18) = IFHR-IFINCR
+             IF(IFMIN .GE. 1)ID(18)=IFHR*60+IFMIN-IFINCR
+            ENDIF
+            IF (ID(18).LT.0) ID(18) = 0
+      print*,'maxval AFWA SNOWFALL HOURLY: ', maxval(GRID1)
+            if(grib=='grib1') then
+              CALL GRIBIT(IGET(925),LVLS(1,IGET(925)),GRID1,IM,JM)
+            elseif(grib=='grib2') then
+              cfld=cfld+1
+              fld_info(cfld)%ifld=IAVBLFLD(IGET(925))
+              if(ITPREC>0) then
+               !fld_info(cfld)%ntrange=(IFHR-ID(18))/ITPREC
+                fld_info(cfld)%ntrange=1
+              else
+                fld_info(cfld)%ntrange=0
+              endif
+             !fld_info(cfld)%tinvstat=ITPREC
+              fld_info(cfld)%tinvstat=IFINCR
+              datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+            endif
+         ENDIF
+
+
+
 !     
 !     INSTANTANEOUS PRECIPITATION TYPE.
 !         print *,'in surfce,iget(160)=',iget(160),'iget(247)=',iget(247)
@@ -3913,7 +3969,85 @@
            endif
 
         ENDIF
+
+!G.Thompson Hail
+      IF ( IGET(917).GT.0 ) THEN
+            GRID1=SPVAL
+            DO J=JSTA,JEND
+            DO I=1,IM
+             GRID1(I,J)=HAIL_MAXK1(I,J)
+            ENDDO
+            ENDDO
+         ID(1:25) = 0
+         ID(02)=133    ! Parameter Table 133
+         If(grib=='grib1') then
+          CALL GRIBIT(IGET(917),LVLS(1,IGET(917)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(917))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+      IF ( IGET(918).GT.0 ) THEN
+            GRID1=SPVAL
+            DO J=JSTA,JEND
+            DO I=1,IM
+             GRID1(I,J)=HAIL_MAX2D(I,J)
+            ENDDO
+            ENDDO
+         ID(1:25) = 0
+         ID(02)=133    ! Parameter Table 133
+         If(grib=='grib1') then
+          CALL GRIBIT(IGET(918),LVLS(1,IGET(918)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(918))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+!End G.Thomppson Hail
 !     
+
+! AFWA HAILCAST
+
+      IF ( IGET(926).GT.0 ) THEN
+            GRID1=SPVAL
+            DO J=JSTA,JEND
+            DO I=1,IM
+             GRID1(I,J)=HAILCAST_DIAM_MEAN(I,J)
+            ENDDO
+            ENDDO
+         ID(1:25) = 0
+         ID(02)=133    ! Parameter Table 133
+         If(grib=='grib1') then
+          CALL GRIBIT(IGET(926),LVLS(1,IGET(926)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(926))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+
+      IF ( IGET(927).GT.0 ) THEN
+            GRID1=SPVAL
+            DO J=JSTA,JEND
+            DO I=1,IM
+             GRID1(I,J)=HAILCAST_DIAM_MEAN(I,J)
+            ENDDO
+            ENDDO
+         ID(1:25) = 0
+         ID(02)=133    ! Parameter Table 133
+         If(grib=='grib1') then
+          CALL GRIBIT(IGET(927),LVLS(1,IGET(927)),GRID1,IM,JM)
+         elseif(grib=='grib2') then
+          cfld=cfld+1
+          fld_info(cfld)%ifld=IAVBLFLD(IGET(927))
+          datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+         endif
+      ENDIF
+! end AFWA Hailcast
+
 !
 !
 !***  BLOCK 5.  SURFACE EXCHANGE FIELDS.

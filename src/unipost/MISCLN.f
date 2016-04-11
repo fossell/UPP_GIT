@@ -125,6 +125,7 @@
       REAL, allocatable :: HELI(:,:,:)
 
       real,dimension(im,jm) ::  EGRID1, EGRID2, EGRID3, EGRID4, EGRID5,&
+                                EGRID6, EGRID7,                        &
                                 GRID1,  GRID2,  P_THETAEMAX,    RHPW,  &
                                 GUST
       real,dimension(:,:),allocatable ::  USHR1, VSHR1, USHR6, VSHR6,  &
@@ -1986,7 +1987,7 @@
 !
            DPBND=0.
            CALL CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,LB2,EGRID1,   &
-      	           EGRID2,EGRID3,EGRID4,EGRID5) 
+      	           EGRID2,EGRID3,EGRID4,EGRID5,EGRID6,EGRID7) 
 !
            IF (IGET(032).GT.0.or.IGET(566)>0) THEN
 !$omp parallel do private(i,j)
@@ -2052,8 +2053,59 @@
               enddo
              endif
            ENDIF
-         ENDIF
+
+! KRF: Add BMIN and PBMIN output options - Best
+         IF( IGET(915).GT.0.AND.LVLS(2,IGET(915)).GT.0 &
+             .OR. IGET(919).GT.0) THEN
+
+!         IF ((IGET(915).GT.0)) THEN
+!           IF( (LVLS(2,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(NBND)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(915),LVLS(1,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(919))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+          END IF
+
+         IF(IGET(916).GT.0.AND.LVLS(2,IGET(916)).GT.0 &
+             .OR. IGET(920).GT.0) THEN
+
+!         IF ((IGET(916).GT.0)) THEN
+!           IF( (LVLS(2,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(NBND)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(916),LVLS(1,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(920))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+            END IF
+            ! END KRF
+
+         ENDIF ! end if field 1/2 true
 !
+
+
 
 !    PBL HEIGHT 
          IF(IGET(221) > 0) THEN
@@ -3071,7 +3123,7 @@
 !
            DPBND=0.
            CALL CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,LB2,EGRID1,           &
-                EGRID2,EGRID3,EGRID4,EGRID5)
+                EGRID2,EGRID3,EGRID4,EGRID5,EGRID6,EGRID7)
  
            IF (IGET(032).GT.0.or.IGET(582)>0) THEN
 !$omp parallel do private(i,j)
@@ -3139,7 +3191,57 @@
                endif
 
            ENDIF
-         ENDIF
+
+! KRF: Add BMIN and PBMIN output options -- Mixed Layer
+
+         IF( IGET(915).GT.0 .AND. LVLS(3,IGET(915)).GT.0 &
+             .OR. IGET(921).GT.0 ) THEN
+
+!         IF ((IGET(915).GT.0)) THEN
+!           IF( (LVLS(3,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(3)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(915),LVLS(3,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(921))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+          END IF
+
+         IF( IGET(916).GT.0 .AND. LVLS(3,IGET(916)).GT.0 &
+             .OR. IGET(922).GT.0 ) THEN
+
+!          IF ((IGET(916).GT.0)) THEN
+!           IF( (LVLS(3,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10)   = PETABND(3)+15.
+                  ID(11)   = PETABND(1)-15.
+                  CALL GRIBIT(IGET(916),LVLS(3,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(922))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+           END IF
+            ! END KRF
+
+         ENDIF ! end if field 1/2 true
               
 !        MIXED LAYER LIFTING CONDENSATION PRESSURE AND HEIGHT.
 !        EGRID1 IS LCL PRESSURE.  EGRID2 IS LCL HEIGHT.
@@ -3206,7 +3308,7 @@
               
            DPBND=300.E2
            CALL CALCAPE(ITYPE,DPBND,P1D,T1D,Q1D,LB2,EGRID1,     &
-                   EGRID2,EGRID3,EGRID4,EGRID5)
+                   EGRID2,EGRID3,EGRID4,EGRID5,EGRID6,EGRID7)
 !
            IF (IGET(032).GT.0.or.IGET(584)>0) THEN
 !$omp parallel do private(i,j)
@@ -3270,7 +3372,56 @@
                  enddo
                endif
 
-            ENDIF
+! KRF: Add BMIN and PBMIN output options - Most Unstable
+
+         IF( IGET(915).GT.0 .AND. LVLS(4,IGET(915)).GT.0 &
+             .OR. IGET(923).GT.0 ) THEN
+
+!         IF ((IGET(915).GT.0)) THEN
+!           IF( (LVLS(4,IGET(915)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID6(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10) = 255
+                  ID(11) = 0
+                  CALL GRIBIT(IGET(915),LVLS(4,IGET(915)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(923))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+          END IF
+
+         IF( IGET(916).GT.0 .AND. LVLS(4,IGET(916)).GT.0 &
+             .OR. IGET(924).GT.0) THEN
+
+!         IF ((IGET(916).GT.0)) THEN
+!           IF( (LVLS(4,IGET(916)).GT.0) )THEN
+               DO J=JSTA,JEND
+               DO I=1,IM
+                 GRID1(I,J) = EGRID7(I,J)
+               ENDDO
+               ENDDO
+                 if(grib=="grib1" )then
+                  ID(1:25)=0
+                  ID(09)   = 116
+                  ID(10) = 255
+                  ID(11) = 0
+                  CALL GRIBIT(IGET(916),LVLS(4,IGET(916)),GRID1,IM,JM)
+                 else if(grib=="grib2" )then
+                  cfld=cfld+1
+                  fld_info(cfld)%ifld=IAVBLFLD(IGET(924))
+                  datapd(1:im,1:jend-jsta+1,cfld)=GRID1(1:im,jsta:jend)
+                 endif
+           END IF
+            ! END KRF
+
+            ENDIF ! end if field 1/2 true
               
 !    EQUILLIBRIUM HEIGHT
            IF (IGET(443).GT.0) THEN

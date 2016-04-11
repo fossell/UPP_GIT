@@ -175,6 +175,10 @@
       allocate(nci_refd(im,jsta_2l:jend_2u))
       allocate(nca_refd(im,jsta_2l:jend_2u))
 ! SRD
+!G.Thompsonhail
+      allocate(HAIL_MAXK1(im,jsta_2l:jend_2u))
+      allocate(HAIL_MAX2D(im,jsta_2l:jend_2u))
+!End G.Thompson hail 
 ! CRA
       allocate(REF_10CM(im,jsta_2l:jend_2u,lm))
       allocate(REFC_10CM(im,jsta_2l:jend_2u))
@@ -448,4 +452,7 @@
       allocate(swdnt(im,jsta_2l:jend_2u))
       allocate(acswdnt(im,jsta_2l:jend_2u))
 ! 
+      allocate(AFWA_SNOWFALL_HRLY(im,jsta_2l:jend_2u))
+      allocate(HAILCAST_DIAM_MEAN(im,jsta_2l:jend_2u))
+      allocate(HAILCAST_DIAM_STD(im,jsta_2l:jend_2u))
       end

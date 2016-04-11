@@ -46,6 +46,14 @@
       ,REFC_10CM(:,:), REF1KM_10CM(:,:), REF4KM_10CM(:,:)                    &
       ,SWRADmean(:,:),U10mean(:,:),V10mean(:,:),SPDUV10mean(:,:)             &
       ,SWNORMmean(:,:),SNFDEN(:,:),SNDEPAC(:,:)                              &
+!G.Thompson hail
+      ,HAIL_MAXK1(:,:),HAIL_MAX2D(:,:) &
+! afwa hourly snow
+      ,AFWA_SNOWFALL_HRLY(:,:) &
+! afwa hailcast
+      ,HAILCAST_DIAM_STD(:,:) &
+      ,HAILCAST_DIAM_MEAN(:,:) &
+!End G.Thompson hail
 ! add new fields for GFS
       ,SFCUX(:,:),SFCVX(:,:),AVGALBEDO(:,:),AVGCPRATE(:,:)                   &
       ,AVGPREC(:,:),PTOP(:,:),PBOT(:,:),AVGCFRACH(:,:)                       &

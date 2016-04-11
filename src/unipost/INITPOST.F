@@ -62,7 +62,8 @@
               ivgtyp, isltyp, islope, pblh, f, &
               QVl1,REFC_10CM,REF1KM_10CM,REF4KM_10CM, &
               SWRADmean,U10mean,V10mean,SPDUV10mean,SWNORMmean,SNFDEN,SNDEPAC, &
-              hbotd,hbots
+              hbotd,hbots,HAIL_MAXK1, HAIL_MAX2D,AFWA_SNOWFALL_HRLY,&
+              HAILCAST_DIAM_STD, HAILCAST_DIAM_MEAN
       use soil, only: smc, sh2o, stc, sldpth, sllevel
       use masks, only: lmv, lmh, vtm, sice, gdlat, gdlon, sm, dx, dy, htm
       use ctlblk_mod, only: jsta_2l, jend_2u, filename, datahandle, datestr,&
@@ -1346,7 +1347,7 @@ endif  ! 1==2
             REFC_10CM ( i, j ) = dummy ( i, j )
         end do
        end do
-!       print*,'REFD_MAX at ',ii,jj,' = ',REFD_MAX(ii,jj)
+!      print *,'MAX/MIN in INITPOST',maxval(REFC_10CM),minval(REFC_10CM)
 
       VarName='UP_HELI_MAX'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
@@ -1490,6 +1491,32 @@ endif  ! 1==2
 ! 
 ! SRD
 !
+
+!G.Thompson Hail diameter output
+      VarName='HAIL_MAXK1'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            HAIL_MAXK1 ( i, j ) = dummy ( i, j )
+        end do
+       end do
+!       print*,'HAIL_MAXK1 at ',ii,jj,' = ',HAIL_MAXK1(ii,jj)
+
+      VarName='HAIL_MAX2D'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,       & 
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            HAIL_MAX2D ( i, j ) = dummy ( i, j )
+        end do
+       end do
+!       print*,'HAIL_MAX2D at ',ii,jj,' = ',HAIL_MAX2D(ii,jj)
+!End G.Thompson Hail diameter output
+
+
+
+
 ! CRA REFLECTIVITY VARIABLES
       VarName='REFL_10CM'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,&
@@ -1503,6 +1530,7 @@ endif  ! 1==2
        end do
       deallocate(DUM3D)
 
+      if(MODELNAME=='RAPR') then
       VarName='COMPOSITE_REFL_10CM'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
         IM,1,JM,1,IM,JS,JE,1)
@@ -1511,6 +1539,7 @@ endif  ! 1==2
             REFC_10CM ( i, j ) = dummy ( i, j )
         end do
        end do
+       end if
 
       VarName='REFL_10CM_1KM'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
@@ -1954,6 +1983,36 @@ endif  ! 1==2
        do j = jsta_2l, jend_2u
         do i = 1, im
             snow_bucket ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+      write(6,*) 'getting AFWA_SNOWFALL_HRLY, [mm] '
+      VarName='AFWA_SNOWFALL_HRLY'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            AFWA_SNOWFALL_HRLY ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+      write(6,*) 'getting HAILCAST_DIAM_STD, [mm] '
+      VarName='HAILCAST_DIAM_STD'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            HAILCAST_DIAM_STD ( i, j ) = dummy ( i, j )
+        end do
+       end do
+
+      write(6,*) 'getting HAILCAST_DIAM_MEAN, [mm] '
+      VarName='HAILCAST_DIAM_MEAN'
+      call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY,        &
+        IM,1,JM,1,IM,JS,JE,1)
+       do j = jsta_2l, jend_2u
+        do i = 1, im
+            HAILCAST_DIAM_MEAN ( i, j ) = dummy ( i, j )
         end do
        end do
 

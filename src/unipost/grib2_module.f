@@ -1036,7 +1036,41 @@
       integer(4),intent(out)   :: ifield3len
       integer(4),intent(inout) :: ifield3(len3),igds(5)
     
+      integer :: g2_latstart, g2_lonstart
+      integer :: g2_TRUELAT1, g2_TRUELAT2
+      integer :: g2_STANDLON
+      integer :: g2_DXVAL, g2_DYVAL
+
 !      print *,'in getgds, im=',im,'jm=',jm,'latstart=',latstart,'lonsstart=',lonstart,'maptyp=',maptype
+
+!      print *,'in getgds bf , im=',im,'jm=',jm,'latstart=',latstart,'lonsstart=',lonstart
+!      print *,'in getgds bf, TRUELAT1=',TRUELAT1,'TRUELAT2=',TRUELAT2,'STANDLON=',STANDLON
+!      print *,'in getgds bf, latstartv=',latstartv,'cenlatv=',cenlatv,'lonstartv=',lonstartv
+!      print *,'in getgds bf, DXVAL= ', DXVAL, 'DYVAL= ', DYVAL
+
+! set to 0
+       g2_latstart =  0
+       g2_lonstart =  0
+       g2_TRUELAT1 =  0
+       g2_TRUELAT2 =  0
+       g2_STANDLON =  0
+       g2_DXVAL    =  0
+       g2_DYVAL    =  0
+
+       g2_latstart = latstart * 1000
+       g2_lonstart = (lonstart + 360000) * 1000
+       g2_TRUELAT1 = TRUELAT1 * 1000
+       g2_TRUELAT2 = TRUELAT2 * 1000
+       g2_STANDLON = (STANDLON + 360000) * 1000
+       g2_DXVAL    = DXVAL * 1000
+       g2_DYVAL    = DYVAL * 1000
+
+!      print *,'in getgds af , im=',im,'jm=',jm,'latstart=',latstart,'lonsstart=',lonstart
+!      print *,'in getgds af, TRUELAT1=',TRUELAT1,'TRUELAT2=',TRUELAT2,'STANDLON=',STANDLON
+!      print *,'in getgds af, latstartv=',latstartv,'cenlatv=',cenlatv,'lonstartv=',lonstartv
+!      print *,'in getgds af, DXVAL= ', DXVAL, 'DYVAL= ', DYVAL
+
+
 !
 !** set up igds 
       igds(1) = 0      !Source of grid definition (see Code Table 3.0)
@@ -1053,21 +1087,21 @@
        ifield3(1)  = 6          !Earth assumed spherical with radius of 6,371,229.0m
        ifield3(8)  = im         !number of points along the x-axis
        ifield3(9)  = jm         !number of points along the y-axis
-       ifield3(10) = latstart   !latitude of first grid point
-       ifield3(11) = lonstart   !longitude of first grid point
+       ifield3(10) = g2_latstart   !latitude of first grid point
+       ifield3(11) = g2_lonstart   !longitude of first grid point
        ifield3(12) = 8          !Resolution and component flags
-       ifield3(13) = TRUELAT1
-       ifield3(14) = STANDLON   !longitude of meridian parallel to y-axis along which latitude increases
-       ifield3(15) = DXVAL
-       ifield3(16) = DYVAL
+       ifield3(13) = g2_TRUELAT1
+       ifield3(14) = g2_STANDLON   !longitude of meridian parallel to y-axis along which latitude increases
+       ifield3(15) = g2_DXVAL
+       ifield3(16) = g2_DYVAL
        IF(TRUELAT1>0)then
         ifield3(17) = 0
        else
         ifield3(17) =128        !for southern hemisphere
        end if
        ifield3(18) = 64
-       ifield3(19) = TRUELAT1   !first latitude from the pole at which the secant cone cuts the sphere
-       ifield3(20) = TRUELAT2   !second latitude from the pole at which the secant cone cuts the sphere
+       ifield3(19) = g2_TRUELAT1   !first latitude from the pole at which the secant cone cuts the sphere
+       ifield3(20) = g2_TRUELAT2   !second latitude from the pole at which the secant cone cuts the sphere
 
 !** Polar stereographic
      ELSE IF(MAPTYPE == 2)THEN  !Polar stereographic
@@ -1202,7 +1236,7 @@
 
      ENDIF
 
-!    write(0,*)'igds=',igds,'igdstempl=',ifield3(1:ifield3len)
+     write(0,*)'igds=',igds,'igdstempl=',ifield3(1:ifield3len)
      end subroutine getgds
 !
 !-------------------------------------------------------------------------------------

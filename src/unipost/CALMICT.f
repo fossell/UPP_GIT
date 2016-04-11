@@ -85,6 +85,7 @@
 !--- Determine composition of condensate in the form of cloud water, 
 !    total ice (cloud ice & snow), & rain following GSMDRIVE in NMM model
 !
+
       Zmin=10.**(0.1*DBZmin)
       DO J=JSTA,JEND
         DO I=1,IM
@@ -276,7 +277,9 @@ no_hail:      IF (.NOT. HAIL) THEN
             IF (NSmICE > 0.) THEN
                Zsmice=Cice*RHO*RHO*QSmICE*QSmICE/NSmICE
             ENDIF
-            Zice=Cice*RQLICE*RQLICE/NLICE1(I,J) 
+            IF (NLICE > 0.) THEN
+               Zice=Cice*RQLICE*RQLICE/NLICE1(I,J)
+            ENDIF
             IF (TC>=0.) Zice=Cwet*Zice      ! increased for wet ice
           ENDIF                 ! End IF (QI1(I,J) .GT. 0.) THEN
 !
