@@ -283,13 +283,13 @@
         end if
       endif
       startdate =                                                              &
-         ACHAR(startdate2(1))//ACHAR(startdate2(2))//ACHAR(startdate2(3))//    &
-         ACHAR(startdate2(4))//ACHAR(startdate2(5))//ACHAR(startdate2(6))//    &
-         ACHAR(startdate2(7))//ACHAR(startdate2(8))//ACHAR(startdate2(9))//    &
-         ACHAR(startdate2(10))//ACHAR(startdate2(11))//ACHAR(startdate2(12))// &
-         ACHAR(startdate2(13))//ACHAR(startdate2(14))//ACHAR(startdate2(15))// &
-         ACHAR(startdate2(16))//ACHAR(startdate2(17))//ACHAR(startdate2(18))// &
-         ACHAR(startdate2(19))
+         ACHAR(startdate2(1))//ACHAR(startdate2(2))//ACHAR(startdate2(3))    &
+         //ACHAR(startdate2(4))//ACHAR(startdate2(5))//ACHAR(startdate2(6))    &
+         //ACHAR(startdate2(7))//ACHAR(startdate2(8))//ACHAR(startdate2(9))    &
+         //ACHAR(startdate2(10))//ACHAR(startdate2(11))//ACHAR(startdate2(12)) &
+         //ACHAR(startdate2(13))//ACHAR(startdate2(14))//ACHAR(startdate2(15)) &
+         //ACHAR(startdate2(16))//ACHAR(startdate2(17))//ACHAR(startdate2(18)) &
+         //ACHAR(startdate2(19))
 
       read(startdate,15)iyear,imn,iday,ihrst,imin
       write(*,*) iyear,imn,iday,ihrst,imin
@@ -3539,11 +3539,11 @@ write(*,*) garb,1.0/garb
         if (iret .eq. 0) then
        do j = jsta_2l, jend_2u
         do i = 1, im
-           REFD_MAX( i, j ) = dummy ( i, j )
+           REFC_10CM( i, j ) = dummy ( i, j )
         end do
        end do
         else
-          REFD_MAX=spval
+          REFC_10CM=spval
         end if
 
       VarName='UP_HELI_MAX'

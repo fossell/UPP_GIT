@@ -70,6 +70,7 @@
 !      allocate(rainw(im,jsta_2l:jend_2u,lm))
       allocate(q2(im,jsta_2l:jend_2u,lm))
       allocate(omga(im,jsta_2l:jend_2u,lm))
+      allocate(dpres(im,jsta_2l:jend_2u,lm))
       allocate(T_ADJ(im,jsta_2l:jend_2u,lm))
       allocate(ttnd(im,jsta_2l:jend_2u,lm))
       allocate(rswtt(im,jsta_2l:jend_2u,lm))
@@ -104,6 +105,9 @@
 ! KRS: HWRF Addition for thompson reflectivity
 ! or non-ferrier physics. wrf-derived
       allocate(REFL_10CM(im,jsta_2l:jend_2u,lm))
+      allocate(radius_cloud(im,jsta_2l:jend_2u,lm))
+      allocate(radius_ice(im,jsta_2l:jend_2u,lm))
+      allocate(radius_snow(im,jsta_2l:jend_2u,lm))
 !GFS FIELD
       allocate(o3(im,jsta_2l:jend_2u,lm))
       allocate(o(im,jsta_2l:jend_2u,lm))
@@ -419,7 +423,6 @@
         allocate(sssd(im,jsta_2l:jend_2u,nbin_ss))
         allocate(ssdp(im,jsta_2l:jend_2u,nbin_ss))
         allocate(sswt(im,jsta_2l:jend_2u,nbin_ss))
-        allocate(dpres(im,jsta_2l:jend_2u,lm))
         allocate(rhomid(im,jsta_2l:jend_2u,lm))
 ! vrbls2d
         allocate(dusmass(im,jsta_2l:jend_2u))

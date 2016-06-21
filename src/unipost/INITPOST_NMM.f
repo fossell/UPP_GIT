@@ -45,58 +45,34 @@
 !     LANGUAGE: FORTRAN
 !     MACHINE : CRAY C-90
 !$$$  
-      use vrbls3d, only: t, u, uh, v, vh, q, cwm, f_ice, f_rain,&
-f_rimef, q,&
-              qqw, qqr, qqs, qqi, qqg, qqw, cwm , q2, wh, pint, alpint,&
-pmid,&
-              omga, pmidv, zmid, rlwtt, rswtt, ttnd, tcucn, train,&
-exch_h,&
-              el_pbl, cfr, zint, REFL_10CM, qqni, qqnr, qrimef
-      use vrbls2d, only: fis, cfrach, cfracl, cfracm, u10h, u10, v10h,&
-v10,th10,&
-              q10, tshltr, qshltr, pshltr, smstav, smstot, acfrcv,&
-acfrst, ncfrcv,&
-              ncfrst,  ssroff, bgroff, sfcevp, sfcexc, vegfrc, acsnow,&
-acsnom,&
-              cmc, sst, mdltaux, mdltauy, thz0, qz0, uz0, vz0, qs, z0,&
-pblh, mixht,&
-              ustar, akhs, akms, ths, prec, cuprec, acprec, ancprc,&
- cprate, cuppt,&
-              lspa, cldefi, htop, hbot, htopd, czmean, rswout, rlwin,&
-rlwtoa, sigt4,&
-              radot, aswin, aswout, alwin, alwout, alwtoa, aswtoa,&
-hbotd, htops,&
-              hbots, sr, rswin, rswinc, czen, tg, soiltb, twbs, sfcshx,&
-qwbs,&
-              sfclhx, grnflx, subshx, potevp, sno, si, pctsno, ivgtyp,&
-isltyp,&
-              islope, albedo, albase, mxsnal, epsr, f, REFD_MAX, &
+      use vrbls3d, only: t, u, uh, v, vh, q, cwm, f_ice, f_rain, f_rimef, q,&
+              qqw, qqr, qqs, qqi, qqg, qqw, cwm , q2, wh, pint, alpint, pmid,&
+              omga, pmidv, zmid, rlwtt, rswtt, ttnd, tcucn, train, exch_h,&
+              el_pbl, cfr, zint, REF_10CM, qqni, qqnr
+      use vrbls2d, only: fis, cfrach, cfracl, cfracm, u10h, u10, v10h, v10,th10,&
+              q10, tshltr, qshltr, pshltr, smstav, smstot, acfrcv, acfrst, ncfrcv,&
+              ncfrst,  ssroff, bgroff, sfcevp, sfcexc, vegfrc, acsnow, acsnom,&
+              cmc, sst, mdltaux, mdltauy, thz0, qz0, uz0, vz0, qs, z0, pblh, mixht,&
+              ustar, akhs, akms, ths, prec, cuprec, acprec, ancprc, cprate, cuppt,&
+              lspa, cldefi, htop, hbot, htopd, czmean, rswout, rlwin, rlwtoa, sigt4,&
+              radot, aswin, aswout, alwin, alwout, alwtoa, aswtoa, hbotd, htops,&
+              hbots, sr, rswin, rswinc, czen, tg, soiltb, twbs, sfcshx, qwbs,&
+              sfclhx, grnflx, subshx, potevp, sno, si, pctsno, ivgtyp, isltyp,&
+              islope, albedo, albase, mxsnal, epsr, f, REFC_10CM, &
               RSWTOA, SWUPT, ACSWUPT, SWDNT, ACSWDNT
       use soil, only: smc, sh2o, stc, sldpth, sllevel
-      use masks, only: lmv, lmh, htm, vtm, hbm2, sm, sice, gdlat,&
-gdlon,&
-dx, dy
+      use masks, only: lmv, lmh, htm, vtm, hbm2, sm, sice, gdlat, gdlon, dx, dy
       use params_mod, only: tfrz, g, rd, d608, rtd, dtr, erad
-      use lookup_mod, only: thl, plq, ptbl, ttbl, rdq, rdth, rdp,&
-rdthe,&
-pl,&
+      use lookup_mod, only: thl, plq, ptbl, ttbl, rdq, rdth, rdp, rdthe, pl,&
               qs0, sqs, sthe, the0, ttblq, rdpq, rdtheq, stheq, the0q
-      use ctlblk_mod, only: jsta, jend, nprec, jsta_2l, jend_2u,&
-filename,&
-              datahandle, datestr, ihrst, imin, sdat, spval,&
-imp_physics, pt,&
-              icu_physics, pdtop, nsoil, isf_surface_physics, jsta_m,&
-jend_m,&
-              avrain, avcnvc, ardsw, ardlw, asrfc, me, mpi_comm_comp,&
-nphs, spl,&
-              lsm, dt, dtq2,tsrfc, trdlw, trdsw, idat, ifhr, ifmin,&
-restrt,&
-              theat, tclod, tprec, alsl, lm, im, jm, &
-              submodelname
-      use gridspec_mod, only: latstart, latlast, cenlat, lonstart,&
-lonlast,&
-              cenlon, dxval, dyval, maptype, gridtype, truelat1,&
-truelat2,&
+      use ctlblk_mod, only: jsta, jend, nprec, jsta_2l, jend_2u, filename,&
+              datahandle, datestr, ihrst, imin, sdat, spval, imp_physics, pt,&
+              icu_physics, pdtop, nsoil, isf_surface_physics, jsta_m, jend_m,&
+              avrain, avcnvc, ardsw, ardlw, asrfc, me, mpi_comm_comp, nphs, spl,&
+              lsm, dt, dtq2,tsrfc, trdlw, trdsw, idat, ifhr, ifmin, restrt,&
+              theat, tclod, tprec, alsl, lm, im, jm , submodelname
+      use gridspec_mod, only: latstart, latlast, cenlat, lonstart, lonlast,&
+              cenlon, dxval, dyval, maptype, gridtype, truelat1, truelat2,&
               psmapf
 !      use wrf_io_flags_mod
 !
@@ -422,15 +398,17 @@ truelat2,&
       qqi=spval
       qqg=spval 
 
-!KRS: HWRF Addition for thompson REFL_10cm and REFD_MAX
-! Also works for other non-ferrier wrf derived radar
+!KRF: NMM and ARW direct read of radar ref for microphysic options
+!     mp options: 2,4,6,7,8,10,14,16 
+!     REFL_10cm --> REF_10CM
+!     REFD_MAX  --> REFC_10CM
       VarName='REFL_10CM'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D, &
         IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
       do l = 1, lm
        do j = jsta_2l, jend_2u
         do i = 1, im
-            REFL_10CM ( i, j, l ) = dum3d ( i, j, l )
+            REF_10CM ( i, j, l ) = dum3d ( i, j, l )
         end do
        end do
       end do
@@ -438,18 +416,16 @@ truelat2,&
       if(jj.ge. jsta .and. jj.le.jend)print*,'sample L,T= ',L,T(ii,jj,l)
       end do
 
-
       VarName='REFD_MAX'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUMMY, &
         IM,1,JM,1,IM,JS,JE,1)
        do j = jsta_2l, jend_2u
         do i = 1, im
-            REFD_MAX ( i, j ) = dummy ( i, j )
+            REFC_10CM ( i, j ) = dummy ( i, j )
         end do
        end do
 ! print*,'REFD_MAX at ',ii,jj,' = ',REFD_MAX(ii,jj)
-
-! END KRS
+! END KRF
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! Read Q (ferrier) or QVAPOR (other mp)
