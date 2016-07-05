@@ -42,6 +42,7 @@
       integer i
       integer, intent(in):: imp_physics
       real, allocatable:: MASSR(:)
+      character filename*80
 !
 !------------------------ START EXECUTION ------------------------
 !

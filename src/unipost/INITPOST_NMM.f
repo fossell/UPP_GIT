@@ -48,7 +48,7 @@
       use vrbls3d, only: t, u, uh, v, vh, q, cwm, f_ice, f_rain, f_rimef, q,&
               qqw, qqr, qqs, qqi, qqg, qqw, cwm , q2, wh, pint, alpint, pmid,&
               omga, pmidv, zmid, rlwtt, rswtt, ttnd, tcucn, train, exch_h,&
-              el_pbl, cfr, zint, REF_10CM, qqni, qqnr
+              el_pbl, cfr, zint, REF_10CM, qqni, qqnr, qrimef
       use vrbls2d, only: fis, cfrach, cfracl, cfracm, u10h, u10, v10h, v10,th10,&
               q10, tshltr, qshltr, pshltr, smstav, smstot, acfrcv, acfrst, ncfrcv,&
               ncfrst,  ssroff, bgroff, sfcevp, sfcexc, vegfrc, acsnow, acsnom,&

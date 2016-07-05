@@ -1756,7 +1756,7 @@ SUBROUTINE CALRAD_WCLOUD
                        endif
                     endif
                  enddo
-              endif if_insat3d
+              endif 
 
               if_insat3d: if(isis=='imgr_insat3d') then ! writing MTSAT-1r to grib
                  nc=0
