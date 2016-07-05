@@ -40,7 +40,7 @@ SUBROUTINE CALRAD_WCLOUD
   use soil, only:
   use gridspec_mod, only: gridtype
   use cmassi_mod, only: TRAD_ice
-  use kinds, only: r_kind,r_single,i_kind
+  use kinds, only: r_kind,r_single,r_double,i_kind
   use crtm_module, only: crtm_atmosphere_type,crtm_surface_type,crtm_geometry_type, &
        crtm_surface_create,o3_id,co2_id,wet_soil,crtm_forward,mass_mixing_ratio_units, &
        crtm_atmosphere_create,grass_scrub,grass_soil, meadow_grass,urban_concrete, &
@@ -155,7 +155,7 @@ SUBROUTINE CALRAD_WCLOUD
   real(r_kind),parameter:: r100=100.0_r_kind
   real,parameter:: ozsmall = 1.e-10 ! to convert to mass mixing ratio
   real(r_kind) tsfc 
-  real(r_kind),dimension(4):: sfcpct
+  real(r_double),dimension(4):: sfcpct
   real(r_kind) snodepth,vegcover
   real snoeqv
   real snofrac
@@ -191,10 +191,9 @@ SUBROUTINE CALRAD_WCLOUD
   integer ii,jj,n_clouds,n,nc
   integer,external :: iw3jdn
   !
-
   print*,'in calrad'
 
-  if(iget(910)<=0) then
+  if(iget(912)<=0) then
      ! We do not need himawari-8 ahi, so tell CRTM not to read that
      ! fix file.  This allows backward compatibility- scripts do not
      ! need to be updated to link the himawari fix files unless they
@@ -204,7 +203,6 @@ SUBROUTINE CALRAD_WCLOUD
      ! Himawari-8 AHI is requested.
      N_sensors=actual_N_sensors
   endif
-
   !*****************************************************************************
   ! Mapping land surface type of NMM to CRTM
   !      allocate(nmm_to_crtm(novegtype) )
@@ -272,7 +270,7 @@ SUBROUTINE CALRAD_WCLOUD
        .or. iget(874) > 0 .or. iget(875) > 0 .or. iget(876) > 0  & 
        .or. iget(877) > 0 .or. iget(878) > 0 .or. iget(879) > 0  &
        .or. iget(880) > 0 .or. iget(881) > 0 .or. iget(882) > 0  &
-       .or. iget(910) > 0 ) then
+       .or. iget(912) > 0 ) then
 
      ! specify numbers of cloud species    
      ! Thompson==8, Ferrier==5,95, WSM6==6, Lin==2
@@ -374,7 +372,7 @@ SUBROUTINE CALRAD_WCLOUD
      endif
      ! Himiwari-8 AHI infrared
      if(iget(910)>0)then
-     call select_channels_L(channelinfo(19),10,(/ 1,2,3,4,5,6,7,8,9,10 /),lvls(1:10,iget(910)),iget(910))
+     call select_channels_L(channelinfo(19),10,(/ 1,2,3,4,5,6,7,8,9,10 /),lvls(1:10,iget(912)),iget(912))
      endif
 
      ! Loop over data types to process    
@@ -405,7 +403,7 @@ SUBROUTINE CALRAD_WCLOUD
              (isis=='ssmis_f19' .and. iget(839) > 0) .OR. &
              (isis=='ssmis_f20' .and. iget(846) > 0) .OR. &
              (isis=='imgr_mt2' .and. iget(860)>0) .OR. &
-             (isis=='ahi_himawari8' .and. iget(910) > 0 ) .OR. &
+             (isis=='ahi_himawari8' .and. iget(912) > 0 ) .OR. &
              (isis=='imgr_mt1r' .and. iget(864)>0) .OR. &
              (isis=='imgr_insat3d' .and. iget(865)>0) .OR. &
              (isis=='imgr_g13' .and. iget(868)>0) .OR. &
@@ -1044,7 +1042,7 @@ SUBROUTINE CALRAD_WCLOUD
            nonnadir: if((isis=='ssmi_f13' .and. iget(800) > 0 ) .OR. &
                         (isis=='ssmi_f14' .and. iget(806) > 0 ) .OR. &
                         (isis=='ssmi_f15' .and. iget(812) > 0 ) .OR. &
-                        (isis=='ahi_himawari8' .and. iget(910) > 0 ) .OR. &
+                        (isis=='ahi_himawari8' .and. iget(912) > 0 ) .OR. &
                         (isis=='ssmis_f16' .and. iget(818) > 0) .OR. &
                         (isis=='ssmis_f17' .and. iget(825) > 0) .OR. &
                         (isis=='ssmis_f18' .and. iget(832) > 0) .OR. &
@@ -1711,7 +1709,7 @@ SUBROUTINE CALRAD_WCLOUD
               if(isis=='ahi_himawari8') then ! writing Himawari-8 AHI to grib
                  nc=0
                  do ichan=1,10
-                    igot=iget(910)
+                    igot=iget(912)
                       if(lvls(ichan,igot).eq.1)then
                        nc=nc+1
                        do j=jsta,jend
@@ -1758,7 +1756,7 @@ SUBROUTINE CALRAD_WCLOUD
                        endif
                     endif
                  enddo
-              endif
+              endif 
 
               if_insat3d: if(isis=='imgr_insat3d') then ! writing MTSAT-1r to grib
                  nc=0

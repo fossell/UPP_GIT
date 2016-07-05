@@ -24,6 +24,7 @@
       ,NRAIN(:,:,:)                                                  &
 ! KRS Add HWRF fields     
       ,REFL_10CM(:,:,:)             &
+      ,radius_cloud(:,:,:),radius_ice(:,:,:),radius_snow(:,:,:)      &
 ! Add GFS fields     
       ,O3(:,:,:),O(:,:,:),O2(:,:,:)              &
 ! Add GFS D3D fields
