@@ -372,7 +372,7 @@ SUBROUTINE CALRAD_WCLOUD
      endif
      ! Himiwari-8 AHI infrared
      if(iget(910)>0)then
-     call select_channels_L(channelinfo(19),10,(/ 1,2,3,4,5,6,7,8,9,10 /),lvls(1:10,iget(912)),iget(912))
+     call select_channels_L(channelinfo(19),10,(/ 1,2,3,4,5,6,7,8,9,10 /),lvls(1:10,iget(910)),iget(910))
      endif
 
      ! Loop over data types to process    

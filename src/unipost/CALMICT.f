@@ -106,7 +106,7 @@
           Zrain=0.            !--- Radar reflectivity from rain
           Zice=0.             !--- Radar reflectivity from ice
           Zsmice=0.           !--- Radar reflectivity from small ice
-          Zconv=CUREFL(I,J)   !--- Radar reflectivity from convection
+          Zconv=0 ! CUREFL(I,J)   !--- Radar reflectivity from convection
           IF (C1D(I,J) .LE. EPSQ) THEN
 !
 !--- Skip rest of calculatiions if no condensate is present
@@ -425,7 +425,7 @@ dbz_mix:  IF (RQR>RQmix .AND. RQLICE>RQmix) THEN
         DO I=1,IM
           Zrain=0.            !--- Radar reflectivity from rain
           Zice=0.             !--- Radar reflectivity from ice
-          Zconv=CUREFL(I,J)   !--- Radar reflectivity from convection
+          Zconv=0 ! CUREFL(I,J)   !--- Radar reflectivity from convection
           IF (C1D(I,J) .LE. EPSQ) THEN
 !
 !--- Skip rest of calculatiions if no condensate is present
