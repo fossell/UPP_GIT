@@ -1,6 +1,4 @@
 
-
-
       SUBROUTINE dcrft(init,x,ldx,y,ldy,n,m,isign,scale,
      & table,n1,wrk,n2,z,nz)
 

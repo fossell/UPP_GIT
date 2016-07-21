@@ -1,5 +1,3 @@
-
-
 C-----------------------------------------------------------------------
       FUNCTION NCPUS()
 C$$$ SUBPROGRAM DOCUMENTATION BLOCK
@@ -31,22 +29,6 @@ C$$$
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       INTEGER NTHREADS, TID, OMP_GET_NUM_THREADS,OMP_GET_THREAD_NUM
 C Obtain thread number
-
-
-!$OMP PARALLEL PRIVATE(TID)
-      TID = OMP_GET_THREAD_NUM()
-! PRINT *, '...............thread # ', TID
-       if (TID. eq. 0) then
-        NCPUS=OMP_GET_NUM_THREADS()
-! PRINT *, 'totaly #------------------- of threads = ',NCPUS
-       endif
-!$OMP END PARALLEL
-
-
-
-
-
-
-
+      NCPUS=1
       RETURN
       END

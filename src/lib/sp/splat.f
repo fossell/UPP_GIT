@@ -1,5 +1,3 @@
-
-
 C-----------------------------------------------------------------------
       SUBROUTINE SPLAT(IDRT,JMAX,SLAT,WLAT)
 C SUBPROGRAM DOCUMENTATION BLOCK
