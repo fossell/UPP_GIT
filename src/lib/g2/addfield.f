@@ -1,5 +1,3 @@
-
-
       subroutine addfield(cgrib,lcgrib,ipdsnum,ipdstmpl,ipdstmplen,
      & coordlist,numcoord,idrsnum,idrstmpl,
      & idrstmplen,fld,ngrdpts,ibmap,bmap,ierr)
