@@ -1,3 +1,7 @@
+
+
+
+
       subroutine addfield(cgrib,lcgrib,ipdsnum,ipdstmpl,ipdstmplen,
      & coordlist,numcoord,idrsnum,idrstmpl,
      & idrstmplen,fld,ngrdpts,ibmap,bmap,ierr)
@@ -92,7 +96,7 @@
 
       use pdstemplates
       use drstemplates
-
+      logical :: match
       character(len=1),intent(inout) :: cgrib(lcgrib)
       integer,intent(in) :: ipdsnum,ipdstmpl(*)
       integer,intent(in) :: idrsnum,numcoord,ipdstmplen,idrstmplen
@@ -117,15 +121,18 @@
       integer lensec3,lensec4,lensec5,lensec6,lensec7
       logical issec3,needext,isprevbmap
 
+      allones=Z'FFFFFFFF'
       ierr=0
-      do jj=0,31
-         allones=ibset(allones,jj)
-      enddo
 !
 ! Check to see if beginning of GRIB message exists
 !
-      ctemp=cgrib(1)//cgrib(2)//cgrib(3)//cgrib(4)
-      if ( ctemp.ne.grib ) then
+      match=.true.
+      do i=1,4
+         if(cgrib(i) /= grib(i:i)) then
+            match=.false.
+         endif
+      enddo
+      if ( .not. match ) then
         print *,'addfield: GRIB not found in given message.'
         print *,'addfield: Call to routine gribcreate required',
      & ' to initialize GRIB messge.'
@@ -284,7 +291,7 @@
       ! if bit-map is provided with field.
       !
       if ( ibmap.eq.0 .OR. ibmap.eq.254 ) then
-         allocate(pfld(ngrdpts))
+         allocate(pfld(max(2,ngrdpts)))
          ndpts=0;
          do jj=1,ngrdpts
              intbmap(jj)=0
@@ -294,6 +301,9 @@
                 pfld(ndpts)=fld(jj);
              endif
          enddo
+         if(ndpts==0 .and. ngrdpts>0) then
+            pfld(1)=0
+         endif
       else
          ndpts=ngrdpts;
          pfld=>fld;
@@ -340,7 +350,15 @@
            width=ndpts
            height=1
         endif
+        if(width<1 .or. height<1) then
+           ! Special case: bitmask off everywhere.
+           write(0,*) 'Warning: bitmask off everywhere.'
+           write(0,*) '   Pretend one point in jpcpack to avoid crash.'
+           width=1
+           height=1
+        endif
         lcpack=nsize
+        !print *,'w,h=',width,height
         call jpcpack(pfld,width,height,idrstmpl,cpack,lcpack)
       else
         print *,'addfield: Data Representation Template 5.',idrsnum,

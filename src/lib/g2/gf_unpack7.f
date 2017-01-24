@@ -1,3 +1,7 @@
+
+
+
+
       subroutine gf_unpack7(cgrib,lcgrib,iofst,igdsnum,igdstmpl,
      & idrsnum,idrstmpl,ndpts,fld,ierr)
 !$$$ SUBPROGRAM DOCUMENTATION BLOCK
@@ -106,8 +110,8 @@
         call jpcunpack(cgrib(ipos),lensec-5,idrstmpl,ndpts,fld)
 
 
-
-
+      elseif (idrsnum.eq.41 .OR. idrsnum.eq.40010) then
+        call pngunpack(cgrib(ipos),lensec-5,idrstmpl,ndpts,fld)
 
       else
         print *,'gf_unpack7: Data Representation Template ',idrsnum,

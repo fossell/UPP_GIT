@@ -84,6 +84,7 @@ $(LIB):	$(LIB)(gridtemplates.o) \
 	$(LIB)(skgb.o) \
 	$(LIB)(ixgb2.o) \
 	$(LIB)(getidx.o) \
+	$(LIB)(getidxes.o) \
 	$(LIB)(getg2i.o) \
 	$(LIB)(getg2ir.o) \
 	$(LIB)(getgb2s.o) \
