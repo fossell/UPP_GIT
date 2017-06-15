@@ -234,7 +234,7 @@ FOPT    = -O3
 CRTMOPT = -O3
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional-cpp $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS   = -Wl,-noinhibit-exec ${ARCHINTELOPT}
 FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian ${ARCHINTELOPT} \
