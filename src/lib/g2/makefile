@@ -34,7 +34,8 @@ all: $(LIB)
 	$(CP) $(LIB) $(LIBDIR)
 	$(CP) *.mod $(INCMOD)
 
-$(LIB):	$(LIB)(gridtemplates.o) \
+$(LIB):	$(LIB)(intmath.o) \
+	$(LIB)(gridtemplates.o) \
 	$(LIB)(pdstemplates.o) \
 	$(LIB)(drstemplates.o) \
 	$(LIB)(gribmod.o) \
