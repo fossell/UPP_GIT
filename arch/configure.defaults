@@ -41,7 +41,7 @@ FOPT    = -O3
 CRTMOPT =
 COPT    = -O3
 
-CPP_FLAGS= -C -P $(PPDEFINE_C)
+CPP_FLAGS= -P -traditional $(PPDEFINE_C)
 INC_FLAGS=
 LDFLAGS = -lessl
 FFLAGS  = -qmaxmem=-1 -qarch=auto -q64 -qessl -qnosave $(SIZE) \
@@ -91,7 +91,7 @@ FOPT    = -O3
 CRTMOPT =
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS   = -Wl,-noinhibit-exec -Kieee
 FFLAGS    = -Kieee -pc 32 -Ktrap=fp -byteswapio $(SIZE) $(FPPDEFINE) \
@@ -140,7 +140,7 @@ FOPT    = -O3
 CRTMOPT =
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS   = -Wl,-noinhibit-exec -Kieee
 FFLAGS    = -Kieee -pc 64 -Ktrap=fp -byteswapio $(SIZE) $(FPPDEFINE) \
@@ -187,7 +187,7 @@ FOPT    = -O3
 CRTMOPT = -O3
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS   = -Wl,-noinhibit-exec 
 FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian \
@@ -234,7 +234,7 @@ FOPT    = -O3
 CRTMOPT = -O3
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS   = -Wl,-noinhibit-exec ${ARCHINTELOPT}
 FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian ${ARCHINTELOPT} \
@@ -281,7 +281,7 @@ FOPT    = -O3
 CRTMOPT = -O3
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS = -I$(MPI_ROOT)/include
 LDFLAGS   = -Wl,-noinhibit-exec -L$(MPI_ROOT)/lib
 LDFLAGS_MPI += -lmpi
@@ -333,7 +333,7 @@ FOPT    = -O3
 CRTMOPT =
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS  = -Wl,-noinhibit-exec
 FFLAGS   = -fconvert=big-endian -fno-second-underscore -frecord-marker=4 \
@@ -382,7 +382,7 @@ FOPT    = -O3
 CRTMOPT =
 COPT    = -O3
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS =
 LDFLAGS   = -Wl,-noinhibit-exec
 FFLAGS    = -fconvert=big-endian -fno-second-underscore -frecord-marker=4 \
@@ -428,7 +428,7 @@ FOPT    = -O3 -msse2
 CRTMOPT = -O3 -msse2
 COPT    = -O3 -msse2
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS = -I$(MPI_ROOT)/include
 LDFLAGS   = -Wl,-noinhibit-exec -L$(MPI_ROOT)/lib
 FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian \
@@ -475,7 +475,7 @@ FOPT    = -O3 -msse2
 CRTMOPT = -O3 -msse2
 COPT    = -O3 -msse2
 
-CPP_FLAGS = -C -P $(FPPDEFINE)
+CPP_FLAGS = -P -traditional $(FPPDEFINE)
 INC_FLAGS = -I$(MPI_ROOT)/include
 LDFLAGS   = -Wl,-noinhibit-exec -L$(MPI_ROOT)/lib -static
 FFLAGS    = -fp-model precise -ftz -assume byterecl -convert big_endian \
