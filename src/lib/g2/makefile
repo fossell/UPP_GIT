@@ -34,7 +34,8 @@ all: $(LIB)
 	$(CP) $(LIB) $(LIBDIR)
 	$(CP) *.mod $(INCMOD)
 
-$(LIB):	$(LIB)(gridtemplates.o) \
+$(LIB):	$(LIB)(intmath.o) \
+	$(LIB)(gridtemplates.o) \
 	$(LIB)(pdstemplates.o) \
 	$(LIB)(drstemplates.o) \
 	$(LIB)(gribmod.o) \
@@ -84,6 +85,7 @@ $(LIB):	$(LIB)(gridtemplates.o) \
 	$(LIB)(skgb.o) \
 	$(LIB)(ixgb2.o) \
 	$(LIB)(getidx.o) \
+	$(LIB)(getidxes.o) \
 	$(LIB)(getg2i.o) \
 	$(LIB)(getg2ir.o) \
 	$(LIB)(getgb2s.o) \
