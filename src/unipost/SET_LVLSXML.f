@@ -13,6 +13,9 @@
 !   04_03_2012  Jun Wang - add SPEC_PRES_ABOVE_GRND for different CAPE/CIN
 !   08_06_2013  S  Moorthi  - fix index out of bound after iloop5
 !   10_03_2013  Jun Wang - add isentropic levels
+!   03_10_2015  Lin Gan  - Replace XML file with flat file implementation
+!   07_08_2016  J. Carley - Comment out debug prints
+!   06_01_2017  Y Mao - For MISCLN.f and FDLVL.f, allow FD levels input from control file
 !
 ! USAGE:    CALL SET_LVLSXML(param,ifld,irec,kpv,pv,kth,th)
 !   INPUT ARGUMENT LIST:
@@ -42,7 +45,7 @@
 !     LANGUAGE: FORTRAN
 !     MACHINE : IBM
 !
-      use xml_data_post_t, only : param_t
+      use xml_perl_data, only: param_t
       use ctlblk_mod, only: lsm, spl, nsoil, isf_surface_physics, nfd, htfd, &
                             petabnd, nbnd
       use soil,       only: SLDPTH,SLLEVEL
@@ -70,6 +73,7 @@
 !
       nlevel=size(param%level)
 !
+
       if(nlevel<=0) then
         LVLS(1,ifld)=1
         LVLSXML(1,ifld)=1
@@ -156,7 +160,7 @@
 !for th sfc
       if(trim(param%fixed_sfc1_type)=='isentropic_lvl') then
          do j=1, nlevel
-           print *,'in set_lvl,kth=',kth,'nlevel=',nlevel,'j=',j,param%level(j)
+         !print *,'in set_lvl,kth=',kth,'nlevel=',nlevel,'j=',j,param%level(j)
         iloop3a:  do i=1, kth
            if(th(i)/=0.and.abs(param%level(j)-th(i))<=1.e-5) then
             LVLS(i,ifld)=1
@@ -166,14 +170,15 @@
            endif
          enddo iloop3a
          enddo
-         print *,'for level type th,nlevel=',nlevel,'level=',  &
-           param%level(1:nlevel), &
-           'th=',th(1:kth),'ifld=',ifld,'var=',trim(param%pname), &
-           'lvl type=',trim(param%fixed_sfc1_type)
+!         print *,'for level type th,nlevel=',nlevel,'level=',  &
+!           param%level(1:nlevel), &
+!           'th=',th(1:kth),'ifld=',ifld,'var=',trim(param%pname), &
+!           'lvl type=',trim(param%fixed_sfc1_type)
          return
       endif
 !
       if(trim(param%fixed_sfc1_type)=='spec_alt_above_mean_sea_lvl') then
+       if(index(param%shortname,"GTG_ON_SPEC_ALT_ABOVE_MEAN_SEA_LVL")<=0) then
          do j=1, nlevel
         iloop4:  do i=1, NFD
            if(nint(param%level(j))==nint(HTFD(i)) )then
@@ -189,6 +194,16 @@
          enddo iloop4
          enddo
          return
+       endif
+!      Allow inputs of FD levels from control file. For GTG (EDPARM CATEDR MWTURB)
+!      SET LVLS to 1
+       do j=1, nlevel
+          LVLS(j,ifld)=1
+          LVLSXML(j,ifld)=j
+          irec=irec+1
+       enddo
+       print *, "GTG levels, n=",nlevel, "irec=",irec
+       return
       endif
 !
       if(trim(param%fixed_sfc1_type)=='spec_pres_above_grnd') then
@@ -209,7 +224,7 @@
           param%level2(1)=0
         else if (trim(param%shortname)=="BEST_CAPE_ON_SPEC_PRES_ABOVE_GRND" .or. &
                  trim(param%shortname)=="BEST_CIN_ON_SPEC_PRES_ABOVE_GRND") then
-         print *,'in set_vlv,best cape'
+         !print *,'in set_vlv,best cape'
           LVLSXML(1,ifld)=1
           irec=irec+1
 !          allocate(param%level(1),param%level2(1))

@@ -10,6 +10,7 @@
       ,SMSTAV(:,:),SSROFF(:,:),BGROFF(:,:),VEGFRC(:,:)                       &
       ,ACSNOW(:,:),ACSNOM(:,:),CMC(:,:),SST(:,:)                             &
       ,RSWIN(:,:),RLWIN(:,:),RLWTOA(:,:)                                     &
+      ,LWDNBC(:,:),LWUPBC(:,:)                                               &
       ,TG(:,:),SFCSHX(:,:),PSLP(:,:)                                         &
       ,SFCLHX(:,:),FIS(:,:),T500(:,:),Z1000(:,:),SLP(:,:)                    &
       ,CFRACL(:,:),CFRACM(:,:),CFRACH(:,:),ACFRST(:,:)                       &
@@ -23,16 +24,17 @@
       ,Z0(:,:),USTAR(:,:),TWBS(:,:),QWBS(:,:)                                &
       ,SFCEXC(:,:),GRNFLX(:,:),SOILTB(:,:),F(:,:)                            &
       ,ALBEDO(:,:),CLDFRA(:,:),CPRATE(:,:),CNVCFR(:,:)                       &
-      ,PBLH(:,:),HBOTD(:,:),HTOPD(:,:),HBOTS(:,:),HTOPS(:,:)                 &
+      ,PBLH(:,:),PBLHGUST(:,:),HBOTD(:,:),HTOPD(:,:),HBOTS(:,:),HTOPS(:,:)   &
       ,CLDEFI(:,:),ALBASE(:,:),SI(:,:),LSPA(:,:)                             &
       ,RSWINC(:,:),VIS(:,:),PD(:,:),MXSNAL(:,:),MIXHT(:,:)                   &
       ,SNONC(:,:),EPSR(:,:),RSWTOA(:,:)                                      &
 ! HWRF additions
-      ,MDLTAUX(:,:),MDLTAUY(:,:),CD10(:,:),CH10(:,:)                         &
-      ,SWUPT(:,:),ACSWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:)                       &
+      ,MDLTAUX(:,:),MDLTAUY(:,:) &
+      ,ACSWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:) &
 ! NAMB additions
       ,SNOAVG(:,:),PSFCAVG(:,:),T10AVG(:,:),AKHSAVG(:,:),AKMSAVG(:,:)        &
       ,T10M(:,:),U10MAX(:,:),V10MAX(:,:),u10h(:,:),v10h(:,:)                 &
+      ,PRATE_MAX(:,:),FPRATE_MAX(:,:)                                        &
 ! GSD addition
       ,WSPD10MAX(:,:),W_UP_MAX(:,:),W_DN_MAX(:,:),REFD_MAX(:,:)              &
       ,UP_HELI_MAX(:,:),UP_HELI_MAX16(:,:),GRPL_MAX(:,:),QRMAX(:,:)          &
@@ -40,12 +42,14 @@
       ,NCI_LTG(:,:),NCA_LTG(:,:),NCI_WQ(:,:),NCA_WQ(:,:)                     &
       ,NCI_REFD(:,:),NCA_REFD(:,:)                                           &
       ,RAINC_BUCKET(:,:),RAINNC_BUCKET(:,:),SNOW_BUCKET(:,:)                 &
-      ,PCP_BUCKET(:,:)                                                       &
+      ,GRAUP_BUCKET(:,:),PCP_BUCKET(:,:),ACGRAUP(:,:),ACFRAIN(:,:)           &
       ,SNOWNC(:,:),GRAUPELNC(:,:),TMAX(:,:),W_MEAN(:,:)                      &
       ,TSNOW(:,:),QVG(:,:),QV2m(:,:),QVl1(:,:)                               &
       ,REFC_10CM(:,:), REF1KM_10CM(:,:), REF4KM_10CM(:,:)                    &
       ,SWRADmean(:,:),U10mean(:,:),V10mean(:,:),SPDUV10mean(:,:)             &
-      ,SWNORMmean(:,:),SNFDEN(:,:),SNDEPAC(:,:)                              &
+      ,SWNORMmean(:,:),SNFDEN(:,:),SNDEPAC(:,:),SWDDNI(:,:),SWDDIF(:,:)      &
+      ,SWDNBC(:,:),SWDDNIC(:,:),SWDDIFC(:,:), SWUPBC(:,:), SWUPT(:,:)        &
+      ,TAOD5502D(:,:),AERASY2D(:,:),AERSSA2D(:,:)                            &
 ! add new fields for GFS
       ,SFCUX(:,:),SFCVX(:,:),AVGALBEDO(:,:),AVGCPRATE(:,:)                   &
       ,AVGPREC(:,:),PTOP(:,:),PBOT(:,:),AVGCFRACH(:,:)                       &
@@ -57,12 +61,14 @@
       ,sfcugs(:,:),sfcvgs(:,:),PBLCFR(:,:)                                   &
       ,cldwork(:,:),gtaux(:,:),gtauy(:,:),runoff(:,:)                        &
       ,maxtshltr(:,:),mintshltr(:,:),maxrhshltr(:,:)                         &
-      ,minrhshltr(:,:),dzice(:,:)                                            &
+      ,minrhshltr(:,:),dzice(:,:),maxqshltr(:,:),minqshltr(:,:)              &
       ,alwinc(:,:),alwoutc(:,:),alwtoac(:,:)                                 &
       ,aswinc(:,:),aswoutc(:,:),aswtoac(:,:),aswintoa(:,:)                   &
       ,smcwlt(:,:),suntime(:,:),fieldcapa(:,:)                               &
       ,avisbeamswin(:,:),avisdiffswin(:,:),airbeamswin(:,:)                  &
-      ,airdiffswin(:,:),snowfall(:,:)
+      ,airdiffswin(:,:),snowfall(:,:),acond(:,:),edir(:,:),ecan(:,:) &
+      ,etrans(:,:),esnow(:,:),avgedir(:,:),avgecan(:,:),avgetrans(:,:)&
+      ,avgesnow(:,:),avgpotevp(:,:)
       integer, allocatable :: IVGTYP(:,:),ISLTYP(:,:),ISLOPE(:,:) 
 ! Add 2d aerosol diagnosis fields for GOCART (NGAC)
       real, allocatable ::                                                   &

@@ -54,7 +54,7 @@
 !----------------------------------------------------------------------------
 !     
       use CTLBLK_mod, only: cfld, etafld2_tim, eta2p_tim, mdl2sigma_tim, surfce2_tim,&
-                            cldrad_tim, miscln_tim, fixed_tim, ntlfld
+                            cldrad_tim, miscln_tim, fixed_tim, ntlfld, me
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
@@ -129,7 +129,7 @@
 !     END OF ROUTINE.
 !     
       NTLFLD=cfld
-      print *,'NTLFLD=',NTLFLD
+      if(me==0)print *,'nTLFLD=',NTLFLD
 !
       RETURN
       END

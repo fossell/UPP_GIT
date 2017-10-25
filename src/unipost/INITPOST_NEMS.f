@@ -46,7 +46,7 @@
               aswtoa, sfcshx, sfclhx, subshx, snopcx, sfcuvx, potevp, ncfrcv, ncfrst, u10h,&
               u10, v10h, v10, u10max, v10max, smstav, smstot, sfcevp, ivgtyp, acsnow, acsnom,&
               sst, thz0, qz0, uz0, vz0, htop, isltyp, sfcexc, hbot, htopd, htops, cuppt, cprate,&
-              hbotd, hbots
+              hbotd, hbots, prate_max, fprate_max
       use soil, only: sldpth, sh2o, smc, stc
       use masks, only: lmv, lmh, htm, vtm, dx, dy, hbm2, gdlat, gdlon, sm, sice
       use kinds, only: i_llong
@@ -86,17 +86,11 @@
 !
 !     ALSO, EXTRACT IS CALLED WITH DUMMY ( A REAL ) EVEN WHEN THE NUMBERS ARE
 !     INTEGERS - THIS IS OK AS LONG AS INTEGERS AND REALS ARE THE SAME SIZE.
-      LOGICAL RUNB,SINGLRST,SUBPOST,NEST,HYDRO
-      LOGICAL IOOMG,IOALL
       logical, parameter :: debugprint = .false.
-      logical fliplayer ! whether or not to flip layer
+!     logical, parameter :: debugprint = .true.
       logical :: convert_rad_to_deg=.false.
 !      logical global
-      CHARACTER*32 LABEL
-      CHARACTER*40 CONTRL,FILALL,FILMST,FILTMP,FILTKE,FILUNV                  &
-         , FILCLD,FILRAD,FILSFC
-      CHARACTER*4 RESTHR
-      CHARACTER FNAME*80,ENVAR*50,BLANK*4
+!     CHARACTER BLANK*4
       integer nfhour ! forecast hour from nems io file
       INTEGER IDATE(8),JDATE(8)
 !     
@@ -122,14 +116,14 @@
       integer ii,jj,js,je,jev,iyear,imn,iday,itmp,ioutcount,istatus,   &
               nsrfc,nrdlw,nrdsw,nheat,nclod,                           &
               iunit,nrec,I,J,L, iret,nframe,impf,jmpf,nframed2,       &
-	      igdout,ll,n,im1,jm1,iim1
+              igdout,ll,n,im1,jm1,iim1,item
 !
-      DATA BLANK/'    '/
+!     DATA BLANK/'    '/
 !
 !***********************************************************************
 !     START INIT HERE.
 !
-      WRITE(6,*)'INITPOST:  ENTER INITPOST'
+      if(me==0)WRITE(6,*)'INITPOST:  ENTER INITPOST'
 !     
 !     
 !     STEP 1.  READ MODEL OUTPUT FILE
@@ -175,37 +169,40 @@
        
        call nemsio_getfilehead(nfile,iret=iret                           &  
          ,idate=idate(1:7),nfhour=nfhour,recname=recname                  &
-         ,reclevtyp=reclevtyp,reclev=reclev,nframe=nframe)	 
+         ,reclevtyp=reclevtyp,reclev=reclev,nframe=nframe)
 !       if(iret/=0)print*,'error getting idate,fhour, stopping';stop
-       print *,'printing an inventory of NEMS Grib file'
-       do i=1,nrec
-        print *,'recname,reclevtyp,reclev=',trim(recname(i)),' ', &
-         trim(reclevtyp(i)),reclev(i)
-       end do	 
-	 
+       if (debugprint) then
+         print *,'printing an inventory of NEMS file'
+         do i=1,nrec
+           print *,'recname,reclevtyp,reclev=',trim(recname(i)),' ', &
+           trim(reclevtyp(i)),reclev(i)
+         end do
+       endif
 !       print *,'reclevtyp=',(trim(reclevtyp(i)),i=1,nrec)
 !       print *,'reclev=',(reclev(i),i=1,nrec)  
        deallocate(recname,reclevtyp,reclev)
        impf=im+nframe*2
        jmpf=jm+nframe*2	  
 !       nframed2=nframe/2
-       print*,'nframe,impf,jmpf= ',nframe,impf,jmpf	       
+       print*,'nframe,impf,jmpf= ',nframe,impf,jmpf       
        allocate(glat1d(impf*jmpf),glon1d(impf*jmpf) )  
        call nemsio_getfilehead(nfile,dx=glat1d               &
          ,dy=glon1d,iret=iret)
-       if(iret/=0)print*,'did not find dx dy'	 	 
+       if(iret/=0)print*,'did not find dx dy'
 !       do j=1,impf*jmpf
 !         print*,'dx before scatter= ',j,glat1d(j)
 !       end do	 	  
+!$omp parallel do private(i,j,item)
        do j=1,jm
+         item = (j-1)*impf + nframe
          do i=1,im
-	   dummy(i,j)  = glat1d((j-1)*impf+i+nframe)
-	   dummy2(i,j) = glon1d((j-1)*impf+i+nframe)
+           dummy(i,j)  = glat1d(item+i)
+           dummy2(i,j) = glon1d(item+i)
 !	   dummy(i,j)=glat1d(i-nframe,j-nframe)
 !	   dummy2(i,j)=glon1d(i-nframe,j-nframe)
-	 end do
+         end do
        end do
-       deallocate(glat1d,glon1d)	 
+       deallocate(glat1d,glon1d)
 !       latstart=nint(dummy(1,1)*1000.)
 !       latlast=nint(dummy(im,jm)*1000.)
 !       lonstart=nint(dummy2(1,1)*1000.)
@@ -249,10 +246,13 @@
         impf=im+1 ! post cut im off because it's the same as i=1 but data from model is till im 
         jmpf=jm
 !        nframed2=nframe/2
-      END IF	
-      print*,'impf,jmpf,nframe for reading fields = ',impf,jmpf,nframe
-      print*,'idate after broadcast = ',(idate(i),i=1,7)
-      print*,'nfhour = ',nfhour
+      END IF
+   
+      if (debugprint) then 
+        print*,'impf,jmpf,nframe for reading fields = ',impf,jmpf,nframe
+        print*,'idate after broadcast = ',(idate(i),i=1,7)
+        print*,'nfhour = ',nfhour
+      end if
       call mpi_scatterv(dummy(1,1),icnt,idsp,mpi_real                   &
        ,dx(1,jsta),icnt(me),mpi_real,0,MPI_COMM_COMP,iret)
       call mpi_scatterv(dummy2(1,1),icnt,idsp,mpi_real                  &
@@ -273,10 +273,12 @@
 !
 !      read(startdate,15)iyear,imn,iday,ihrst,imin       
  15   format(i4,1x,i2,1x,i2,1x,i2,1x,i2)
-      print*,'start yr mo day hr min =',iyear,imn,iday,ihrst,imin
-      print*,'processing yr mo day hr min='                            &
-        ,idat(3),idat(1),idat(2),idat(4),idat(5)
-!
+      if (me==0) then
+        print*,'start yr mo day hr min =',iyear,imn,iday,ihrst,imin
+        print*,'processing yr mo day hr min='                            &
+          ,idat(3),idat(1),idat(2),idat(4),idat(5)
+      endif
+! 
       idate(1) = iyear
       idate(2) = imn
       idate(3) = iday
@@ -291,23 +293,19 @@
       jdate(5) = idat(4)
       jdate(6) = idat(5)
 !
-      print *,' idate=',idate
-      print *,' jdate=',jdate
+
 !      CALL W3DIFDAT(JDATE,IDATE,2,RINC)
 !      ifhr=nint(rinc(2))
 !
       CALL W3DIFDAT(JDATE,IDATE,0,RINC)
 !
-      print *,' rinc=',rinc
       ifhr=nint(rinc(2)+rinc(1)*24.)
-      print *,' ifhr=',ifhr
       ifmin=nint(rinc(3))
 !      if(ifhr /= nfhour)print*,'find wrong Model input file';stop
-      print*,' in INITPOST ifhr ifmin fileName=',ifhr,ifmin,fileName
+      if (me==0)print*,' in INITPOST ifhr ifmin fileName=',ifhr,ifmin,trim(fileName)
       
 ! Getting tstart
       tstart=0.
-      print*,'tstart= ',tstart
       
 ! Getiing restart
       
@@ -345,17 +343,18 @@
       if(me == 0)then
         call nemsio_getheadvar(nfile,trim(VarName),imp_physics,iret)
         if (iret /= 0) then
-	 print*,VarName," not found in file- go to 16 character "
-	 VarName='mp_physics'
-	 call nemsio_getheadvar(nfile,trim(VarName),imp_physics,iret)
-	 if (iret /= 0) then
-          print*,VarName," not found in file-Assigned 1000"
-          imp_physics=5
-	 end if 
+          print*,VarName," not found in file- go to 16 character "
+          VarName='mp_physics'
+          call nemsio_getheadvar(nfile,trim(VarName),imp_physics,iret)
+          if (iret /= 0) then
+            print*,VarName," not found in file-Assigned 1000"
+!           imp_physics=1000          ! should this line be uncommented? - Moorthi
+            imp_physics=5
+          end if 
         end if
       end if
       call mpi_bcast(imp_physics,1,MPI_INTEGER,0,mpi_comm_comp,iret)	
-      print*,'MP_PHYSICS= ',imp_physics
+      if(me==0)print*,'MP_PHYSICS= ',imp_physics
 
 ! Initializes constants for Ferrier microphysics       
       if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
@@ -371,7 +370,7 @@
         end if
       end if
       call mpi_bcast(iSF_SURFACE_PHYSICS,1,MPI_INTEGER,0,mpi_comm_comp,iret)
-      print*,'SF_SURFACE_PHYSICS= ',iSF_SURFACE_PHYSICS
+      if(me==0) print*,'SF_SURFACE_PHYSICS= ',iSF_SURFACE_PHYSICS
 
 ! IVEGSRC=1 for IGBP and 0 for USGS
       VarName='IVEGSRC'
@@ -383,7 +382,7 @@
         end if
       end if
       call mpi_bcast(IVEGSRC,1,MPI_INTEGER,0,mpi_comm_comp,iret)
-      print*,'IVEGSRC= ',IVEGSRC
+      if(me==0) print*,'IVEGSRC= ',IVEGSRC
 
 ! set novegtype based on vegetation classification
       if(ivegsrc==1)then
@@ -391,7 +390,7 @@
       else if(ivegsrc==0)then 
        novegtype=24 
       end if
-      print*,'novegtype= ',novegtype
+      if(me==0) print*,'novegtype= ',novegtype
 
       VarName='CU_PHYSICS'
       if(me == 0)then
@@ -402,7 +401,7 @@
         end if
       end if
       call mpi_bcast(iCU_PHYSICS,1,MPI_INTEGER,0,mpi_comm_comp,iret)
-      print*,'CU_PHYSICS= ',iCU_PHYSICS
+      if(me==0) print*,'CU_PHYSICS= ',iCU_PHYSICS
       
 
       allocate(bufy(jm))
@@ -477,7 +476,7 @@
       call mpi_bcast(dxval,1,MPI_REAL,0,mpi_comm_comp,iret)
 !      	dxval=124 ! hard wire for AQ domain testing
       
-      print*,'DX, DY, DT=',dxval,dyval,dt
+      if(me==0) print*,'DX, DY, DT=',dxval,dyval,dt
       
       VarName='TPH0D'
       if(me == 0)then
@@ -554,8 +553,8 @@
       ELSE
         maptype=0 !  for global NMMB on latlon grid 
         gridtype='A' ! will put wind on mass point for now to make regular latlon
-      END IF 		
-      print*,'maptype and gridtype= ',maptype,gridtype
+      END IF
+      if(me==0) print*,'maptype and gridtype= ',maptype,gridtype
       
       HBM2=1.0
 
@@ -572,9 +571,12 @@
        if(maxval(abs(dummy))<pi)then ! convert from radian to degree
         if(debugprint)print*,'convert from radian to degree'
         dummy=dummy*180./pi 
-	convert_rad_to_deg=.true.
+        convert_rad_to_deg=.true.
        end if
       end if
+!     print *,' gdlat1=',gdlat(1,:)
+!     print *,' gdlatim=',gdlat(im,:)
+
       call mpi_bcast(convert_rad_to_deg,1,MPI_LOGICAL,0,mpi_comm_comp,iret)
       if(convert_rad_to_deg)call mpi_scatterv(dummy(1,1),icnt,idsp,mpi_real &
       ,gdlat(1,jsta),icnt(me),mpi_real,0,MPI_COMM_COMP,iret)      
@@ -603,13 +605,14 @@
       call mpi_bcast(latlast,1,MPI_INTEGER,0,mpi_comm_comp,iret)
 !      call mpi_bcast(dyval,1,MPI_INTEGER,0,mpi_comm_comp,iret)
 !      call mpi_bcast(cenlat,1,MPI_INTEGER,0,mpi_comm_comp,iret)
-      write(6,*) 'latstart,latlast,me A calling bcast=',latstart,latlast,me
-      print*,'dyval, cenlat= ',dyval, cenlat
+      if(debugprint) write(6,*) 'latstart,latlast,me A calling bcast=',latstart,latlast,me
+      if(me==0) print*,'dyval, cenlat= ',dyval, cenlat
       
+!$omp parallel do private(i,j)
       do j=jsta,jend
         do i=1,im
-	  F(I,J)=1.454441e-4*sin(gdlat(i,j)*DTR)   ! 2*omeg*sin(phi)
-	end do
+          F(I,J) = 1.454441e-4*sin(gdlat(i,j)*DTR)   ! 2*omeg*sin(phi)
+        end do
       end do
       
       varname='glon'
@@ -626,11 +629,11 @@
 !	end do
 !       end do 	 
        if(gdlon(1,jsta)>0. .and. gdlon(2,jsta)<0.)then
-        do j=jsta,jend
-	 gdlon(1,j)=gdlon(1,j)-360.0
-	end do
+         do j=jsta,jend
+           gdlon(1,j) = gdlon(1,j)-360.0
+         end do
        end if
-      end if 	 
+      end if
       if(debugprint)print*,'sample ',VarName,' = ',(gdlon(i,(jsta+jend)/2),i=1,im,8)
       if(debugprint)print*,'max min lon=',maxval(gdlon),minval(gdlon)
       call collect_loc(gdlon,dummy)
@@ -673,7 +676,7 @@
 	  dummy(1,1)=dummy(1,1)*180./pi
 	  dummy(im,jm)=dummy(im,jm)*180./pi
 	  convert_rad_to_deg=.true.
-	end if	  
+	end if
         latstartv=nint(dummy(1,1)*gdsdegr)
         latlastv=nint(dummy(im,jm)*gdsdegr)
 !        cenlatv=nint(dummy(ii,jj)*1000.)
@@ -683,7 +686,7 @@
       call mpi_bcast(latlastv,1,MPI_INTEGER,0,mpi_comm_comp,iret)
 !      call mpi_bcast(cenlatv,1,MPI_INTEGER,0,mpi_comm_comp,iret)
       cenlatv=cenlat
-      write(6,*) 'latstartv,cenlatv,latlastv,me A calling bcast=', &
+      if(debugprint)write(6,*) 'latstartv,cenlatv,latlastv,me A calling bcast=', &
       latstartv,cenlatv,latlastv,me
       
       varname='vlon'
@@ -875,14 +878,14 @@
           ETA2=SPVAL
         end if
       end if
-      call mpi_bcast(eta2,lm+1,MPI_REAL,0,mpi_comm_comp,iret)	
+      call mpi_bcast(eta2,lm+1,MPI_REAL,0,mpi_comm_comp,iret)
       
       open(75,file='ETAPROFILE.txt',form='formatted',                    &
               status='unknown')
       DO L=1,lm+1 
 	write(75,1020)L, ETA1(lm+2-l), ETA2(lm+2-l)
       END DO
- 1020 format(I3,2E17.10)	
+ 1020 format(I3,2E17.10)
       close (75)
 
       varname='pdtop'
@@ -893,7 +896,7 @@
           pdtop=SPVAL
         end if
       end if
-      call mpi_bcast(pdtop,1,MPI_REAL,0,mpi_comm_comp,iret)	
+      call mpi_bcast(pdtop,1,MPI_REAL,0,mpi_comm_comp,iret)
       
       varname='pt'
       if(me==0)then
@@ -902,10 +905,10 @@
           print*,VarName," not found in file-Assigned missing values"
           pt=SPVAL
         end if
-      end if	
+      end if
       call mpi_bcast(pt,1,MPI_REAL,0,mpi_comm_comp,iret)
-      print*,'PT, PDTOP= ',PT,PDTOP
-	
+      if(me==0) print*,'PT, PDTOP= ',PT,PDTOP
+
       varname='pblh'
       VcoordName='sfc'
       l=1
@@ -945,7 +948,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,ths)
       if(debugprint)print*,'sample ',VarName,' = ',ths(im/2,(jsta+jend)/2)
-	
+
       VarName='qsh'
       VcoordName='sfc'
       l=1
@@ -1090,6 +1093,22 @@
       ,l,impf,jmpf,nframe,up_heli_max)
       if(debugprint)print*,'sample ',VarName,' = ',up_heli_max(im/2,(jsta+jend)/2)
 
+      varname='pratemax'    ! max hourly precip rate
+      VcoordName='sfc' ! wrong
+      l=1
+      call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
+      ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
+      ,l,impf,jmpf,nframe,prate_max)
+      if(debugprint)print*,'sample ',VarName,' = ',prate_max(im/2,(jsta+jend)/2)
+
+      varname='fpratemax'   ! max hourly frozen precip rate
+      VcoordName='sfc' ! wrong
+      l=1
+      call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
+      ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
+      ,l,impf,jmpf,nframe,fprate_max)
+      if(debugprint)print*,'sample ',VarName,' = ',fprate_max(im/2,(jsta+jend)/2)
+
       varname='si'
       VcoordName='sfc'
       l=1
@@ -1217,7 +1236,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,albase)
       if(debugprint)print*,'sample ',VarName,' = ',albase(im/2,(jsta+jend)/2)
-	
+
       varname='albedo'
       VcoordName='sfc'
       l=1
@@ -1249,7 +1268,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,mxsnal)
       if(debugprint)print*,'sample ',VarName,' = ',mxsnal(im/2,(jsta+jend)/2)
-	
+
       varname='radot'
       VcoordName='sfc'
       l=1
@@ -1279,7 +1298,7 @@
 ! model level cwm      
        VarName='clwmr'
        VcoordName='mid layer'
-       do l=1,lm	
+       do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -1290,7 +1309,7 @@
 
        varname='f_ice'
        VcoordName='mid layer'
-       do l=1,lm	
+       do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -1302,7 +1321,7 @@
 
        varname='f_rain'
        VcoordName='mid layer'
-       do l=1,lm	
+       do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -1312,10 +1331,10 @@
 	if(debugprint)print*,'max min ',VarName,' = ',ll,maxval(f_rain(:,:,ll)),minval(f_rain(:,:,ll))
        end do ! do loop for l 
       
-      if(imp_physics/=99)then
+      if(imp_physics /= 99)then
        varname='f_rimef'
        VcoordName='mid layer'
-       do l=1,lm	
+       do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -1324,6 +1343,21 @@
         if(debugprint)print*,'sample l ',VarName,' = ',ll,f_rimef(im/2,(jsta+jend)/2,ll)
 	if(debugprint)print*,'max min ',VarName,' = ',ll,maxval(f_rimef(:,:,ll)),minval(f_rimef(:,:,ll))
        end do ! do loop for l       
+      endif
+
+      if(imp_physics==5)then
+       varname='refl_10cm'
+       VcoordName='mid layer'
+       do l=1,lm
+        ll=l
+        call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
+        ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
+        ,l,impf,jmpf,nframe,REF_10CM(1,jsta_2l,ll))
+        if(debugprint)print*,'sample l ',VarName,' = '  &
+         ,ll,REF_10CM(im/2,(jsta+jend)/2,ll)
+       if(debugprint)print*,'max min ',VarName,' = '  &
+         ,ll,maxval(REF_10CM(:,:,ll)),minval(REF_10CM(:,:,ll))
+       end do ! do loop for l
       endif
 
       else ! retrieve hydrometeo fields directly for non-Ferrier
@@ -1359,49 +1393,64 @@
        varname='qv'
        VcoordName='mid layer'
        do l=1,lm
-        ll=l
-        call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
-        ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
-        ,l,impf,jmpf,nframe,q(1,jsta_2l,ll))
-        do j=jsta_2l,jend_2u
-         do i=1,im
-          if(q(i,j,ll)<10E-12)q(i,j,ll)=10E-12
-          q(i,j,ll)=q(i,j,ll)/(1.0+q(i,j,ll))
+         ll=l
+         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l          &
+           ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
+           ,l,impf,jmpf,nframe,q(1,jsta_2l,ll))
+!$omp parallel do private(i,j)
+         do j=jsta_2l,jend_2u
+           do i=1,im
+             q(i,j,ll) = max(10E-12,q(i,j,ll))
+             q(i,j,ll) = q(i,j,ll) / (1.0+q(i,j,ll))
+           end do
          end do
-        end do
         if(debugprint)print*,'sample l ',VarName,' = '   &
           ,ll,q(im/2,(jsta+jend)/2,ll)
         if(debugprint)print*,'max min ',VarName,' = '  &
           ,ll,maxval(q(:,:,ll)),minval(q(:,:,ll))
-       end do ! do loop for l
-       qqw=spval
-       qqr=spval
-       qqs=spval
-       qqi=spval
-       qqg=spval
-       cwm=spval
+       end do ! ,j,l) do loop for l
+
+!$omp parallel do private(i,j,l)
+       do l=1,lm
+         do j=jsta_2l,jend_2u
+           do i=1,im
+             qqw(i,j,l) = spval
+             qqr(i,j,l) = spval
+             qqs(i,j,l) = spval
+             qqi(i,j,l) = spval
+             qqg(i,j,l) = spval
+             cwm(i,j,l) = spval
+           enddo
+         enddo
+       enddo
 ! cloud water
        if(imp_physics/=0)then
         varname='qc'
         VcoordName='mid layer'
         do l=1,lm
-         ll=l
-         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
-         ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
-         ,l,impf,jmpf,nframe,qqw(1,jsta_2l,ll))
-         if(imp_physics==3)then !WSM3
+          ll=l
+          call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
+             ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
+             ,l,impf,jmpf,nframe,qqw(1,jsta_2l,ll))
+          if(imp_physics==3)then !WSM3
+!$omp parallel do private(i,j)
+            do j=jsta_2l,jend_2u
+              do i=1,im
+                if(t(i,j,ll)<TFRZ) qqi(i,j,ll) = qqw(i,j,ll)
+              end do
+            end do
+          end if
+!$omp parallel do private(i,j)
           do j=jsta_2l,jend_2u
-           do i=1,im
-            if(t(i,j,ll)<TFRZ)qqi(i,j,ll)=qqw(i,j,ll)
-           end do
+            do i=1,im
+              cwm(i,j,ll) = qqw(i,j,ll)
+            end do
           end do
-         end if
-         cwm(:,:,ll)=qqw(:,:,ll)
-         if(debugprint)print*,'sample l ',VarName,' = '  &
+          if(debugprint)print*,'sample l ',VarName,' = '  &
            ,ll,qqw(im/2,(jsta+jend)/2,ll)
-         if(debugprint)print*,'max min ',VarName,' = '   &
+          if(debugprint)print*,'max min ',VarName,' = '   &
            ,ll,maxval(qqw(:,:,ll)),minval(qqw(:,:,ll))
-        end do ! do loop for l
+         end do ! do loop for l
        end if ! for non-zero mp_physics
 
 ! cloud ice
@@ -1413,11 +1462,12 @@
          call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
          ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
          ,l,impf,jmpf,nframe,qqi(1,jsta_2l,ll))
-         do j=jsta_2l,jend_2u
-          do i=1,im
-           cwm(i,j,ll)=cwm(i,j,ll)+qqi(i,j,ll)
+!$omp parallel do private(i,j)
+          do j=jsta_2l,jend_2u
+            do i=1,im
+              cwm(i,j,ll) = cwm(i,j,ll) + qqi(i,j,ll)
+            end do
           end do
-         end do
          if(debugprint)print*,'sample l ',VarName,' = '  &
           ,ll,qqi(im/2,(jsta+jend)/2,ll)
         if(debugprint)print*,'max min ',VarName,' = '   &
@@ -1434,13 +1484,19 @@
          ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
          ,l,impf,jmpf,nframe,qqr(1,jsta_2l,ll))
          if(imp_physics==3)then !WSM3
+!$omp parallel do private(i,j)
           do j=jsta_2l,jend_2u
            do i=1,im
-            if(t(i,j,ll)<TFRZ)qqs(i,j,ll)=qqr(i,j,ll)
+            if(t(i,j,ll)<TFRZ) qqs(i,j,ll) = qqr(i,j,ll)
            end do
           end do
          end if
-         cwm(:,:,ll)=cwm(:,:,ll)+qqr(:,:,ll)
+!$omp parallel do private(i,j)
+         do j=jsta_2l,jend_2u
+           do i=1,im
+             cwm(i,j,ll)  = cwm(i,j,ll) + qqr(i,j,ll)
+           end do
+         end do
          if(debugprint)print*,'sample l ',VarName,' = '  &
            ,ll,qqr(im/2,(jsta+jend)/2,ll)
          if(debugprint)print*,'max min ',VarName,' = '  &
@@ -1456,10 +1512,11 @@
          call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
          ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
          ,l,impf,jmpf,nframe,qqs(1,jsta_2l,ll))
+!$omp parallel do private(i,j)
          do j=jsta_2l,jend_2u
-          do i=1,im
-           cwm(i,j,ll)=cwm(i,j,ll)+qqs(i,j,ll)
-          end do
+           do i=1,im
+             cwm(i,j,ll) = cwm(i,j,ll) + qqs(i,j,ll)
+           end do
          end do
          if(debugprint)print*,'sample l ',VarName,' = '  &
           ,ll,qqs(im/2,(jsta+jend)/2,ll)
@@ -1476,10 +1533,11 @@
          call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
          ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
          ,l,impf,jmpf,nframe,qqg(1,jsta_2l,ll))
+!$omp parallel do private(i,j)
          do j=jsta_2l,jend_2u
-          do i=1,im
-           cwm(i,j,ll)=cwm(i,j,ll)+qqg(i,j,ll)
-          end do
+           do i=1,im
+             cwm(i,j,ll) = cwm(i,j,ll) + qqg(i,j,ll)
+           end do
          end do
          if(debugprint)print*,'sample l ',VarName,' = '  &
           ,ll,qqg(im/2,(jsta+jend)/2,ll)
@@ -1548,7 +1606,7 @@
 
       varname='cldfra'
       VcoordName='mid layer'
-      do l=1,lm	
+      do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -1614,7 +1672,7 @@
 !        end if
       end if
       call mpi_bcast(sldpth,4,MPI_REAL,0,mpi_comm_comp,iret)	
-      print*,'SLDPTH= ',(SLDPTH(N),N=1,NSOIL)
+      if(me==0)print*,'SLDPTH= ',(SLDPTH(N),N=1,NSOIL)
 
       VarName='cmc'
       VcoordName='sfc'
@@ -1829,50 +1887,54 @@
         call exch(PMID(1:IM,JSTA_2L:JEND_2U,L))
         do j = jsta, jend_m 
          do i = 1, im-1 
-           PMIDV(I,J,L)=0.25*(PMID(I,J,L)+PMID(I+1,J,L)                       &
-             +PMID(I,J+1,L)+PMID(I+1,J+1,L))
+           PMIDV(I,J,L)=0.25*(PMID(I,J,L)   + PMID(I+1,J,L)              &
+                       +      PMID(I,J+1,L) + PMID(I+1,J+1,L))
          end do
         end do
        end do
       end if  
-      write(0,*)' after PMIDV'
-
 
 !!!!! COMPUTE Z
        do j = jsta, jend
         do i = 1, im
-            ZINT(I,J,LM+1)=FIS(I,J)/G
-	if (I .eq. im/2 .and. J .eq.(jsta+jend)/2 ) then
+            ZINT(I,J,LM+1) = FIS(I,J)/G
+          if (debugprint .and. I == im/2 .and. J ==(jsta+jend)/2 ) then
                    write(6,*) 'G,ZINT: ', G,ZINT(I,J,LM+1)
-	endif
-            FI(I,J,1)=FIS(I,J)
+          endif
+          FI(I,J,1) = FIS(I,J)
         end do
        end do
 
 ! SECOND, INTEGRATE HEIGHT HYDROSTATICLY
+      ii = im/2
+      jj = (jsta+jend)/2
       DO L=LM,1,-1
-       do j = jsta, jend
-        do i = 1, im
-         FI(I,J,2)=HTM(I,J,L)*T(I,J,L)*(Q(I,J,L)*D608+1.0)*RD*                &
-                   (ALPINT(I,J,L+1)-ALPINT(I,J,L))+FI(I,J,1)
-         ZINT(I,J,L)=FI(I,J,2)/G
-         if(i==im/2.and.j==(jsta+jend)/2)                                              &
-        print*,'L,sample HTM,T,Q,ALPINT(L+1),ALPINT(l),ZINT= '                &
-        ,l,HTM(I,J,L),T(I,J,L),Q(I,J,L),ALPINT(I,J,L+1),                      &
-        ALPINT(I,J,L),ZINT(I,J,L)
-         FI(I,J,1)=FI(I,J,2)
+!$omp parallel do private(i,j)
+        do j = jsta, jend
+          do i = 1, im
+            FI(I,J,2)  = HTM(I,J,L)*T(I,J,L)*(Q(I,J,L)*D608+1.0)*RD*    &
+                        (ALPINT(I,J,L+1)-ALPINT(I,J,L))+FI(I,J,1)
+            ZINT(I,J,L) = FI(I,J,2)/G
+            FI(I,J,1) = FI(I,J,2)
+          ENDDO
         ENDDO
-       ENDDO
+        if(debugprint)print*,'L,sample HTM,T,Q,ALPINT(L+1),ALPINT(l)',  &
+                             ',ZINT= ',l,HTM(Ii,Jj,L),T(Ii,Jj,L),       &
+                             Q(Ii,Jj,L),ALPINT(Ii,Jj,L+1),              &
+                             ALPINT(Ii,Jj,L),ZINT(Ii,Jj,L)
       END DO
-      print*,'finish deriving geopotential in nmm'
-      write(0,*)' after ZINT lm=',lm,' js=',js,' je=',je,' im=',im
-      write(0,*)' zmid lbounds=',lbound(zmid),' ubounds=',ubound(zmid)
-      write(0,*)' zint lbounds=',lbound(zint),' ubounds=',ubound(zint)
-      write(0,*)' pmid lbounds=',lbound(pmid),' ubounds=',ubound(pmid)
-      write(0,*)' pint lbounds=',lbound(pint),' ubounds=',ubound(pint)
+      if (me==0) then
+        print*,'finish deriving geopotential in nmm'
+        write(0,*)' after ZINT lm=',lm,' js=',js,' je=',je,' im=',im
+        write(0,*)' zmid lbounds=',lbound(zmid),' ubounds=',ubound(zmid)
+        write(0,*)' zint lbounds=',lbound(zint),' ubounds=',ubound(zint)
+        write(0,*)' pmid lbounds=',lbound(pmid),' ubounds=',ubound(pmid)
+        write(0,*)' pint lbounds=',lbound(pint),' ubounds=',ubound(pint)
+      endif
 !
       DO L=1,LM
 !      write(0,*)' zmid l=',l
+!$omp parallel do private(i,j,fact)
         DO J=Jsta,Jend
 !      write(0,*)' zmid j=',j
           DO I=1,IM
@@ -1881,9 +1943,9 @@
 !      write(0,*)' pmid=',pmid(i,j,l)
 !      write(0,*)' pint=',pint(i,j,l),pint(i,j,l+1)
 !      write(0,*)' zint=',zint(i,j,l),zint(i,j,l+1)
-            FACT=(ALOG(PMID(I,J,L))-ALOG(PINT(I,J,L)))/                      &
-               (ALOG(PINT(I,J,L+1))-ALOG(PINT(I,J,L)))	 
-            ZMID(I,J,L)=ZINT(I,J,L)+(ZINT(I,J,L+1)-ZINT(I,J,L))*FACT
+            FACT = (LOG(PMID(I,J,L))-LOG(PINT(I,J,L)))                      &
+                 / (LOG(PINT(I,J,L+1))-LOG(PINT(I,J,L)))
+            ZMID(I,J,L) = ZINT(I,J,L) + (ZINT(I,J,L+1)-ZINT(I,J,L))*FACT
           ENDDO
         ENDDO
       ENDDO
@@ -2052,7 +2114,7 @@
       ,jend_2u,MPI_COMM_COMP,icnt,idsp,spval,VarName,VcoordName &
       ,l,impf,jmpf,nframe,snopcx)
       if(debugprint)print*,'sample ',VarName,' = ',snopcx(im/2,(jsta+jend)/2)
-	
+
       VarName='sfcuvx'
       VcoordName='sfc'
       l=1
@@ -2071,7 +2133,7 @@
 
       varname='rlwtt'
       VcoordName='mid layer'
-      do l=1,lm	
+      do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -2082,7 +2144,7 @@
 
       varname='rswtt'
       VcoordName='mid layer'
-      do l=1,lm	
+      do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -2105,7 +2167,7 @@
 	
       varname='train'
       VcoordName='mid layer'
-      do l=1,lm	
+      do l=1,lm
 !        ll=lm-l+1
 	ll=l
         call getnemsandscatter(me,nfile,im,jm,jsta,jsta_2l &
@@ -2607,18 +2669,16 @@
 
 !!!! DONE GETTING
 
+!$omp parallel do private(i,j,l)
       do l = 1, lm
-       do j = jsta, jend
-        do i = 1, im
-            IF(ABS(T(I,J,L)).GT.1.0E-3)                                &
-              OMGA(I,J,L) = -WH(I,J,L)*PMID(I,J,L)*G/                   &
-                       (RD*T(I,J,L)*(1.+D608*Q(I,J,L)))
-
+        do j = jsta, jend
+          do i = 1, im
+            IF(ABS(T(I,J,L)).GT.1.0E-3 .and. (WH(I,J,1) < SPVAL))     &
+              OMGA(I,J,L) = -WH(I,J,L)*PMID(I,J,L)*G                  &
+                          / (RD*T(I,J,L)*(1.+D608*Q(I,J,L)))
+          end do
         end do
-       end do
       end do
-      write(0,*)' after OMGA'
-
 
       THL=210.
       PLQ=70000.
@@ -2627,8 +2687,6 @@
                 RDQ,RDTH,RDP,RDTHE,PL,THL,QS0,SQS,STHE,THE0)
 
       CALL TABLEQ(TTBLQ,RDPQ,RDTHEQ,PLQ,THL,STHEQ,THE0Q)
-      write(0,*)' after TABLEQ'
-
 
 !     
 !     
@@ -2642,17 +2700,18 @@
 !     COMPUTE DERIVED TIME STEPPING CONSTANTS.
 !
 !MEB need to get DT
-!      DT = 120. !MEB need to get DT
-!      NPHS = 4  !MEB need to get physics DT
+!     DT = 120. !MEB need to get DT
+!     NPHS = 4  !MEB need to get physics DT
       DTQ2 = DT * NPHS  !MEB need to get physics DT
       TSPH = 3600./DT   !MEB need to get DT
 
-      IF (PTHRESH>0.) THEN
-         PTHRESH=0.01*DTQ2/3.6E6          !-- Precip rate >= 0.01 mm/h
-!         PTHRESH=0.01*DTQ2/(3600.*39.37)  !-- Precip rate >= 0.01 inches/h
+      IF (PTHRESH > 0.) THEN
+         PTHRESH = 0.01*DTQ2/3.6E6          !-- Precip rate >= 0.01 mm/h
+!        PTHRESH = 0.01*DTQ2/(3600.*39.37)  !-- Precip rate >= 0.01 inches/h
       ENDIF
 
       TSRFC=float(NSRFC)/TSPH
+      if(me==0)write(6,*)'tsfrc ',tsrfc,nsrfc,tsph
       IF(NSRFC.EQ.0)TSRFC=float(ifhr)  !in case buket does not get emptied
       TRDLW=float(NRDLW)/TSPH
       IF(NRDLW.EQ.0)TRDLW=float(ifhr)  !in case buket does not get emptied
@@ -2665,7 +2724,7 @@
       TPREC=float(NPREC)/TSPH
       IF(NPREC.EQ.0)TPREC=float(ifhr)  !in case buket does not get emptied
 !       TPREC=float(ifhr)
-      print*,'TSRFC TRDLW TRDSW THEAT TCLOD TPREC= ' &
+      if(me==0)print*,'TSRFC TRDLW TRDSW THEAT TCLOD TPREC= ' &
       ,TSRFC, TRDLW, TRDSW, THEAT, TCLOD, TPREC
 !MEB need to get DT
 
@@ -2689,7 +2748,6 @@
       DO L = 1,LSM
          ALSL(L) = ALOG(SPL(L))
       END DO
-      write(0,*)' after ALSL'
 !
 !HC WRITE IGDS OUT FOR WEIGHTMAKER TO READ IN AS KGDSIN
         if(me.eq.0)then
@@ -2714,7 +2772,7 @@
             WRITE(igdout)0
             WRITE(igdout)LATLAST
             WRITE(igdout)LONLAST
-	  ELSE IF(MAPTYPE.EQ.205)THEN  !A STAGGERED B-GRID
+          ELSE IF(MAPTYPE.EQ.205)THEN  !A STAGGERED B-GRID
             WRITE(igdout)205
             WRITE(igdout)im
             WRITE(igdout)jm
@@ -2743,15 +2801,15 @@
                 NINT(dxval*107.),NINT(dyval*110.),CENLAT,CENLAT,  &
                 LATLAST,LONLAST
            else
-            write(111,1000) IM,JM,LATSTART/1000,LONSTART/1000,CENLON/1000, &
+	    write(111,1000) IM,JM,LATSTART/1000,LONSTART/1000,CENLON/1000, &
                 NINT(dxval*107.)/1000,NINT(dyval*110.)/1000, &
                 CENLAT/1000,CENLAT/1000,  &
                 LATLAST/1000,LONLAST/1000
            endif
-	  END IF		
+	  END IF
 1000      format('255 3 ',2(I4,x),I6,x,I7,x,'8 ',I7,x,2(I6,x),'0 64', &
                 3(x,I6),x,I7)
-          close(111)	  
+          close(111)
 !
           IF (MAPTYPE.EQ.205)THEN  !A STAGGERED B-GRID
             open(112,file='latlons_corners.txt',form='formatted' &
@@ -2760,9 +2818,10 @@
               write(112,1001)LATSTART,LONSTART,LATSE,LONSE,LATNW,LONNW, &
                   LATLAST,LONLAST
             else
-              write(112,1001)LATSTART/1000,LONSTART/1000,LATSE/1000, &
+              write(112,1001)LATSTART/1000,(LONSTART/1000)-360000, &
+                  LATSE/1000, &
                   LONSE/1000,LATNW/1000,LONNW/1000,LATLAST/1000, &
-                  LONLAST/1000
+                  (LONLAST/1000)-360000
             endif
 1001        format(4(I6,x,I7,x))
           close(112)
@@ -2773,7 +2832,7 @@
 ! close all files
         call nemsio_close(nfile,iret=status)
 !
-       write(0,*)'end of INIT_NEMS'
+       if(me==0)write(0,*)'end of INIT_NEMS'
 
       RETURN
       END

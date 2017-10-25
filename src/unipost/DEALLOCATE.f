@@ -1,4 +1,4 @@
-      SUBROUTINE DE_ALLOCATE	
+      SUBROUTINE DE_ALLOCATE
 !$$$  SUBPROGRAM DOCUMENTATION BLOCK
 !                .      .    .
 ! SUBPROGRAM:    MPI_FIRST   SET UP MESSGAE PASSING INFO
@@ -89,10 +89,14 @@
       deallocate(QQR)
       deallocate(QQS)
       deallocate(QQG)
+      deallocate(QQNW)
       deallocate(QQNI)
       deallocate(QQNR)
+      deallocate(QQNWFA)
+      deallocate(QQNIFA)
       deallocate(EXTCOF55)
       deallocate(CFR)
+      deallocate(CFR_RAW)
       deallocate(DBZ)
       deallocate(DBZR)
       deallocate(DBZI)
@@ -164,6 +168,8 @@
       deallocate(bgroff)
       deallocate(vegfrc)
       deallocate(acsnow)
+      deallocate(acgraup)
+      deallocate(acfrain)
       deallocate(acsnom)
       deallocate(cmc)
       deallocate(sst)
@@ -195,7 +201,19 @@
       deallocate(qvg)
       deallocate(qv2m)
       deallocate(rswin)
+      deallocate(swddni)
+      deallocate(swddif)
+      deallocate(swdnbc)
+      deallocate(swupbc)
+      deallocate(swddnic)
+      deallocate(swddifc)
+      deallocate(swupt)
+      deallocate(taod5502d)
+      deallocate(aerasy2d)
+      deallocate(aerssa2d)
       deallocate(rlwin)
+      deallocate(lwdnbc)
+      deallocate(lwupbc)
       deallocate(rlwtoa)
       deallocate(rswtoa)
       deallocate(tg)
@@ -238,6 +256,7 @@
       deallocate(z0)
       deallocate(ustar)
       deallocate(pblh)
+      deallocate(pblhgust)
       deallocate(twbs)
       deallocate(qwbs)
       deallocate(sfcexc)
@@ -302,6 +321,8 @@
       deallocate(mintshltr)
       deallocate(maxrhshltr)
       deallocate(minrhshltr)
+      deallocate(maxqshltr)
+      deallocate(minqshltr)
       deallocate(mixht)
       deallocate(epsr)
       deallocate(dzice)
@@ -320,11 +341,22 @@
       deallocate(airbeamswin)
       deallocate(airdiffswin)
       deallocate(snowfall)
+      deallocate(acond)
+      deallocate(edir)
+      deallocate(ecan)
+      deallocate(etrans)
+      deallocate(esnow)
+      deallocate(avgedir)
+      deallocate(avgecan)
+      deallocate(avgetrans)
+      deallocate(avgesnow)
+      deallocate(avgpotevp)
 ! GSD
       deallocate(rainc_bucket)
       deallocate(rainnc_bucket)
       deallocate(pcp_bucket)
       deallocate(snow_bucket)
+      deallocate(graup_bucket)
       deallocate(qrmax)
       deallocate(tmax)
       deallocate(snownc)
@@ -335,6 +367,8 @@
       deallocate(w_dn_max)
       deallocate(w_mean)
       deallocate(refd_max)
+      deallocate(prate_max)
+      deallocate(fprate_max)
       deallocate(up_heli_max)
       deallocate(up_heli_max16)
       deallocate(grpl_max)
@@ -382,6 +416,11 @@
 ! add GFIP ICING
       deallocate(icing_gfip)
       deallocate(icing_gfis)
+
+! add GTG turbulence
+      deallocate(catedr)
+      deallocate(mwt)
+      deallocate(gtg)
 
 !
       if (gocart_on) then
@@ -442,7 +481,6 @@
       endif
 !
 ! HWRF RRTMG output 
-      deallocate(swupt)
       deallocate(acswupt)
       deallocate(swdnt)
       deallocate(acswdnt)
