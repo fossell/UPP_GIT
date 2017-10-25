@@ -82,7 +82,7 @@
                          spduv10mean,swradmean,swnormmean,prate_max,fprate_max &
                          ,fieldcapa,edir,ecan,etrans,esnow,U10mean,V10mean,   &
                          avgedir,avgecan,avgetrans,avgesnow,acgraup,acfrain,  &
-                         acond,maxqshltr,minqshltr,avgpotevp
+                         acond,maxqshltr,minqshltr,avgpotevp,ch10,cd10
       use soil,    only: stc, sllevel, sldpth, smc, sh2o
       use masks,   only: lmh, sm, sice, htm, gdlat, gdlon
       use physcons,only: CON_EPS, CON_EPSM1

@@ -29,8 +29,8 @@
       ,RSWINC(:,:),VIS(:,:),PD(:,:),MXSNAL(:,:),MIXHT(:,:)                   &
       ,SNONC(:,:),EPSR(:,:),RSWTOA(:,:)                                      &
 ! HWRF additions
-      ,MDLTAUX(:,:),MDLTAUY(:,:) &
-      ,ACSWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:) &
+      ,MDLTAUX(:,:),MDLTAUY(:,:),CD10(:,:),CH10(:,:)                         &
+      ,ACSWUPT(:,:),SWDNT(:,:),ACSWDNT(:,:)                                  &
 ! NAMB additions
       ,SNOAVG(:,:),PSFCAVG(:,:),T10AVG(:,:),AKHSAVG(:,:),AKMSAVG(:,:)        &
       ,T10M(:,:),U10MAX(:,:),V10MAX(:,:),u10h(:,:),v10h(:,:)                 &
