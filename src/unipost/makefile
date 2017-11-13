@@ -38,7 +38,7 @@ MODULES     = $(WRF_MODS)
 #
 # Compilation / Link Flag Configuration
 EXTRA_CPPFLAGS = 
-EXTRA_FFLAGS   = -c $(LOCALINC) $(NETCDFINC)
+EXTRA_FFLAGS   = -c $(LOCALINC) $(NETCDFINC) $(NCDFINC)
 #EXTRA_LDFLAGS  = $(LIBS) -Wl,-Map=lm
 EXTRA_LDFLAGS  = $(LIBS) 
 EXTRA_CFLAGS   = -Dfunder -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'
