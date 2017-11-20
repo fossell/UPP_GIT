@@ -34,6 +34,7 @@
                             cn0r_dmrmin, cn0r_dmrmax, dmrmin
       use gridspec_mod,only : gridtype
       use rhgrd_mod, only: rhgrd
+      use ctlblk_mod, only: me
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
@@ -70,11 +71,17 @@
          endif
       endif 
 
+#if defined(COMMCODE)
+    ! If community code, check DMRmax to determine which file to link
       if (DMRmax<=0.45E-3) then
          filename = "nam_micro_lookup.dat"
       else
          filename = "hires_micro_lookup.dat"
       endif 
+#else 
+    ! Else operational code and use this file
+         filename = "eta_micro_lookup.dat"
+#endif
 
       T_ICE=-40.     !-- Now used in all versions.
       XMRmax=1.E6*DMRmax 
@@ -99,8 +106,8 @@
       CN0r0=1.E6/SQRT(SQRT(C_N0r0))
       CN0r_DMRmin=1./(PI*RHOL*DMRmin*DMRmin*DMRmin*DMRmin)
       CN0r_DMRmax=1./(PI*RHOL*DMRmax*DMRmax*DMRmax*DMRmax)
-      print *,'MICROINIT: MDRmin, MASSR(MDRmin)=',MDRmin,MASSR(MDRmin)
-      print *,'MICROINIT: MDRmax, MASSR(MDRmax)=',MDRmax,MASSR(MDRmax)
+      if(me==0)print *,'MICROINIT: MDRmin, MASSR(MDRmin)=',MDRmin,MASSR(MDRmin)
+      if(me==0)print *,'MICROINIT: MDRmax, MASSR(MDRmax)=',MDRmax,MASSR(MDRmax)
 !      print *,  'ETA2P:MASSI(50)= ', MASSI(50)
 !      print *,  'ETA2P:MASSI(450)= ', MASSI(450)
 !      print *,  'ETA2P:MASSI(1000)= ', MASSI(1000)

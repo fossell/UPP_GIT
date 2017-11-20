@@ -58,7 +58,7 @@
               radot, aswin, aswout, alwin, alwout, alwtoa, aswtoa, hbotd, htops,&
               hbots, sr, rswin, rswinc, czen, tg, soiltb, twbs, sfcshx, qwbs,&
               sfclhx, grnflx, subshx, potevp, sno, si, pctsno, ivgtyp, isltyp,&
-              islope, albedo, albase, mxsnal, epsr, f, REFC_10CM, &
+              islope, albedo, albase, mxsnal, epsr, f, REFC_10CM, REFD_MAX,  &
               RSWTOA, SWUPT, ACSWUPT, SWDNT, ACSWDNT, CD10, CH10
       use soil, only: smc, sh2o, stc, sldpth, sllevel
       use masks, only: lmv, lmh, htm, vtm, hbm2, sm, sice, gdlat, gdlon, dx, dy
@@ -401,7 +401,7 @@
 !KRF: NMM and ARW direct read of radar ref for microphysic options
 !     mp options: 2,4,6,7,8,10,14,16 
 !     REFL_10cm --> REF_10CM
-!     REFD_MAX  --> REFC_10CM
+!     REFD_MAX  --> REFD_MAX
       VarName='REFL_10CM'
       call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D, &
         IM+1,1,JM+1,LM+1,IM,JS,JE,LM)
@@ -421,7 +421,7 @@
         IM,1,JM,1,IM,JS,JE,1)
        do j = jsta_2l, jend_2u
         do i = 1, im
-            REFC_10CM ( i, j ) = dummy ( i, j )
+            REFD_MAX ( i, j ) = dummy ( i, j )
         end do
        end do
 ! print*,'REFD_MAX at ',ii,jj,' = ',REFD_MAX(ii,jj)
@@ -616,7 +616,7 @@
       ,Qqs(ii,jj,ll)
        
        if(imp_physics.eq.2 .or. imp_physics.eq.6  & 
-        .or. imp_physics.eq.8)then
+        .or. imp_physics.eq.8 .or. imp_physics.eq.28)then
         VarName='QGRAUP'
         call getVariable(fileName,DateStr,DataHandle,VarName,DUM3D,  &
          IM+1,1,JM+1,LM+1,IM,JS,JE,LM)

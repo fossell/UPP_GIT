@@ -65,7 +65,7 @@ SUBROUTINE CALRAD_WCLOUD
   use params_mod, only: pi, rtd, p1000, capa, h1000, h1, g, rd, d608, qconv
   use rqstfld_mod, only: iget, id, lvls, iavblfld
   use ctlblk_mod, only: modelname, ivegsrc, novegtype, imp_physics, lm, spval, icu_physics,&
-              grib, cfld, fld_info, datapd, idat, im, jsta, jend, jm
+              grib, cfld, fld_info, datapd, idat, im, jsta, jend, jm, me
 !     
   implicit none
 
@@ -74,10 +74,10 @@ SUBROUTINE CALRAD_WCLOUD
   ! Mapping land surface type of GFS to CRTM
   !  Note: index 0 is water, and index 13 is ice. The two indices are not
   !        used and just assigned to COMPACTED_SOIL.
-  integer, parameter, dimension(0:13) :: gfs_to_crtm=(/COMPACTED_SOIL,     &
-         BROADLEAF_FOREST, BROADLEAF_FOREST, BROADLEAF_PINE_FOREST, PINE_FOREST, &
-         PINE_FOREST, BROADLEAF_BRUSH, SCRUB, SCRUB, SCRUB_SOIL, TUNDRA,         &
-         COMPACTED_SOIL, TILLED_SOIL, COMPACTED_SOIL/)
+  !integer, parameter, dimension(0:13) :: gfs_to_crtm=(/COMPACTED_SOIL,     &
+  !       BROADLEAF_FOREST, BROADLEAF_FOREST, BROADLEAF_PINE_FOREST, PINE_FOREST, &
+  !       PINE_FOREST, BROADLEAF_BRUSH, SCRUB, SCRUB, SCRUB_SOIL, TUNDRA,         &
+  !       COMPACTED_SOIL, TILLED_SOIL, COMPACTED_SOIL/)
 
   ! Mapping land surface type of NMM to CRTM
   !  Note: index 16 is water, and index 24 is ice. The two indices are not
@@ -90,7 +90,7 @@ SUBROUTINE CALRAD_WCLOUD
   !      &   IRRIGATED_LOW_VEGETATION, TUNDRA, TUNDRA, TUNDRA, TUNDRA,             &
   !      &   COMPACTED_SOIL/)
 
-  integer, allocatable:: nmm_to_crtm(:)
+  integer, allocatable:: model_to_crtm(:)
   integer, parameter:: ndat=100
   ! CRTM structure variable declarations.
   integer,parameter::  n_absorbers = 2
@@ -161,7 +161,7 @@ SUBROUTINE CALRAD_WCLOUD
   real snofrac
   real(r_kind),dimension(im,jsta:jend):: tb1,tb2,tb3,tb4
   real(r_kind),allocatable :: tb(:,:,:)
-  real,dimension(im,jm):: grid1,grid2
+  real,dimension(im,jm):: grid1
   real sun_zenith,sun_azimuth, dpovg, sun_zenith_rad
   real sat_zenith
   real q_conv   !bsf
@@ -191,7 +191,7 @@ SUBROUTINE CALRAD_WCLOUD
   integer ii,jj,n_clouds,n,nc
   integer,external :: iw3jdn
   !
-  print*,'in calrad'
+  if(me==0)print*,'in calrad'
 
   if(iget(912)<=0) then
      ! We do not need himawari-8 ahi, so tell CRTM not to read that
@@ -205,31 +205,36 @@ SUBROUTINE CALRAD_WCLOUD
   endif
   !*****************************************************************************
   ! Mapping land surface type of NMM to CRTM
-  !      allocate(nmm_to_crtm(novegtype) )
-  if(MODELNAME == 'NMM' .OR. MODELNAME == 'NCAR' .OR. MODELNAME == 'RAPR')then 
-     if(ivegsrc==1)then  !IGBP veg type
-        allocate(nmm_to_crtm(novegtype) )
-        nmm_to_crtm=(/PINE_FOREST, BROADLEAF_FOREST, PINE_FOREST,       &
-             BROADLEAF_FOREST,BROADLEAF_PINE_FOREST, SCRUB, SCRUB_SOIL, &
-             BROADLEAF_BRUSH,BROADLEAF_BRUSH, SCRUB, BROADLEAF_BRUSH,   &
-             TILLED_SOIL, URBAN_CONCRETE,TILLED_SOIL, INVALID_LAND,     &
-             COMPACTED_SOIL, INVALID_LAND, TUNDRA,TUNDRA, TUNDRA/)
-     else if(ivegsrc==0)then ! USGS veg type
-        allocate(nmm_to_crtm(novegtype) )
-        nmm_to_crtm=(/URBAN_CONCRETE,       &
-             COMPACTED_SOIL, IRRIGATED_LOW_VEGETATION, GRASS_SOIL, MEADOW_GRASS,   &
-             MEADOW_GRASS, MEADOW_GRASS, SCRUB, GRASS_SCRUB, MEADOW_GRASS,         &
-             BROADLEAF_FOREST, PINE_FOREST, BROADLEAF_FOREST, PINE_FOREST,         &
-             BROADLEAF_PINE_FOREST, COMPACTED_SOIL, WET_SOIL, WET_SOIL,            &
-             IRRIGATED_LOW_VEGETATION, TUNDRA, TUNDRA, TUNDRA, TUNDRA,             &
-             COMPACTED_SOIL/)
-     else
-        print*,'novegtype=',novegtype
-        print*,'model veg type not supported by post in calling crtm ' 
-        print*,'skipping generation of simulated radiance' 
-        return
-     end if 
-  end if 
+  !if(MODELNAME == 'NMM' .OR. MODELNAME == 'NCAR' .OR. MODELNAME == 'RAPR')then 
+   if(ivegsrc==1)then  !IGBP veg type
+      allocate(model_to_crtm(novegtype) )
+      model_to_crtm=(/PINE_FOREST, BROADLEAF_FOREST, PINE_FOREST,       &
+           BROADLEAF_FOREST,BROADLEAF_PINE_FOREST, SCRUB, SCRUB_SOIL, &
+           BROADLEAF_BRUSH,BROADLEAF_BRUSH, SCRUB, BROADLEAF_BRUSH,   &
+           TILLED_SOIL, URBAN_CONCRETE,TILLED_SOIL, INVALID_LAND,     &
+           COMPACTED_SOIL, INVALID_LAND, TUNDRA,TUNDRA, TUNDRA/)
+   else if(ivegsrc==0)then ! USGS veg type
+      allocate(model_to_crtm(novegtype) )
+      model_to_crtm=(/URBAN_CONCRETE,       &
+           COMPACTED_SOIL, IRRIGATED_LOW_VEGETATION, GRASS_SOIL, MEADOW_GRASS,   &
+           MEADOW_GRASS, MEADOW_GRASS, SCRUB, GRASS_SCRUB, MEADOW_GRASS,         &
+           BROADLEAF_FOREST, PINE_FOREST, BROADLEAF_FOREST, PINE_FOREST,         &
+           BROADLEAF_PINE_FOREST, COMPACTED_SOIL, WET_SOIL, WET_SOIL,            &
+           IRRIGATED_LOW_VEGETATION, TUNDRA, TUNDRA, TUNDRA, TUNDRA,             &
+           COMPACTED_SOIL/)
+   else if(ivegsrc==2)then ! old GFS veg type
+      allocate(model_to_crtm(0:novegtype) )
+      model_to_crtm=(/COMPACTED_SOIL,     &
+         BROADLEAF_FOREST, BROADLEAF_FOREST, BROADLEAF_PINE_FOREST, &
+         PINE_FOREST, PINE_FOREST, BROADLEAF_BRUSH, SCRUB, SCRUB, SCRUB_SOIL, &
+         TUNDRA, COMPACTED_SOIL, TILLED_SOIL, COMPACTED_SOIL/)
+   else
+      print*,'novegtype=',novegtype
+      print*,'model veg type not supported by post in calling crtm ' 
+      print*,'skipping generation of simulated radiance' 
+      return
+   end if 
+  !end if 
 
   !     DO NOT FORGET TO ADD YOUR NEW IGET HERE (IF YOU'VE ADDED ONE)      
   !     START SUBROUTINE CALRAD.
@@ -278,7 +283,7 @@ SUBROUTINE CALRAD_WCLOUD
         n_clouds=2 ! GFS uses Zhao scheme
      else if(imp_physics==5 .or. imp_physics==85 .or. imp_physics==95)then
         n_clouds=6  ! change to 6 cloud types because microwave is sensitive to density
-     else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2)then
+     else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2 .or. imp_physics==28)then
         n_clouds=5
      end if
 
@@ -449,7 +454,6 @@ SUBROUTINE CALRAD_WCLOUD
            micrim=ssmi .or. ssmis .or. amsre   ! only used for MW-imager-QC and id_qc(ch)
 
            microwave=amsua .or. amsub .or. mhs .or. msu .or. hsb .or. micrim
-
            ! check sensor list
            sensorindex = 0
            sensor_search: do j = 1, n_sensors
@@ -517,7 +521,7 @@ SUBROUTINE CALRAD_WCLOUD
               atmosphere(1)%cloud(5)%Type = GRAUPEL_CLOUD
       	      atmosphere(1)%cloud(6)%n_layers = lm
               atmosphere(1)%cloud(6)%Type = HAIL_CLOUD
-           else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2)then
+           else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2 .or. imp_physics==28)then
               atmosphere(1)%cloud(1)%n_layers = lm
               atmosphere(1)%cloud(1)%Type = WATER_CLOUD
               atmosphere(1)%cloud(2)%n_layers = lm
@@ -541,7 +545,6 @@ SUBROUTINE CALRAD_WCLOUD
            surface(1)%sensordata%sensor_channel = channelinfo(sensorindex)%sensor_channel
 
            ! run crtm for nadir instruments / channels
-           
            nadir: if ( (isis=='imgr_g12' .and. (iget(327)>0 .or. &
                        iget(328)>0 .or. iget(329)>0 .or. iget(330)>0)) .or. &
                        (isis=='imgr_g11' .and. (iget(446)>0 .or. &
@@ -669,14 +672,13 @@ SUBROUTINE CALRAD_WCLOUD
                        !             mapping below is specific to the versions NCEP
                        !             GFS and NNM as of September 2005
                        !    itype = ivgtyp(i,j)
-                       if (MODELNAME == 'NMM' .OR. MODELNAME == 'NCAR' .OR. MODELNAME == 'RAPR') then
-                          itype = min(max(1,ivgtyp(i,j)),24)
-                          surface(1)%land_type = nmm_to_crtm(itype)
+                       if(ivegsrc==0)then
+                         itype = min(max(0,ivgtyp(i,j)),novegtype)
                        else
-                          itype = min(max(0,ivgtyp(i,j)),13)
-                          surface(1)%land_type = gfs_to_crtm(itype)
+                         itype = min(max(1,ivgtyp(i,j)),novegtype)
                        end if
-
+                       surface(1)%land_type = model_to_crtm(itype)
+                       
                        if(gridtype=='B' .or. gridtype=='E')then
                           surface(1)%wind_speed         = sqrt(u10h(i,j)*u10h(i,j)   &
                                                               +v10h(i,j)*v10h(i,j))
@@ -726,7 +728,6 @@ SUBROUTINE CALRAD_WCLOUD
                           if(MODELNAME == 'GFS' .and. (itype<0 .or. itype>13)) &
                              print*,'bad veg type'
                        end if
-       
                        if(i==ii.and.j==jj)print*,'sample surface in CALRAD=', &
                              i,j,surface(1)%wind_speed,surface(1)%water_coverage,       &
                              surface(1)%land_coverage,surface(1)%ice_coverage,          &
@@ -838,8 +839,8 @@ SUBROUTINE CALRAD_WCLOUD
                                 atmosphere(1)%cloud(4)%effective_radius(k), atmosphere(1)%cloud(4)%water_content(k), &
                                 atmosphere(1)%cloud(5)%effective_radius(k), atmosphere(1)%cloud(5)%water_content(k), &
                                 atmosphere(1)%cloud(6)%effective_radius(k), atmosphere(1)%cloud(6)%water_content(k)
-	
-                          else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2)then
+
+                          else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2 .or. imp_physics==28)then
                              atmosphere(1)%cloud(1)%water_content(k)=max(0.,qqw(i,j,k)*dpovg)
                              atmosphere(1)%cloud(2)%water_content(k)=max(0.,qqi(i,j,k)*dpovg)
                              atmosphere(1)%cloud(3)%water_content(k)=max(0.,qqr(i,j,k)*dpovg)
@@ -962,7 +963,6 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               end if  ! end of outputting amsre
-
               if (isis=='tmi_trmm')then  ! writing trmm to grib (37 & 85.5 GHz)
                  do ixchan=1,4
                     ichan=5+ixchan
@@ -970,7 +970,7 @@ SUBROUTINE CALRAD_WCLOUD
                     if(igot>0) then
                        do j=jsta,jend
                           do i=1,im
-                             grid1(i,j)=tb(i,j,ichan)
+                             grid1(i,j) = tb(i,j,ichan)
                           enddo
                        enddo
                        id(1:25) = 0
@@ -994,7 +994,7 @@ SUBROUTINE CALRAD_WCLOUD
                     if(igot>0) then
                        do j=jsta,jend
                           do i=1,im
-                             grid1(i,j)=tb(i,j,ichan)
+                             grid1(i,j) = tb(i,j,ichan)
                           enddo
                        enddo
                        id(1:25) = 0
@@ -1061,7 +1061,6 @@ SUBROUTINE CALRAD_WCLOUD
 
               do j=jsta,jend
                  do i=1,im
-
                     !    Load geometry structure
                     !    geometryinfo(1)%sensor_zenith_angle = zasat*rtd  ! local zenith angle ???????
                     ! compute satellite zenith angle
@@ -1112,7 +1111,6 @@ SUBROUTINE CALRAD_WCLOUD
                        print *,'zenith info: zenith=',sat_zenith,' scan=',sat_zenith, &
                              ' MAX_SENSOR_SCAN_ANGLE=',MAX_SENSOR_SCAN_ANGLE
                     endif
-
                     !        geometryinfo(1)%sensor_zenith_angle = 0. ! 44.
                     !only call crtm if we have right satellite zenith angle
                     IF(geometryinfo(1)%sensor_zenith_angle <= MAX_SENSOR_SCAN_ANGLE &
@@ -1196,7 +1194,6 @@ SUBROUTINE CALRAD_WCLOUD
                        else
                           snodepth = 0.
                        end if
-
                        !DTC added based on nadir section
                        ! Chuang: for igbp type 15 (snow/ice), the main type
                        ! needs to be set to ice or snow
@@ -1228,13 +1225,12 @@ SUBROUTINE CALRAD_WCLOUD
                        !             mapping below is specific to the versions NCEP
                        !             GFS and NNM as of September 2005
                        !    itype = ivgtyp(i,j)
-                       if (MODELNAME == 'NMM' .OR. MODELNAME == 'NCAR' .OR. MODELNAME == 'RAPR') then
-                          itype = min(max(1,ivgtyp(i,j)),24)
-                          surface(1)%land_type = nmm_to_crtm(itype)
+                       if(ivegsrc==0)then
+                         itype = min(max(0,ivgtyp(i,j)),novegtype)
                        else
-                          itype = min(max(0,ivgtyp(i,j)),13)
-                          surface(1)%land_type = gfs_to_crtm(itype)
+                         itype = min(max(1,ivgtyp(i,j)),novegtype)
                        end if
+                       surface(1)%land_type = model_to_crtm(itype)
 
                        if(gridtype=='B' .or. gridtype=='E')then
                           surface(1)%wind_speed            = sqrt(u10h(i,j)*u10h(i,j)   &
@@ -1248,7 +1244,6 @@ SUBROUTINE CALRAD_WCLOUD
                        surface(1)%land_coverage         = sfcpct(2)
                        surface(1)%ice_coverage          = sfcpct(3)
                        surface(1)%snow_coverage         = sfcpct(4)
-       
                        surface(1)%land_temperature      = tsfc
                        surface(1)%snow_temperature      = min(tsfc,280._r_kind)
                        surface(1)%water_temperature     = max(tsfc,270._r_kind)
@@ -1398,8 +1393,7 @@ SUBROUTINE CALRAD_WCLOUD
                                 atmosphere(1)%cloud(4)%effective_radius(k), atmosphere(1)%cloud(4)%water_content(k), &
                                 atmosphere(1)%cloud(5)%effective_radius(k), atmosphere(1)%cloud(5)%water_content(k), &
                                 atmosphere(1)%cloud(6)%effective_radius(k), atmosphere(1)%cloud(6)%water_content(k)
-
-                          else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2)then
+                          else if(imp_physics==8 .or. imp_physics==6 .or. imp_physics==2 .or. imp_physics==28)then
                              atmosphere(1)%cloud(1)%water_content(k)=max(0.,qqw(i,j,k)*dpovg)
                              atmosphere(1)%cloud(2)%water_content(k)=max(0.,qqi(i,j,k)*dpovg)
                              atmosphere(1)%cloud(3)%water_content(k)=max(0.,qqr(i,j,k)*dpovg)
@@ -1422,7 +1416,6 @@ SUBROUTINE CALRAD_WCLOUD
                              nrain(i,j,k),qqs(i,j,k),qqg(i,j,k),qqnr(i,j,k),qqni(i,j,k),imp_physics,'G')
                           end if 
                        end do
-
                        !bsf - start
                        !-- Add subgrid-scale convective clouds for WRF runs
                        if(icu_physics==2) then
@@ -1484,7 +1477,7 @@ SUBROUTINE CALRAD_WCLOUD
                     END IF ! endif block for allowable satellite zenith angle 
                  end do ! end loop for i
               end do ! end loop for j 
-  
+
                !      error_status = crtm_destroy(channelinfo)
                !      if (error_status /= success) &
                !     &   print*,'ERROR*** crtm_destroy error_status=',error_status
@@ -1511,7 +1504,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmi f13
-
               if (isis=='ssmi_f14')then  ! writing ssmi to grib (19,37 & 85 GHz)
               nc=0
               do ixchan=1,6
@@ -1535,7 +1527,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmi f14
-
               if (isis=='ssmi_f15')then  ! writing ssmi to grib (19,37 & 85 GHz)
               nc=0
               do ixchan=1,6
@@ -1559,7 +1550,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmi f15
-
               if (isis=='ssmis_f16')then  ! writing ssmis to grib (183,19,37 & 85GHz)
               nc=0
               do ixchan=1,7
@@ -1583,7 +1573,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmis f16
-
               if (isis=='ssmis_f17')then  ! writing ssmis to grib (183,19,37 &85GHz)
               nc=0
               do ixchan=1,7
@@ -1607,7 +1596,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmis f17
-
               if (isis=='ssmis_f18')then  ! writing ssmis to grib (183,19,37 &85GHz)
               nc=0
               do ixchan=1,7
@@ -1631,7 +1619,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmis f18
-
               if (isis=='ssmis_f19')then  ! writing ssmis to grib (183,19,37 &85GHz)
               nc=0
               do ixchan=1,7
@@ -1655,7 +1642,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmis f19
-
               if (isis=='ssmis_f20')then  ! writing ssmis to grib (183,19,37 &85GHz)
               nc=0
               do ixchan=1,7
@@ -1679,7 +1665,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
               enddo
               end if  ! end of outputting ssmis f20
-
               if(isis=='imgr_mt2') then ! writing MTSAT-2 to grib
                  nc=0
                  do ichan=1,4
@@ -1705,7 +1690,6 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               endif
-
               if(isis=='ahi_himawari8') then ! writing Himawari-8 AHI to grib
                  nc=0
                  do ichan=1,10
@@ -1757,7 +1741,6 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               endif 
-
               if_insat3d: if(isis=='imgr_insat3d') then ! writing MTSAT-1r to grib
                  nc=0
                  do ichan=1,4
@@ -1783,7 +1766,6 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               endif if_insat3d
-
               if (isis=='imgr_g11')then  ! writing goes 11 to grib
                  do ixchan=1,4
                     ichan=ixchan
@@ -1807,7 +1789,6 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                 enddo
               endif ! end of outputting goes 11
-
               if (isis=='imgr_g12')then  ! writing goes 12 to grib
                  do ixchan=1,4
                     ichan=ixchan
@@ -1831,7 +1812,6 @@ SUBROUTINE CALRAD_WCLOUD
                     endif
                  enddo
               end if  ! end of outputting goes 12
-
               if (isis=='seviri_m10')then  ! writing msg/severi 10
                  nc=0
                  do ixchan=1,7
@@ -1855,7 +1835,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
                  enddo
               end if  ! end of outputting msg/seviri 10
-
               if (isis=='imgr_g13')then  ! writing goes 13 to grib
                  nc=0
                  do ixchan=1,4
@@ -1879,7 +1858,6 @@ SUBROUTINE CALRAD_WCLOUD
                  endif
                  enddo
               end if  ! end of outputting goes 13
-
               if (isis=='imgr_g15')then  ! writing goes 15 to grib
                  nc=0
                  do ixchan=1,4
@@ -1904,7 +1882,6 @@ SUBROUTINE CALRAD_WCLOUD
                  enddo
               end if  ! end of outputting goes 15
 
-
            end if nonnadir  ! end if for computing simulated radiance with zenith angle correction
       
            ! Deallocate arrays
@@ -1923,7 +1900,6 @@ SUBROUTINE CALRAD_WCLOUD
 !     
         end if  sensor_avail  ! end of if block for only calling crtm when sepcific sensor is requested in the control file
      end do  sensordo ! end looping for different satellite
-
      error_status = crtm_destroy(channelinfo)
      if (error_status /= success) &
          print*,'ERROR*** crtm_destroy error_status=',error_status

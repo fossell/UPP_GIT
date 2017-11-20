@@ -20,19 +20,19 @@
 ! 
       use params_mod, only: h1m12, d00, d608, h1, rog
       use ctlblk_mod, only: jsta, jend, spval, modelname,pthresh, im,   &
-                            jsta_2l, jend_2u, lm, lp1, jm
+                            jsta_2l, jend_2u, lm, lp1
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       implicit none
 !
 !    INPUT:
 !      T,Q,PMID,HTM,LMH,PREC,ZINT
 !
-      real,dimension(IM,jsta_2l:jend_2u),intent(in) :: LMH
-      real,dimension(IM,jsta_2l:jend_2u,LM),intent(in) :: T,Q,PMID,HTM
+      real,dimension(IM,jsta_2l:jend_2u),intent(in)     :: LMH
+      real,dimension(IM,jsta_2l:jend_2u,LM),intent(in)  :: T,Q,PMID,HTM
       real,dimension(IM,jsta_2l:jend_2u,LP1),intent(in) :: ZINT,PINT
-      integer,DIMENSION(IM,JM),intent(inout)  :: IWX
+      integer,DIMENSION(IM,jsta:jend),intent(inout)     :: IWX
       real,dimension(IM,jsta_2l:jend_2u),intent(inout) :: PREC
-      real,DIMENSION(IM,JM),intent(inout)  :: ZWET
+      real,DIMENSION(IM,jsta:jend),intent(inout)       :: ZWET
 
 
 !    OUTPUT:
@@ -47,8 +47,8 @@
 !    INTERNAL:
 !
       REAL, ALLOCATABLE :: TWET(:,:,:)
-      integer,DIMENSION(IM,JM) :: KARR,LICEE
-      real,DIMENSION(IM,JM) :: TCOLD,TWARM
+      integer,DIMENSION(IM,jsta:jend) :: KARR,LICEE
+      real,   DIMENSION(IM,jsta:jend) :: TCOLD,TWARM
 
 !    SUBROUTINES CALLED:
 !     WETBULB
@@ -109,15 +109,15 @@
       PSFCK=PINT(I,J,LMHK+1)
 !meb
       TDCHK=2.0
-  760 TCOLD(I,J)=T(I,J,LMHK)
-      TWARM(I,J)=T(I,J,LMHK)
-      LICEE(I,J)=LMHK
+  760 TCOLD(I,J) = T(I,J,LMHK)
+      TWARM(I,J) = T(I,J,LMHK)
+      LICEE(I,J) = LMHK
 !
       DO 775 L=1,LMHK
-      QKL=Q(I,J,L)
-      QKL=AMAX1(H1M12,QKL)
-      TKL=T(I,J,L)
-      PKL=PMID(I,J,L)
+      QKL = Q(I,J,L)
+      QKL = MAX(H1M12,QKL)
+      TKL = T(I,J,L)
+      PKL = PMID(I,J,L)
 !
 !   SKIP PAST THIS IF THE LAYER IS NOT BETWEEN 70 MB ABOVE GROUND
 !       AND 500 MB
@@ -184,12 +184,12 @@
 !    &         tlmhk,twrmk)
       DO 1900 J=JSTA,JEND
       DO 1900 I=1,IM
-       IF (I .EQ. 324 .AND. J .EQ. 390) THEN
-          LMHK=NINT(LMH(I,J))
-          DO L=LMHK,1,-1          
-           print *, 'TW NCEP ', TWET(I,J,L)
-          ENDDO
-       ENDIF
+!       IF (I .EQ. 324 .AND. J .EQ. 390) THEN
+!          LMHK=NINT(LMH(I,J))
+!          DO L=LMHK,1,-1          
+!           print *, 'TW NCEP ', TWET(I,J,L)
+!          ENDDO
+!       ENDIF
       IF(KARR(I,J).GT.0)THEN
         LMHK=NINT(LMH(I,J))
         LICE=LICEE(I,J)
@@ -300,14 +300,14 @@
 !---------------------------------------------------------
       DEALLOCATE (TWET)
 
-      IF(MODELNAME.eq.'RSM') THEN    !add by Binbin, change back
-       DO J=JSTA,JEND
-       DO I=1,IM
-        PREC(I,J) = PREC(I,J)/(3*3600.0)
-       ENDDO
-       ENDDO
+      IF(MODELNAME == 'RSM') THEN    !add by Binbin, change back
+!!$omp parallel do private(i,j)
+        DO J=JSTA,JEND
+          DO I=1,IM
+            PREC(I,J) = PREC(I,J)/(3*3600.0)
+          ENDDO
+        ENDDO
       END IF
-
 
       RETURN
       END
